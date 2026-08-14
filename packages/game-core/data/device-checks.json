@@ -1,0 +1,71 @@
+{
+  "_note": "Kiểm tra hợp lý TRÊN MÁY — thay cho chống gian lận server-authoritative của bản 1.0 (§4.3 bản 2.0). Triết lý: game chơi đơn, gian lận chỉ tự lừa mình. Chỉ chặn những gì làm hỏng cảm giác cân bằng hoặc gây nguy hiểm thật.",
+  "version": 2,
+
+  "stepReward": {
+    "dailyCap": 15000,
+    "_capNote": "Vượt trần thì ngừng cấp lượt nhặt, nhưng VẪN đếm và VẪN hiển thị đủ số bước — không xoá công sức người chơi.",
+    "maxStepsPerSyncBurst": 6000,
+    "_burstNote": "Một lần mở app không thể nhận quá 6.000 bước mới; phần dư giữ lại cho lần sync sau thay vì bị xoá."
+  },
+
+  "cadence": {
+    "_note": "Nhịp bước người bình thường 100–130 bước/phút. Dùng để lọc, không dùng để tố cáo.",
+    "normalMinStepsPerMinute": 100,
+    "normalMaxStepsPerMinute": 130,
+    "implausibleStepsPerMinute": 300,
+    "minSampleMinutes": 3
+  },
+
+  "shakeDetection": {
+    "_note": "Máy lắc điện thoại cho mẫu gia tốc đều đặn bất thường; dáng đi người luôn có biến thiên.",
+    "maxAllowedPeriodicityScore": 0.92,
+    "minStepIntervalVarianceMs": 900,
+    "sampleWindowSteps": 60
+  },
+
+  "clockGuard": {
+    "_note": "§4.3 — chống lùi đồng hồ. Lưu mốc thời gian lớn nhất từng thấy; nếu giờ máy nhỏ hơn mốc đó thì tạm khoá các sự kiện theo lịch (Trăng Máu, hồi chiêu, đợt đêm) cho tới khi giờ máy vượt lại mốc.",
+    "toleranceMs": 120000,
+    "lockScheduledEventsOnRollback": true,
+    "messageVi": "Đồng hồ máy đang chạy sau mốc thời gian đã lưu. Các sự kiện theo lịch tạm khoá đến khi giờ máy trở lại đúng.",
+    "freezeSurvivalDecayOnRollback": true
+  },
+
+  "safety": {
+    "_note": "§6.1 — không thương lượng. Đây là những kiểm tra DUY NHẤT mang tính bắt buộc trong bản offline.",
+    "maxKmh": 12,
+    "sustainedSamplesToLock": 2,
+    "messageVi": "Bạn đang di chuyển quá nhanh — hãy dừng lại rồi thử lại.",
+    "dailyAwarenessReminderVi": "Quan sát xung quanh. Không chơi khi băng qua đường hoặc khi đang lái xe.",
+    "nightWalkWarningVi": "Trời đã tối. Đi bộ buổi tối không được thưởng thêm — về trại phòng thủ cũng tốt như vậy."
+  },
+
+  "wellbeing": {
+    "_note": "§6.2 — bản offline KHÔNG có nghĩa vụ giới hạn giờ chơi (không tài khoản, không server). Vẫn làm vì tử tế và vì hình ảnh với phụ huynh, ở dạng nhắc nhở chứ không cưỡng chế.",
+    "breakReminderEveryMinutes": 30,
+    "softDailyMinutes": 180,
+    "healthWarningVi": "Bạn đã chơi 3 tiếng hôm nay. Nghỉ một chút cho mắt và chân nhé.",
+    "ageRating": "12+",
+    "enforceHardLimit": false
+  },
+
+  "privacy": {
+    "_note": "§6.3 — không thu thập gì. Đây là lời hứa sản phẩm, và cũng là thông điệp bán hàng.",
+    "collectsNothing": true,
+    "storeRawGpsHistory": false,
+    "sessionCoordinateRetentionDays": 0,
+    "storeOnlyVisitedPoiCells": true,
+    "analyticsOptInDefault": false,
+    "networkCallsAtRuntime": "none"
+  },
+
+  "save": {
+    "_note": "§4.1, §4.3 — save cục bộ có checksum. Không mã hoá nặng: người muốn sửa save chỉ tự phá trải nghiệm của họ.",
+    "profileSlots": 2,
+    "checksumAlgorithm": "fnv1a32",
+    "autosaveEveryActions": 5,
+    "backupFileExtension": ".khc",
+    "formatVersion": 1
+  }
+}

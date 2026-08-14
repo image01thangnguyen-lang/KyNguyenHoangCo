@@ -1,0 +1,54 @@
+{
+  "_note": "Ánh xạ tag OpenStreetMap → vùng trong game (§4.2 bản 2.0). Ở bản OFFLINE bảng này KHÔNG được dùng lúc chạy game — nó chỉ chạy trong tool lọc dữ liệu lúc build (tools/build-poi-pack.ts) để sinh gói POI đóng sẵn theo tỉnh/thành. Lúc chơi, game chỉ đọc gói đã đóng, không gọi mạng.",
+  "version": 2,
+
+  "rules": [
+    { "zone": "forest",   "match": [{ "key": "leisure", "values": ["park", "garden", "nature_reserve"] }, { "key": "landuse", "values": ["forest", "grass", "meadow", "recreation_ground"] }, { "key": "natural", "values": ["wood", "scrub", "heath", "grassland"] }] },
+    { "zone": "water",    "match": [{ "key": "natural", "values": ["water", "spring", "wetland"] }, { "key": "waterway", "values": ["river", "stream", "canal"] }, { "key": "leisure", "values": ["swimming_pool"] }, { "key": "landuse", "values": ["reservoir", "basin"] }] },
+    { "zone": "merchant", "match": [{ "key": "shop", "values": ["supermarket", "convenience", "general", "department_store", "greengrocer"] }, { "key": "amenity", "values": ["marketplace"] }] }
+  ],
+
+  "radiusMetersByZone": {
+    "forest": 60,
+    "water": 40,
+    "merchant": 30
+  },
+  "_radiusNote": "Bán kính tương tác quanh tâm POI. Riêng hành động múc nước còn kiểm tra thêm ngưỡng 20 m theo §5.2.",
+
+  "queryRadiusMeters": 500,
+  "maxPoisPerQuery": 60,
+
+  "pack": {
+    "_note": "Định dạng gói POI offline. Gói được đóng lúc build từ extract Geofabrik, đặt trên CDN tĩnh; app kèm sẵn Hà Nội, TP.HCM, Đà Nẵng (§2, §4.2).",
+    "formatVersion": 1,
+    "coordinatePrecision": 5,
+    "_precisionNote": "5 chữ số thập phân ≈ 1,1 m — thừa đủ cho game, mà giảm mạnh kích thước gói so với độ chính xác đầy đủ của OSM.",
+    "bundledRegions": ["hanoi", "hcmc", "danang"],
+    "estimatedSizeMbPerRegion": [5, 40],
+    "indexCellSizeMeters": 500,
+    "_indexNote": "Gói được băm sẵn theo ô 500 m để tra cứu O(1) khi chơi, không phải quét toàn bộ danh sách."
+  },
+
+  "wildernessGrid": {
+    "_note": "§4.2 — vùng hoang dã thủ tục. Ở bản offline nó còn quan trọng hơn: đây là lớp bảo đảm game chơi được ở MỌI NƠI, kể cả khi người chơi chưa tải gói dữ liệu chi tiết cho khu vực của mình.",
+    "cellSizeMeters": 200,
+    "activateWhenPoiCountBelow": 3,
+    "pickupMultiplier": 1.2,
+    "_zoneWeightsNote": "Khi không có dữ liệu OSM, ô lưới được gán vùng theo hàm băm toạ độ — cùng một ô luôn cho cùng một vùng, ổn định qua các lần chơi và giữa các máy. KHÔNG thêm khoá chú thích vào trong proceduralZoneWeights: mọi khoá trong đó đều được đọc là trọng số.",
+    "proceduralZoneWeights": {
+      "trail": 62,
+      "forest": 22,
+      "water": 10,
+      "merchant": 6
+    }
+  },
+
+  "safety": {
+    "_note": "§6.1 — lọc ngay trong tool đóng gói, để POI nguy hiểm không bao giờ lọt vào máy người chơi.",
+    "excludeNearHighwayClasses": ["motorway", "trunk", "primary"],
+    "excludeNearHighwayMeters": 25,
+    "excludeAccessValues": ["private", "no"],
+    "reportChannelInApp": true,
+    "_reportNote": "Bản offline không gửi báo cáo lên server được. Nút báo cáo ẩn POI đó NGAY trên máy người chơi, đồng thời ghi vào file để người chơi tuỳ chọn gửi email cho đội phát triển — POI bị gỡ trong bản cập nhật gói dữ liệu kế tiếp."
+  }
+}

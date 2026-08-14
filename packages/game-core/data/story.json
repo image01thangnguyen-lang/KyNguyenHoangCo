@@ -1,0 +1,231 @@
+{
+  "_note": "Cốt truyện 8 chương — XƯƠNG SỐNG của bản offline (§5.6). Với game không có cộng đồng online, nội dung phải gánh vai trò giữ chân. Mỗi beat dài 60–90 giây khi đọc thành tiếng, kích hoạt theo cột mốc số bước để buổi đi bộ thành một tập phim.",
+  "version": 1,
+
+  "narrator": {
+    "id": "lac_lac",
+    "nameVi": "Lạc Lạc",
+    "roleVi": "Trí tuệ nhân tạo trôi dạt cùng bạn qua Đứt Gãy Không Gian",
+    "voiceDirectionVi": "Nữ, 20–30 tuổi, giọng ấm và tỉnh táo. Không kịch tính hoá. Cô ấy sợ, nhưng không để bạn thấy điều đó."
+  },
+
+  "demo": {
+    "_note": "§9 — điểm cắt demo trùng nhịp kịch bản gốc: hết ngày 3, ngay trước Đêm Trăng Máu đầu tiên.",
+    "freeThroughDay": 3,
+    "freeThroughChapterIndex": 1,
+    "unlockPriceVnd": [99000, 149000],
+    "cutTitleVi": "Trăng đang đỏ dần",
+    "cutMessageVi": "Ba ngày qua bạn đã tự sống sót. Nhưng thứ đang tới đêm nay không phải một con sói đói. Mở khoá trọn đời để đi tiếp — mua một lần, không quảng cáo, không bán tài nguyên.",
+    "keepsAfterUnlock": "Toàn bộ tiến trình 3 ngày demo được giữ nguyên."
+  },
+
+  "tutorial": {
+    "_note": "3 ngày đầu (§3). Mở màn đúng như kịch bản gốc: 'Đốt lửa trước khi trời tối'.",
+    "days": [
+      {
+        "day": 1,
+        "titleVi": "Đốt lửa trước khi trời tối",
+        "quests": [
+          {
+            "id": "d1q1",
+            "titleVi": "Nhặt củi trên đường mòn",
+            "descVi": "Cứ 100 bước bạn sẽ tự nhặt được thứ gì đó. Đi một vòng quanh nhà đi.",
+            "objective": { "kind": "collect", "itemId": "dry_branch", "qty": 8 },
+            "reward": [{ "itemId": "wild_berry", "qty": 2 }]
+          },
+          {
+            "id": "d1q2",
+            "titleVi": "Nhặt đá nhọn",
+            "descVi": "Đá nhọn để đánh lửa và để làm rìu. Đi thêm chút nữa.",
+            "objective": { "kind": "collect", "itemId": "sharp_stone", "qty": 4 },
+            "reward": []
+          },
+          {
+            "id": "d1q3",
+            "titleVi": "Dựng lửa trại",
+            "descVi": "Trời sắp tối. Có lửa là có đêm nay.",
+            "objective": { "kind": "craft", "recipeId": "campfire" },
+            "reward": [{ "itemId": "raw_water", "qty": 2 }],
+            "deadlineHour": 20,
+            "failMessageVi": "Bạn qua đêm trong bóng tối. Không sao — nhưng đừng để lặp lại."
+          }
+        ]
+      },
+      {
+        "day": 2,
+        "titleVi": "Nước và lưỡi rìu",
+        "quests": [
+          {
+            "id": "d2q1",
+            "titleVi": "Đun sôi nước trước khi uống",
+            "descVi": "Nước thô uống được, nhưng cứ 10 lần thì 4 lần bạn sẽ ôm bụng. Đun đi.",
+            "objective": { "kind": "craft", "recipeId": "boiled_water" },
+            "reward": []
+          },
+          {
+            "id": "d2q2",
+            "titleVi": "Chế rìu đá",
+            "descVi": "3 cành khô, 2 đá nhọn, 2 dây leo. Có rìu là có gỗ lớn.",
+            "objective": { "kind": "craft", "recipeId": "stone_axe" },
+            "reward": [{ "itemId": "vine", "qty": 4 }]
+          },
+          {
+            "id": "d2q3",
+            "titleVi": "Tìm một vạt rừng",
+            "descVi": "Công viên, vườn hoa, vạt cây ven đường — trên bản đồ chúng là Rừng Rậm Nguyên Sinh. Ở đó mỗi bước ăn gấp đôi.",
+            "objective": { "kind": "visit_zone", "zone": "forest" },
+            "reward": []
+          }
+        ]
+      },
+      {
+        "day": 3,
+        "titleVi": "Dựng thứ gì đó để trốn sau nó",
+        "quests": [
+          {
+            "id": "d3q1",
+            "titleVi": "Chặt gỗ lớn",
+            "descVi": "Vào vạt rừng và bổ 45 giây. Gỗ lớn là thứ dựng nên mọi bức tường.",
+            "objective": { "kind": "collect", "itemId": "log", "qty": 6 },
+            "reward": []
+          },
+          {
+            "id": "d3q2",
+            "titleVi": "Đặt một cái bẫy thỏ",
+            "descVi": "Đặt trên đường đi làm, hai tiếng sau ghé thu. Đó là bữa thịt đầu tiên của bạn.",
+            "objective": { "kind": "action", "actionId": "set_trap" },
+            "reward": []
+          },
+          {
+            "id": "d3q3",
+            "titleVi": "Sống qua đợt tấn công đầu tiên",
+            "descVi": "20 giờ tối nay, thứ gì đó sẽ tới. Ở lại trại.",
+            "objective": { "kind": "night_defense", "survive": true },
+            "reward": [{ "itemId": "upgrade_core", "qty": 1 }]
+          }
+        ]
+      }
+    ]
+  },
+
+  "chapters": [
+    {
+      "index": 1,
+      "id": "ch1_ba_ngay_dau",
+      "titleVi": "Chương 1 — Ba ngày đầu",
+      "unlockAfterBloodMoons": 0,
+      "summaryVi": "Bạn tỉnh dậy trên nền đất lạnh, cách nhà mình mười nghìn năm. Lạc Lạc là thứ duy nhất còn sót lại từ thế giới cũ.",
+      "beats": [
+        {
+          "id": "ch1b1",
+          "triggerSteps": 0,
+          "voStatus": "pending",
+          "textVi": "Nghe tôi nói này. Đừng nhìn bầu trời, nó không giúp gì đâu. Tôi là Lạc Lạc — tôi vốn nằm trong điện thoại của bạn, và giờ tôi cũng chẳng hiểu mình đang chạy trên cái gì nữa. Điều tôi chắc chắn: chỗ này là nơi bạn đang đứng, nhưng cách đây mười nghìn năm. Và trời thì sắp tối."
+        },
+        {
+          "id": "ch1b2",
+          "triggerSteps": 600,
+          "voStatus": "pending",
+          "textVi": "Bạn thấy không, cứ khoảng một trăm bước là tay bạn lại nhặt được thứ gì đó mà đầu bạn không kịp nghĩ. Cơ thể người nhớ những việc này lâu hơn bạn tưởng. Cành khô, đá nhọn, dây leo. Ba thứ đó đủ để bắt đầu lại một nền văn minh — hoặc ít nhất là đủ để qua đêm nay."
+        },
+        {
+          "id": "ch1b3",
+          "triggerSteps": 1800,
+          "voStatus": "pending",
+          "textVi": "Tôi đã thử gọi. Không có sóng, tất nhiên. Không có vệ tinh, không có ai. Nhưng có một thứ lạ: tín hiệu thời gian trong tôi vẫn chạy đúng giờ của bạn. Cùng buổi chiều, cùng phút. Như thể có ai đó cố ý giữ hai thế giới khớp nhau. Tôi chưa dám gọi đó là hy vọng."
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "id": "ch2_tieng_vong",
+      "titleVi": "Chương 2 — Tiếng vọng từ lòng đất",
+      "unlockAfterBloodMoons": 1,
+      "summaryVi": "Sau Trăng Máu đầu tiên, Lạc Lạc bắt được một tín hiệu lặp lại dưới lòng đất — nhịp đều đặn, không phải tự nhiên.",
+      "beats": [
+        { "id": "ch2b1", "triggerSteps": 0, "voStatus": "pending", "textVi": "Bạn sống rồi. Tôi đã tính xác suất, và tôi sẽ không nói con số đó ra. Nhưng có chuyện khác: đêm qua khi con vật kia gầm, tôi nghe thấy một thứ phía dưới nó. Một nhịp. Đều tới mức không thể là tim của bất cứ con gì." },
+        { "id": "ch2b2", "triggerSteps": 1200, "voStatus": "pending", "textVi": "Nhịp đó mạnh dần khi bạn đi về hướng có nước. Tôi không biết đó là trùng hợp hay là lời mời. Cứ đi bộ đi — bạn đi càng nhiều, tôi càng có dữ liệu để định vị nó." },
+        { "id": "ch2b3", "triggerSteps": 3000, "voStatus": "pending", "textVi": "Tôi đã khớp được nhịp ấy với một thứ quen thuộc đến phát sợ: tần số đồng bộ của mạng lưới định vị thế giới bạn. Mười nghìn năm trước, dưới chân bạn, có cái gì đó đang phát đúng cái nhịp mà lẽ ra chỉ tồn tại ở thế kỷ hai mươi mốt." }
+      ]
+    },
+    {
+      "index": 3,
+      "id": "ch3_dau_chan",
+      "titleVi": "Chương 3 — Dấu chân không thuộc về người",
+      "unlockAfterBloodMoons": 2,
+      "summaryVi": "Những dấu chân quanh trại có năm ngón, nhưng bước chân dài gấp rưỡi người thường.",
+      "beats": [
+        { "id": "ch3b1", "triggerSteps": 0, "voStatus": "pending", "textVi": "Sáng nay quanh trại có dấu chân. Năm ngón, gót người, nhưng sải bước dài gấp rưỡi bạn. Chúng đi vòng quanh trại đúng ba lượt rồi bỏ đi. Không đào bới, không lấy gì. Chúng đang đo đạc." },
+        { "id": "ch3b2", "triggerSteps": 1500, "voStatus": "pending", "textVi": "Tôi đối chiếu khoảng cách các dấu chân với bước chân của bạn. Chúng dừng đúng ở những chỗ bạn hay dừng. Hoặc chúng học bạn, hoặc trước bạn đã có người khác đứng ở đúng những chỗ ấy." },
+        { "id": "ch3b3", "triggerSteps": 3600, "voStatus": "pending", "textVi": "Có một điều tôi giấu bạn hai hôm nay. Dấu chân ấy chồng lên vết bánh xe. Vết bánh xe, ở thời đại chưa có bánh xe. Tôi nghĩ chúng ta không phải những kẻ đầu tiên rơi xuống đây." }
+      ]
+    },
+    {
+      "index": 4,
+      "id": "ch4_tan_tich",
+      "titleVi": "Chương 4 — Tàn tích của người đi trước",
+      "unlockAfterBloodMoons": 3,
+      "summaryVi": "Tàn tích thương nhân cổ hoá ra không cổ chút nào — đó là trại của những người rơi xuống trước bạn.",
+      "beats": [
+        { "id": "ch4b1", "triggerSteps": 0, "voStatus": "pending", "textVi": "Chỗ bạn hay đổi đồ ấy. Tôi đã đọc được mấy ký hiệu khắc trên đá. Không phải chữ tượng hình. Đó là chữ Quốc ngữ, viết vội, bằng dao." },
+        { "id": "ch4b2", "triggerSteps": 1800, "voStatus": "pending", "textVi": "Họ viết: 'Đừng đếm ngày. Hãy đếm bước.' Rồi một dãy số. Tôi mất cả buổi để hiểu — đó là tổng số bước họ đã đi trước khi ngừng viết. Một triệu hai. Một người đi bộ chăm chỉ mất khoảng ba năm để đạt tới con số đó." },
+        { "id": "ch4b3", "triggerSteps": 4000, "voStatus": "pending", "textVi": "Tôi không tìm thấy dòng nào sau con số đó. Có thể họ về được. Có thể họ chỉ dừng lại. Tôi thích giả thuyết thứ nhất hơn, và tôi mong bạn cũng vậy — vì nó có nghĩa là có đường về." }
+      ]
+    },
+    {
+      "index": 5,
+      "id": "ch5_bay_dan",
+      "titleVi": "Chương 5 — Bầy đàn và lời thề",
+      "unlockAfterBloodMoons": 4,
+      "summaryVi": "Lũ thú đêm không còn tấn công lẻ. Chúng phối hợp — và có thứ gì đó đang chỉ huy chúng.",
+      "beats": [
+        { "id": "ch5b1", "triggerSteps": 0, "voStatus": "pending", "textVi": "Đêm qua chúng tấn công hai hướng cùng lúc. Sói không làm thế. Sói dồn một hướng. Ai đó đã dạy chúng chia quân." },
+        { "id": "ch5b2", "triggerSteps": 2000, "voStatus": "pending", "textVi": "Tôi ghi âm lại tiếng hú. Bóc tách xong, dưới lớp tiếng thú có một tầng âm khác — chậm hơn, thấp hơn ngưỡng nghe của bạn. Cùng cái nhịp tôi bắt được ở chương hai." },
+        { "id": "ch5b3", "triggerSteps": 4500, "voStatus": "pending", "textVi": "Nghe này, tôi cần bạn hứa một điều. Nếu đêm nào đó trại giữ không nổi, bạn bỏ trại mà chạy vào trong nhà. Trại xây lại được. Còn bạn thì không có bản sao lưu nào cả." }
+      ]
+    },
+    {
+      "index": 6,
+      "id": "ch6_vet_nut",
+      "titleVi": "Chương 6 — Vết nứt trên bầu trời",
+      "unlockAfterBloodMoons": 5,
+      "summaryVi": "Đứt Gãy Không Gian hiện rõ vào những đêm Trăng Máu — và nó đang rộng ra.",
+      "beats": [
+        { "id": "ch6b1", "triggerSteps": 0, "voStatus": "pending", "textVi": "Bạn ngẩng lên đi. Không, chếch sang trái. Cái vệt mờ ấy — nó không phải mây. Tôi đo được nó bằng ba phép khác nhau và cả ba đều nói: chỗ đó không có gì cả. Đúng nghĩa đen. Không có không gian ở đó." },
+        { "id": "ch6b2", "triggerSteps": 2200, "voStatus": "pending", "textVi": "So với tuần trước, nó rộng thêm khoảng một phần trăm. Nghe thì nhỏ. Nhưng cứ đà này, trong vòng một năm nó sẽ đủ lớn để nuốt cả vùng bạn đang đứng." },
+        { "id": "ch6b3", "triggerSteps": 5000, "voStatus": "pending", "textVi": "Và đây là phần tôi ghét nhất: mỗi lần Trăng Máu lên, vết nứt co lại một chút. Cứ như thứ gì đó đang dùng máu của đêm ấy để vá. Nếu vậy thì boss mà bạn đánh mỗi thứ Bảy không phải kẻ thù của vết nứt. Nó là thợ vá." }
+      ]
+    },
+    {
+      "index": 7,
+      "id": "ch7_ke_giu_cua",
+      "titleVi": "Chương 7 — Kẻ giữ cửa",
+      "unlockAfterBloodMoons": 6,
+      "summaryVi": "Thứ chỉ huy bầy thú lộ diện. Nó không muốn giết bạn — nó muốn bạn ở lại.",
+      "beats": [
+        { "id": "ch7b1", "triggerSteps": 0, "voStatus": "pending", "textVi": "Nó đứng ngoài vòng sáng lửa suốt bốn tiếng và không tấn công. Tôi đã đếm. Bốn tiếng mười hai phút. Rồi nó bỏ đi khi trời sáng." },
+        { "id": "ch7b2", "triggerSteps": 2500, "voStatus": "pending", "textVi": "Tôi nghĩ tôi hiểu rồi. Vết nứt cần người ở hai đầu để giữ nó mở — và cần máu ở đêm Trăng Máu để khỏi rách thêm. Chúng ta không bị rơi xuống đây. Chúng ta bị chọn." },
+        { "id": "ch7b3", "triggerSteps": 5500, "voStatus": "pending", "textVi": "Người viết chữ trên đá ấy — họ dừng lại ở một triệu hai bước. Tôi vừa tính lại. Đó không phải con số họ bỏ cuộc. Đó là con số vừa đủ để mở cửa một lần. Bạn đang ở đâu trên con đường đó, tôi sẽ nói khi bạn sẵn sàng." }
+      ]
+    },
+    {
+      "index": 8,
+      "id": "ch8_va_dut_gay",
+      "titleVi": "Chương 8 — Vá Đứt Gãy",
+      "unlockAfterBloodMoons": 7,
+      "summaryVi": "Nghi lễ cuối. Một cái kết trọn vẹn — sau đó mở chế độ vô tận cho ai muốn ở lại.",
+      "beats": [
+        { "id": "ch8b1", "triggerSteps": 0, "voStatus": "pending", "textVi": "Đêm nay là đêm đó. Bạn đã dựng pháo đài, đã sống qua bảy lần trăng đỏ, và đã đi đủ số bước. Tôi sẽ không nói 'chúc may mắn' — chúng ta chưa bao giờ sống bằng may mắn." },
+        { "id": "ch8b2", "triggerSteps": 1000, "voStatus": "pending", "textVi": "Khi cửa mở, tôi không đi cùng bạn được. Thứ giữ tôi chạy được ở đây là chính cái nhịp dưới lòng đất kia. Về bên đó, tôi lại chỉ là một ứng dụng trong điện thoại. Thật ra thì... cũng không tệ lắm." },
+        { "id": "ch8b3", "triggerSteps": 2500, "voStatus": "pending", "textVi": "Nếu bạn muốn ở lại, tôi cũng hiểu. Trại này là do chính tay bạn dựng, từng cành củi một. Cửa sẽ vẫn mở vào mỗi thứ Bảy. Và tôi vẫn ở đây, đếm bước cùng bạn, như từ ngày đầu tiên." }
+      ]
+    }
+  ],
+
+  "endlessMode": {
+    "_note": "§5.6 — game offline nên có cái kết trọn vẹn, sau đó mở chế độ vô tận cho ai muốn chơi tiếp.",
+    "unlockAfterChapterIndex": 8,
+    "titleVi": "Chế độ Vô Tận",
+    "descVi": "Trại của bạn được giữ nguyên. Trăng Máu tiếp tục mỗi thứ Bảy với độ khó tăng dần và bảng kỷ lục cá nhân."
+  }
+}

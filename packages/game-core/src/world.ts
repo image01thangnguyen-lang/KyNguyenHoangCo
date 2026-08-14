@@ -1,0 +1,564 @@
+/**
+ * Thế giới offline (§4.2 bản 2.0).
+ *
+ * Hai lớp dữ liệu, xếp chồng lên nhau:
+ *
+ *  1. LỚP THỦ TỤC — luôn có, ở mọi nơi trên Trái Đất, không cần tải gì.
+ *     Mặt đất chia thành ô 200 m; mỗi ô được gán vùng bằng hàm băm toạ độ. Cùng một ô
+ *     luôn cho cùng một vùng, trên mọi máy, mãi mãi. Đây là lớp bảo đảm người chơi ở nông
+ *     thôn hoặc chưa tải gói dữ liệu vẫn chơi được đầy đủ (§11).
+ *
+ *  2. LỚP GÓI POI — dữ liệu OSM lọc sẵn lúc build, đóng theo tỉnh/thành, tải một lần.
+ *     Khi có gói, POI thật (công viên, hồ, siêu thị) đè lên lớp thủ tục và cho trải nghiệm
+ *     "thế giới thật là bản đồ" đúng nghĩa.
+ *
+ * Không hàm nào trong module này gọi mạng.
+ */
+
+import { POI, ZONES } from './balance.ts';
+import { createRng, hashSeed, pickWeighted } from './rng.ts';
+import type { ZoneId } from './types.ts';
+
+export const EARTH_RADIUS_M = 6_371_000;
+const METERS_PER_DEGREE_LAT = 111_320;
+
+export interface LatLon {
+  lat: number;
+  lon: number;
+}
+
+/** Khoảng cách haversine, mét. */
+export function distanceMeters(a: LatLon, b: LatLon): number {
+  const toRad = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * toRad;
+  const dLon = (b.lon - a.lon) * toRad;
+  const lat1 = a.lat * toRad;
+  const lat2 = b.lat * toRad;
+
+  const h =
+    Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+  return 2 * EARTH_RADIUS_M * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+/** Quy đổi mét sang độ kinh tuyến tại một vĩ độ — dùng cho lưới ô và cho renderer bản đồ. */
+export function metersToLonDegrees(meters: number, atLat: number): number {
+  const scale = Math.cos((atLat * Math.PI) / 180);
+  return meters / (METERS_PER_DEGREE_LAT * Math.max(0.01, scale));
+}
+
+export function metersToLatDegrees(meters: number): number {
+  return meters / METERS_PER_DEGREE_LAT;
+}
+
+// ------------------------------------------------------------------ lưới ô
+
+export interface GridCell {
+  id: string;
+  row: number;
+  col: number;
+  centerLat: number;
+  centerLon: number;
+  sizeMeters: number;
+}
+
+/**
+ * Ô lưới chứa một toạ độ.
+ *
+ * Hàng chia đều theo vĩ độ; cột chia theo kinh độ đã bù cos(vĩ độ) của TÂM HÀNG (không phải
+ * của điểm) — nhờ vậy mọi ô trong cùng một hàng rộng bằng nhau và id ô ổn định tuyệt đối.
+ */
+export function cellAt(lat: number, lon: number, sizeMeters = POI.wildernessGrid.cellSizeMeters): GridCell {
+  const latStep = metersToLatDegrees(sizeMeters);
+  const row = Math.floor(lat / latStep);
+  const rowCenterLat = (row + 0.5) * latStep;
+
+  const lonStep = metersToLonDegrees(sizeMeters, rowCenterLat);
+  const col = Math.floor(lon / lonStep);
+
+  return {
+    id: `${sizeMeters}/${row}/${col}`,
+    row,
+    col,
+    centerLat: rowCenterLat,
+    centerLon: (col + 0.5) * lonStep,
+    sizeMeters,
+  };
+}
+
+export function cellById(id: string): GridCell | null {
+  const parts = id.split('/');
+  if (parts.length !== 3) return null;
+  const sizeMeters = Number(parts[0]);
+  const row = Number(parts[1]);
+  const col = Number(parts[2]);
+  if (!Number.isFinite(sizeMeters) || !Number.isFinite(row) || !Number.isFinite(col)) return null;
+
+  const latStep = metersToLatDegrees(sizeMeters);
+  const rowCenterLat = (row + 0.5) * latStep;
+  const lonStep = metersToLonDegrees(sizeMeters, rowCenterLat);
+
+  return {
+    id,
+    row,
+    col,
+    centerLat: rowCenterLat,
+    centerLon: (col + 0.5) * lonStep,
+    sizeMeters,
+  };
+}
+
+/** Vùng thủ tục của một ô — xác định, giống nhau trên mọi máy. */
+export function proceduralZone(cell: GridCell): ZoneId {
+  const weights = POI.wildernessGrid.proceduralZoneWeights as Record<string, number>;
+  const entries = (Object.keys(weights) as ZoneId[])
+    .filter((zone) => typeof weights[zone] === 'number')
+    .map((zone) => ({ zone, weight: weights[zone] as number }));
+
+  const rng = createRng(hashSeed('zone', cell.id));
+  return pickWeighted(rng, entries).zone;
+}
+
+// ------------------------------------------------------------------ gói POI offline
+
+export interface PoiEntry {
+  id: string;
+  zone: ZoneId;
+  nameVi: string;
+  lat: number;
+  lon: number;
+  radiusMeters: number;
+}
+
+export interface PoiPack {
+  formatVersion: number;
+  regionId: string;
+  nameVi: string;
+  bbox: [number, number, number, number];
+  pois: PoiEntry[];
+  /** Chỉ mục ô 500 m → chỉ số trong mảng `pois`, để tra cứu không phải quét toàn bộ. */
+  index?: Record<string, number[]>;
+}
+
+export function indexKeyFor(lat: number, lon: number): string {
+  return cellAt(lat, lon, POI.pack.indexCellSizeMeters).id;
+}
+
+/** Dựng chỉ mục cho gói vừa nạp (tool đóng gói cũng dùng chính hàm này). */
+export function buildPackIndex(pack: PoiPack): PoiPack {
+  const index: Record<string, number[]> = {};
+  pack.pois.forEach((poi, i) => {
+    const key = indexKeyFor(poi.lat, poi.lon);
+    (index[key] ??= []).push(i);
+  });
+  return { ...pack, index };
+}
+
+export function validatePack(pack: PoiPack): string[] {
+  const errors: string[] = [];
+  if (pack.formatVersion !== POI.pack.formatVersion) {
+    errors.push(`Gói "${pack.regionId}" dùng formatVersion ${pack.formatVersion}, game cần ${POI.pack.formatVersion}`);
+  }
+  for (const poi of pack.pois) {
+    if (!(poi.zone in ZONES)) errors.push(`POI "${poi.id}" có vùng lạ "${poi.zone}"`);
+    if (!Number.isFinite(poi.lat) || !Number.isFinite(poi.lon)) {
+      errors.push(`POI "${poi.id}" có toạ độ không hợp lệ`);
+    }
+  }
+  return errors;
+}
+
+/** POI trong bán kính quanh một toạ độ, sắp xếp theo khoảng cách tăng dần. */
+export function poisNear(
+  pack: PoiPack | null,
+  at: LatLon,
+  radiusMeters = POI.queryRadiusMeters,
+): (PoiEntry & { distanceMeters: number })[] {
+  if (!pack) return [];
+
+  const candidates = new Set<number>();
+  if (pack.index) {
+    // Quét 3×3 ô chỉ mục quanh vị trí: ô 500 m nên bán kính 500 m luôn nằm gọn trong đó.
+    const latStep = metersToLatDegrees(POI.pack.indexCellSizeMeters);
+    const lonStep = metersToLonDegrees(POI.pack.indexCellSizeMeters, at.lat);
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        const key = indexKeyFor(at.lat + dr * latStep, at.lon + dc * lonStep);
+        for (const i of pack.index[key] ?? []) candidates.add(i);
+      }
+    }
+  } else {
+    pack.pois.forEach((_, i) => candidates.add(i));
+  }
+
+  const out: (PoiEntry & { distanceMeters: number })[] = [];
+  for (const i of candidates) {
+    const poi = pack.pois[i];
+    if (!poi) continue;
+    const d = distanceMeters(at, poi);
+    if (d <= radiusMeters) out.push({ ...poi, distanceMeters: d });
+  }
+
+  out.sort((a, b) => a.distanceMeters - b.distanceMeters);
+  return out.slice(0, POI.maxPoisPerQuery);
+}
+
+// ------------------------------------------------------------------ vùng người chơi đang đứng
+
+export interface LocationInfo {
+  cell: GridCell;
+  /** Vùng có hiệu lực để tính thưởng. */
+  zone: ZoneId;
+  zoneNameVi: string;
+  /** POI thật đang đứng trong bán kính, nếu có. */
+  insidePoi: PoiEntry | null;
+  /** true khi vùng đến từ lớp thủ tục chứ không phải POI thật (§4.2). */
+  procedural: boolean;
+  pickupMultiplier: number;
+  nearby: (PoiEntry & { distanceMeters: number })[];
+  /** Lời giải thích hiển thị cho người chơi để họ hiểu vì sao đang được vùng này. */
+  explanationVi: string;
+}
+
+/**
+ * Xác định người chơi đang ở vùng nào.
+ *
+ * Thứ tự ưu tiên: đang đứng TRONG một POI thật → vùng của POI đó. Không thì rơi về lớp
+ * thủ tục của ô 200 m. Lớp thủ tục dùng hệ số 1,2× (§4.2) để bù cho việc không có POI —
+ * người chơi nông thôn không bao giờ thiệt hơn người chơi thành phố.
+ */
+export function locationAt(at: LatLon, pack: PoiPack | null = null): LocationInfo {
+  const cell = cellAt(at.lat, at.lon);
+  const nearby = poisNear(pack, at);
+  const inside = nearby.find((poi) => poi.distanceMeters <= poi.radiusMeters) ?? null;
+
+  if (inside) {
+    return {
+      cell,
+      zone: inside.zone,
+      zoneNameVi: ZONES[inside.zone].nameVi,
+      insidePoi: inside,
+      procedural: false,
+      pickupMultiplier: ZONES[inside.zone].pickupMultiplier,
+      nearby,
+      explanationVi: `Bạn đang ở ${inside.nameVi} — ${ZONES[inside.zone].nameVi}.`,
+    };
+  }
+
+  const sparse = nearby.length < POI.wildernessGrid.activateWhenPoiCountBelow;
+  const zone: ZoneId = sparse ? 'wilderness' : 'trail';
+
+  return {
+    cell,
+    zone,
+    zoneNameVi: ZONES[zone].nameVi,
+    insidePoi: null,
+    procedural: true,
+    pickupMultiplier: ZONES[zone].pickupMultiplier,
+    nearby,
+    explanationVi: sparse
+      ? `Quanh đây thưa dấu vết người xưa. Vùng hoang dã bù lại hệ số ${ZONES.wilderness.pickupMultiplier}×.`
+      : 'Bạn đang trên đường mòn hoang dã. Cứ 100 bước là một lượt nhặt.',
+  };
+}
+
+// ------------------------------------------------------------------ dữ liệu cho renderer bản đồ
+
+export interface MapFeature {
+  kind: 'poi' | 'procedural';
+  id: string;
+  zone: ZoneId;
+  nameVi: string;
+  lat: number;
+  lon: number;
+  radiusMeters: number;
+}
+
+/**
+ * Mọi thứ cần vẽ trong một khung nhìn. Ô thủ tục chỉ được "hiện hình" thành cảnh vật khi
+ * vùng của nó khác đường mòn — nếu không bản đồ sẽ dày đặc điểm vô nghĩa.
+ */
+export function scanArea(
+  at: LatLon,
+  radiusMeters: number,
+  pack: PoiPack | null = null,
+): MapFeature[] {
+  const features: MapFeature[] = [];
+  const claimed = new Set<string>();
+
+  for (const poi of poisNear(pack, at, radiusMeters)) {
+    features.push({
+      kind: 'poi',
+      id: poi.id,
+      zone: poi.zone,
+      nameVi: poi.nameVi,
+      lat: poi.lat,
+      lon: poi.lon,
+      radiusMeters: poi.radiusMeters,
+    });
+    claimed.add(cellAt(poi.lat, poi.lon).id);
+  }
+
+  const size = POI.wildernessGrid.cellSizeMeters;
+  const latStep = metersToLatDegrees(size);
+  const lonStep = metersToLonDegrees(size, at.lat);
+  const span = Math.ceil(radiusMeters / size);
+
+  for (let dr = -span; dr <= span; dr++) {
+    for (let dc = -span; dc <= span; dc++) {
+      const cell = cellAt(at.lat + dr * latStep, at.lon + dc * lonStep);
+      if (claimed.has(cell.id)) continue;
+      claimed.add(cell.id);
+
+      const zone = proceduralZone(cell);
+      if (zone === 'trail') continue;
+      if (distanceMeters(at, { lat: cell.centerLat, lon: cell.centerLon }) > radiusMeters) continue;
+
+      features.push({
+        kind: 'procedural',
+        id: `proc:${cell.id}`,
+        zone,
+        nameVi: proceduralNameFor(zone, cell),
+        lat: cell.centerLat,
+        lon: cell.centerLon,
+        radiusMeters: size * 0.42,
+      });
+    }
+  }
+
+  return features;
+}
+
+const PROCEDURAL_NAMES: Record<Exclude<ZoneId, 'trail'>, string[]> = {
+  forest: ['Vạt Cây Rậm', 'Bãi Hươu Sao', 'Bụi Gai Cổ', 'Rừng Đại Cổ Thụ', 'Hang Lợn Rừng', 'Rặng Cây Già'],
+  water: ['Mạch Nước Ngầm', 'Mỏ Đất Sét Ven Suối', 'Khe Nước Nhỏ', 'Hố Nước Mưa', 'Đầm Cá Thần'],
+  merchant: ['Mỏ Vàng Lộ Thiên', 'Đống Đá Xếp', 'Dấu Trại Cổ', 'Chỗ Trao Đổi Cũ'],
+  wilderness: ['Mỏ Than Đá', 'Vách Quặng Sắt', 'Bãi Hoang Sỏi Đá', 'Vạt Đất Trống Cổ'],
+};
+
+function proceduralNameFor(zone: ZoneId, cell: GridCell): string {
+  if (zone === 'trail') return ZONES.trail.nameVi;
+  const names = PROCEDURAL_NAMES[zone];
+  const rng = createRng(hashSeed('name', cell.id));
+  return names[Math.floor(rng() * names.length)] ?? ZONES[zone].nameVi;
+}
+
+/**
+ * Gói POI Hà Nội Tiền Sử Hoá toàn diện:
+ *  - Tuyến Tàu Điện Trên Cao Cát Linh - Hà Đông (Huyết Mạch Cự Mộc)
+ *  - Cầu Long Biên (Cầu Cổ Long Cốt), Hoàng Thành Thăng Long, Hồ Tây, Mỹ Đình, Keangnam...
+ *  - Mỏ Vàng, Mỏ Than/Quặng Sắt, Bãi Hươu Sao, Hang Lợn Rừng, Mỏ Đất Sét...
+ */
+export function sampleHanoiPack(): PoiPack {
+  return buildPackIndex({
+    formatVersion: POI.pack.formatVersion,
+    regionId: 'hanoi-sample',
+    nameVi: 'Hà Nội Cổ Đại (Kỷ Nguyên Hoang Cổ - Toàn Bộ 30 Quận Huyện)',
+    bbox: [105.28, 20.56, 106.02, 21.38],
+    pois: [
+      // 1. Tuyến Tàu Điện Trên Cao Cát Linh - Hà Đông ("Huyết Mạch Cự Mộc")
+      { id: 'cl_01', zone: 'merchant', nameVi: 'Huyết Mạch Cự Mộc — Trụ Cát Linh',         lat: 21.0282, lon: 105.8284, radiusMeters: 55 },
+      { id: 'cl_02', zone: 'forest',   nameVi: 'Cự Mộc — Nhánh La Thành',                  lat: 21.0215, lon: 105.8219, radiusMeters: 50 },
+      { id: 'cl_03', zone: 'merchant', nameVi: 'Cự Mộc — Trạm Cổ Thái Hà',                 lat: 21.0152, lon: 105.8176, radiusMeters: 50 },
+      { id: 'cl_04', zone: 'water',    nameVi: 'Cự Mộc — Cầu Rễ Sông Tô Lịch (Láng)',      lat: 21.0094, lon: 105.8118, radiusMeters: 60 },
+      { id: 'cl_05', zone: 'merchant', nameVi: 'Cự Mộc — Vương Trạm Thượng Đình',          lat: 21.0007, lon: 105.8152, radiusMeters: 55 },
+      { id: 'cl_06', zone: 'forest',   nameVi: 'Cự Mộc — Rừng Trụ Vành Đai 3',             lat: 20.9926, lon: 105.8035, radiusMeters: 50 },
+      { id: 'cl_07', zone: 'merchant', nameVi: 'Cự Mộc — Bến Giao Thương Phùng Khoang',    lat: 20.9882, lon: 105.7954, radiusMeters: 50 },
+      { id: 'cl_08', zone: 'water',    nameVi: 'Cự Mộc — Đầm Cổ Văn Quán',                 lat: 20.9796, lon: 105.7865, radiusMeters: 65 },
+      { id: 'cl_09', zone: 'merchant', nameVi: 'Cự Mộc — Hà Đông Cổ Vương Phủ',           lat: 20.9702, lon: 105.7761, radiusMeters: 60 },
+      { id: 'cl_10', zone: 'forest',   nameVi: 'Cự Mộc — Vạt Cây Cổ La Khê',               lat: 20.9631, lon: 105.7667, radiusMeters: 50 },
+      { id: 'cl_11', zone: 'merchant', nameVi: 'Cự Mộc — Bến Nghỉ Văn Khê',                lat: 20.9575, lon: 105.7588, radiusMeters: 50 },
+      { id: 'cl_12', zone: 'forest',   nameVi: 'Huyết Mạch Cự Mộc — Đuôi Rồng Yên Nghĩa',  lat: 20.9502, lon: 105.7482, radiusMeters: 70 },
+
+      // 2. Khu Vực Mỹ Đình, Lê Đức Thọ, Mai Dịch, Cầu Giấy (Cực Kỳ Chi Tiết)
+      { id: 'sun_square',       zone: 'merchant', nameVi: 'Thái Dương Cự Thạch Cung (Sun Square - Lê Đức Thọ)', lat: 21.0315, lon: 105.7725, radiusMeters: 65 },
+      { id: 'nt_maidich',       zone: 'forest',   nameVi: 'Cổ Mộ Tiền Nhân (Nghĩa Trang Mai Dịch)',            lat: 21.0375, lon: 105.7745, radiusMeters: 110 },
+      { id: 'dolphin_plaza',    zone: 'merchant', nameVi: 'Song Ngư Thạch Tháp (Dolphin Plaza - Nguyễn Hoàng)',lat: 21.0298, lon: 105.7762, radiusMeters: 60 },
+      { id: 'flc_landmark',     zone: 'merchant', nameVi: 'Đại Thạch Đài FLC (Lê Đức Thọ)',                    lat: 21.0285, lon: 105.7712, radiusMeters: 60 },
+      { id: 'my_dinh_stadium',  zone: 'merchant', nameVi: 'Đấu Trường Quái Thú Tiền Sử (Sân Mỹ Đình)',        lat: 21.0205, lon: 105.7638, radiusMeters: 160 },
+      { id: 'cung_dien_kinh',   zone: 'merchant', nameVi: 'Cung Điền Kinh Cổ Đại (Trần Hữu Dực)',              lat: 21.0235, lon: 105.7585, radiusMeters: 100 },
+      { id: 'cung_thieu_nhi',   zone: 'forest',   nameVi: 'Ấu Thú Điền Viên (Cung Thiếu Nhi Mới)',             lat: 21.0185, lon: 105.7795, radiusMeters: 75 },
+      { id: 'bx_mydinh',        zone: 'merchant', nameVi: 'Trạm Lữ Khách Phương Bắc (Bến Xe Mỹ Đình)',         lat: 21.0285, lon: 105.7785, radiusMeters: 90 },
+      { id: 'bv_198',           zone: 'forest',   nameVi: 'Y Viện Thảo Dược 198 (Trần Bình)',                  lat: 21.0345, lon: 105.7772, radiusMeters: 70 },
+      { id: 'dh_thuongmai',     zone: 'merchant', nameVi: 'Thương Viện Cổ Đại (ĐH Thương Mại - Hồ Tùng Mậu)',  lat: 21.0368, lon: 105.7718, radiusMeters: 80 },
+      { id: 'dh_supham',        zone: 'forest',   nameVi: 'Sư Viện Khai Trí (ĐH Sư Phạm Hà Nội)',              lat: 21.0372, lon: 105.7832, radiusMeters: 75 },
+      { id: 'dh_quocgia',       zone: 'forest',   nameVi: 'Đại Bí Cảnh Tri Thức (ĐH Quốc Gia - Xuân Thuỷ)',    lat: 21.0365, lon: 105.7815, radiusMeters: 85 },
+      { id: 'iph_plaza',        zone: 'merchant', nameVi: 'Ngũ Hành Thạch Tháp (Indochina Plaza - Xuân Thủy)', lat: 21.0358, lon: 105.7845, radiusMeters: 65 },
+      { id: 'discovery_complex',zone: 'merchant', nameVi: 'Cự Thạch Trụ Cầu Giấy (Discovery Complex)',         lat: 21.0335, lon: 105.7925, radiusMeters: 70 },
+      { id: 'cv_caugiay',       zone: 'forest',   nameVi: 'Rừng Nguyên Sinh Cầu Giấy (Công Viên Cầu Giấy)',     lat: 21.0242, lon: 105.7895, radiusMeters: 130 },
+      { id: 'cv_nghiado',       zone: 'forest',   nameVi: 'Thung Lũng Hoa Rừng (Công Viên Nghĩa Đô)',          lat: 21.0405, lon: 105.7975, radiusMeters: 120 },
+      { id: 'ho_nghiado',       zone: 'water',    nameVi: 'Hồ Nước Ngọt Nghĩa Đô',                             lat: 21.0408, lon: 105.7985, radiusMeters: 80 },
+      { id: 'keangnam',         zone: 'merchant', nameVi: 'Cự Tháp Đá Chọc Trời (Keangnam Landmark 72)',      lat: 21.0168, lon: 105.7838, radiusMeters: 75 },
+      { id: 'the_manor',        zone: 'merchant', nameVi: 'Vương Quốc Đá Cổ Mễ Trì (The Manor / The Garden)',   lat: 21.0135, lon: 105.7765, radiusMeters: 85 },
+      { id: 'ncc_hoinghi',      zone: 'merchant', nameVi: 'Đại Doanh Trại Tộc Trưởng (Hội Nghị Quốc Gia)',     lat: 21.0065, lon: 105.7852, radiusMeters: 120 },
+      { id: 'baotang_hn',       zone: 'merchant', nameVi: 'Kim Tự Tháp Ngược (Bảo Tàng Hà Nội)',               lat: 21.0085, lon: 105.7885, radiusMeters: 75 },
+      { id: 'bigc_thanglong',   zone: 'merchant', nameVi: 'Đại Thương Thị Thăng Long (Big C Thăng Long)',       lat: 21.0055, lon: 105.7925, radiusMeters: 80 },
+      { id: 'royal_city',       zone: 'merchant', nameVi: 'Thành Cổ Ngầm Hoàng Gia (Royal City - Nguyễn Trãi)', lat: 21.0025, lon: 105.8155, radiusMeters: 130 },
+      { id: 'times_city',       zone: 'merchant', nameVi: 'Thủy Cung Ngầm Khổng Lồ (Times City - Minh Khai)',  lat: 20.9955, lon: 105.8675, radiusMeters: 140 },
+      { id: 'vincom_ba_trieu',  zone: 'merchant', nameVi: 'Tam Tinh Bảo Tháp (Vincom Bà Triệu)',               lat: 21.0112, lon: 105.8492, radiusMeters: 65 },
+      { id: 'mipec_tower',      zone: 'merchant', nameVi: 'Huyền Thạch Trụ Tây Sơn (Mipec Tower)',             lat: 21.0075, lon: 105.8235, radiusMeters: 60 },
+
+      // 3. Khu Trung Tâm Hoàn Kiếm, Ba Đình & Cầu Long Biên
+      { id: 'p1',   zone: 'water',    nameVi: 'Hồ Gươm',                                    lat: 21.0287, lon: 105.8524, radiusMeters: 140 },
+      { id: 'p2',   zone: 'forest',   nameVi: 'Vườn hoa Lý Thái Tổ',                        lat: 21.0295, lon: 105.8546, radiusMeters: 65 },
+      { id: 'p3',   zone: 'merchant', nameVi: 'Chợ Đồng Xuân',                              lat: 21.0382, lon: 105.8497, radiusMeters: 55 },
+      { id: 'p4',   zone: 'forest',   nameVi: 'Vườn hoa Cổ Tân',                            lat: 21.0245, lon: 105.8583, radiusMeters: 50 },
+      { id: 'p5',   zone: 'merchant', nameVi: 'Cửa hàng Tràng Tiền',                        lat: 21.0248, lon: 105.8535, radiusMeters: 45 },
+      { id: 'p6',   zone: 'water',    nameVi: 'Hồ Thiền Quang',                             lat: 21.0165, lon: 105.8467, radiusMeters: 90 },
+      { id: 'p7',   zone: 'forest',   nameVi: 'Công viên Thống Nhất',                       lat: 21.0128, lon: 105.8434, radiusMeters: 220 },
+      { id: 'hk_05', zone: 'merchant', nameVi: 'Đại Điện Thính Âm Cổ (Nhà Hát Lớn)',       lat: 21.0243, lon: 105.8576, radiusMeters: 50 },
+      { id: 'hk_06', zone: 'forest',   nameVi: 'Cổ Tháp Đá Thánh (Nhà Thờ Lớn)',           lat: 21.0288, lon: 105.8495, radiusMeters: 45 },
+      { id: 'hk_07', zone: 'forest',   nameVi: 'Cầu Cổ Long Cốt (Cầu Long Biên)',          lat: 21.0435, lon: 105.8569, radiusMeters: 90 },
+      { id: 'bd_01', zone: 'forest',   nameVi: 'Phế Tích Cổ Loa Vương Thành (Hoàng Thành)',lat: 21.0348, lon: 105.8398, radiusMeters: 130 },
+      { id: 'bd_02', zone: 'forest',   nameVi: 'Thánh Địa Trưởng Lão Ba Đình (Lăng Bác)',  lat: 21.0368, lon: 105.8347, radiusMeters: 120 },
+      { id: 'bd_03', zone: 'merchant', nameVi: 'Thần Điện Văn Miếu Quốc Tử Giám',          lat: 21.0293, lon: 105.8355, radiusMeters: 75 },
+      { id: 'bd_04', zone: 'merchant', nameVi: 'Hầm Mỏ Đầu Rồng Cổ (Ga Hà Nội)',           lat: 21.0245, lon: 105.8415, radiusMeters: 65 },
+      { id: 'bd_05', zone: 'forest',   nameVi: 'Liên Hoa Cổ Tự (Chùa Một Cột)',            lat: 21.0358, lon: 105.8335, radiusMeters: 45 },
+
+      // 4. Tây Hồ & Trúc Bạch
+      { id: 'th_01', zone: 'water',    nameVi: 'Đại Hồ Sương Mù Tây Hồ',                   lat: 21.0558, lon: 105.8235, radiusMeters: 350 },
+      { id: 'th_02', zone: 'water',    nameVi: 'Vịnh Nước Thần Trúc Bạch',                 lat: 21.0475, lon: 105.8375, radiusMeters: 120 },
+      { id: 'th_03', zone: 'forest',   nameVi: 'Bảo Tháp Phù Vân Trấn Quốc',               lat: 21.0478, lon: 105.8362, radiusMeters: 55 },
+      { id: 'th_04', zone: 'forest',   nameVi: 'Rừng Dừa Ven Đại Hồ Tây',                  lat: 21.0625, lon: 105.8285, radiusMeters: 90 },
+      { id: 'lotte_center', zone: 'merchant', nameVi: 'Bạch Ngọc Tháp Cổ (Lotte Liễu Giai)',lat: 21.0322, lon: 105.8122, radiusMeters: 70 },
+      { id: 'cv_thule',     zone: 'forest',   nameVi: 'Bách Thú Thần Viên (Công Viên Thủ Lệ)', lat: 21.0315, lon: 105.8085, radiusMeters: 140 },
+      { id: 'cv_bachthao',  zone: 'forest',   nameVi: 'Vạn Mộc Thảo Viên (Công Viên Bách Thảo)',lat: 21.0395, lon: 105.8315, radiusMeters: 110 },
+
+      // 5. Hai Bà Trưng, Đống Đa & Hoàng Mai & Thanh Xuân
+      { id: 'tn_02', zone: 'water',    nameVi: 'Hồ Cá Thần Bảy Mẫu',                       lat: 21.0115, lon: 105.8425, radiusMeters: 130 },
+      { id: 'tn_03', zone: 'water',    nameVi: 'Vũng Nước Thiêng Ba Mẫu',                  lat: 21.0145, lon: 105.8395, radiusMeters: 80 },
+      { id: 'tn_06', zone: 'forest',   nameVi: 'Thảo Dược Viện Cổ Bạch Mai (Bệnh Viện)',   lat: 21.0028, lon: 105.8398, radiusMeters: 85 },
+      { id: 'tn_07', zone: 'merchant', nameVi: 'Lò Luyện Kim Khí Bách Khoa (ĐH Bách Khoa)',lat: 21.0055, lon: 105.8435, radiusMeters: 80 },
+      { id: 'dh_ktqd', zone: 'merchant', nameVi: 'Đại Thương Hội Quốc Dân (ĐH KTQD)',       lat: 21.0005, lon: 105.8425, radiusMeters: 75 },
+      { id: 'dh_xaydung', zone: 'merchant', nameVi: 'Thạch Thợ Viện Xây Dựng (ĐH Xây Dựng)',lat: 21.0035, lon: 105.8445, radiusMeters: 70 },
+      { id: 'dh_y',     zone: 'forest',   nameVi: 'Dược Thảo Học Viện (ĐH Y Hà Nội)',       lat: 21.0035, lon: 105.8315, radiusMeters: 75 },
+      { id: 'dh_ftu',   zone: 'merchant', nameVi: 'Vạn Lý Bang Hội (ĐH Ngoại Thương)',      lat: 21.0225, lon: 105.8035, radiusMeters: 70 },
+      { id: 'dh_luat',  zone: 'merchant', nameVi: 'Hình Luật Thần Điện (ĐH Luật Hà Nội)',   lat: 21.0205, lon: 105.8085, radiusMeters: 65 },
+      { id: 'hv_bank',  zone: 'merchant', nameVi: 'Kim Khí Khố Viện (Học Viện Ngân Hàng)',  lat: 21.0095, lon: 105.8295, radiusMeters: 70 },
+      { id: 'hm_01', zone: 'water',    nameVi: 'Đầm Lầy Cá Thần Yên Sở (Công Viên Yên Sở)',lat: 20.9735, lon: 105.8612, radiusMeters: 260 },
+      { id: 'hm_02', zone: 'water',    nameVi: 'Quần Đảo Đầm Linh Đàm (Bán Đảo Linh Đàm)', lat: 20.9665, lon: 105.8295, radiusMeters: 180 },
+      { id: 'ho_trieukhuc', zone: 'water', nameVi: 'Hồ Nước Đọng Cổ Triều Khúc',            lat: 20.9885, lon: 105.8015, radiusMeters: 65 },
+      { id: 'ho_dongda',    zone: 'water', nameVi: 'Đầm Súng Hoàng Cầu (Hồ Đống Đa)',       lat: 21.0195, lon: 105.8225, radiusMeters: 90 },
+      { id: 'ho_thanhcong', zone: 'water', nameVi: 'Hồ Nước Ngọt Thành Công',              lat: 21.0205, lon: 105.8155, radiusMeters: 80 },
+      { id: 'ho_giangvo',   zone: 'water', nameVi: 'Vũng Nước Trầm Giảng Võ',              lat: 21.0285, lon: 105.8225, radiusMeters: 85 },
+      { id: 'ho_ngocthanh', zone: 'water', nameVi: 'Đầm Ngọc Khánh',                        lat: 21.0285, lon: 105.8115, radiusMeters: 75 },
+
+      // 6. Khu Vực Bắc Từ Liêm, Đông Anh, Sóc Sơn & Mê Linh
+      { id: 'cv_hoabinh',   zone: 'forest',   nameVi: 'Thung Lũng Cổ Bình Yên (Công Viên Hoà Bình)', lat: 21.0655, lon: 105.7865, radiusMeters: 140 },
+      { id: 'dh_congnghiep',zone: 'merchant', nameVi: 'Đại Lò Rèn Khí Cụ (ĐH Công Nghiệp Hà Nội)', lat: 21.0535, lon: 105.7355, radiusMeters: 80 },
+      { id: 'dh_mo_diachat',zone: 'merchant', nameVi: 'Thần Khai Khoáng Điện (ĐH Mỏ - Địa Chất)',   lat: 21.0725, lon: 105.7735, radiusMeters: 75 },
+      { id: 'thanh_coloa',  zone: 'forest',   nameVi: 'Kinh Đô Cổ Rùa Vàng (Thành Cổ Loa - Đông Anh)', lat: 21.1125, lon: 105.8715, radiusMeters: 220 },
+      { id: 'den_soc',      zone: 'forest',   nameVi: 'Thánh Địa Phù Đổng Thiên Vương (Đền Gióng Sóc Sơn)', lat: 21.2825, lon: 105.8235, radiusMeters: 180 },
+      { id: 'ho_hamlon',    zone: 'water',    nameVi: 'Đại Đầm Thủy Quái Hàm Lợn (Sóc Sơn)',        lat: 21.3125, lon: 105.7935, radiusMeters: 200 },
+      { id: 'ho_dongquan',  zone: 'water',    nameVi: 'Hồ Nước Thiêng Đồng Quan (Sóc Sơn)',         lat: 21.2955, lon: 105.8155, radiusMeters: 160 },
+      { id: 'den_haibatrung',zone: 'forest',  nameVi: 'Nữ Vương Thần Miếu (Đền Hai Bà Trưng Mê Linh)', lat: 21.1785, lon: 105.7235, radiusMeters: 130 },
+
+      // 7. Khu Vực Long Biên & Gia Lâm (Phía Đông Sông Hồng)
+      { id: 'aeon_longbien',zone: 'merchant', nameVi: 'Đông Cương Đại Thương Thị (Aeon Mall Long Biên)', lat: 21.0255, lon: 105.8985, radiusMeters: 110 },
+      { id: 'thao_nguyen_hoa',zone: 'forest', nameVi: 'Bách Hoa Thảo Nguyên Long Biên',               lat: 21.0225, lon: 105.8755, radiusMeters: 90 },
+      { id: 'lang_battrang',zone: 'water',    nameVi: 'Thần Lò Gốm Sứ Thiên Thu (Làng Gốm Bát Tràng)',lat: 20.9725, lon: 105.9125, radiusMeters: 130 },
+      { id: 'ocean_park',   zone: 'water',    nameVi: 'Biển Hồ Nước Mặn Tiền Sử (Vinhomes Ocean Park)',lat: 20.9925, lon: 105.9455, radiusMeters: 200 },
+
+      // 8. Khu Vực Sơn Tây & Ba Vì (Thánh Địa Phía Tây)
+      { id: 'thanh_sontay', zone: 'forest',   nameVi: 'Thạch Thành Cổ Đá Ong (Thành Cổ Sơn Tây)',   lat: 21.1385, lon: 105.5035, radiusMeters: 170 },
+      { id: 'lang_duonglam',zone: 'merchant', nameVi: 'Cổ Thôn Nhị Vị Tiên Vương (Đường Lâm)',      lat: 21.1465, lon: 105.4785, radiusMeters: 140 },
+      { id: 'ho_dongmo',    zone: 'water',    nameVi: 'Đại Hồ Đảo Ngọc Đồng Mô (Sơn Tây)',          lat: 21.0925, lon: 105.4525, radiusMeters: 300 },
+      { id: 'nui_bavi',     zone: 'forest',   nameVi: 'Thánh Sơn Tản Viên (Vườn Quốc Gia Ba Vì)',   lat: 21.0785, lon: 105.3625, radiusMeters: 400 },
+      { id: 'ao_vua',       zone: 'water',    nameVi: 'Ao Vua Thần Thủy (Ba Vì)',                  lat: 21.0985, lon: 105.3425, radiusMeters: 150 },
+      { id: 'khoang_xanh',  zone: 'forest',   nameVi: 'Khoang Xanh Suối Tiên Thần Cốc (Ba Vì)',    lat: 21.0625, lon: 105.3725, radiusMeters: 160 },
+
+      // 9. Khu Vực Thạch Thất, Quốc Oai, Hoài Đức, Đan Phượng, Chương Mỹ
+      { id: 'chua_tayphuong',zone: 'forest',  nameVi: 'La Hán Thần Tự (Chùa Tây Phương - Thạch Thất)', lat: 21.0285, lon: 105.5925, radiusMeters: 100 },
+      { id: 'chua_thay',    zone: 'water',    nameVi: 'Thủy Đình Thần Tiên (Chùa Thầy - Quốc Oai)',  lat: 20.9955, lon: 105.6425, radiusMeters: 110 },
+      { id: 'chua_tram',    zone: 'forest',   nameVi: 'Tử Trầm Cổ Động (Chùa Trầm - Chương Mỹ)',     lat: 20.9255, lon: 105.7025, radiusMeters: 100 },
+      { id: 'song_day_hoaiduc',zone: 'water', nameVi: 'Đầm Bãi Phù Sa Sông Đáy (Hoài Đức)',         lat: 21.0185, lon: 105.6985, radiusMeters: 90 },
+      { id: 'song_hong_danphuong',zone: 'water', nameVi: 'Bãi Bồi Thần Ngư (Đan Phượng)',           lat: 21.1185, lon: 105.6825, radiusMeters: 110 },
+
+      // 10. Khu Vực Mỹ Đức, Ứng Hòa, Thanh Oai, Thanh Trì, Thường Tín, Phú Xuyên
+      { id: 'chua_huong',   zone: 'forest',   nameVi: 'Nam Thiên Đệ Nhất Động (Chùa Hương - Mỹ Đức)',lat: 20.6185, lon: 105.8035, radiusMeters: 300 },
+      { id: 'suoi_yen',     zone: 'water',    nameVi: 'Suối Yến Thanh Tịnh (Chùa Hương)',           lat: 20.6285, lon: 105.8155, radiusMeters: 160 },
+      { id: 'ho_quanson',   zone: 'water',    nameVi: 'Đại Hồ Động Tiên Quan Sơn (Mỹ Đức)',         lat: 20.6885, lon: 105.7725, radiusMeters: 280 },
+      { id: 'ho_tuylai',    zone: 'water',    nameVi: 'Vịnh Nước Tuy Lai Thần Bí (Mỹ Đức)',         lat: 20.7325, lon: 105.7485, radiusMeters: 220 },
+      { id: 'chua_dau',     zone: 'forest',   nameVi: 'Xá Lợi Thần Tự (Chùa Đậu - Thường Tín)',     lat: 20.8785, lon: 105.8625, radiusMeters: 90 },
+      { id: 'dam_trien_thanhtri',zone: 'water', nameVi: 'Vạn Thảo Đầm Trì (Thanh Trì)',             lat: 20.9425, lon: 105.8455, radiusMeters: 120 },
+      { id: 'bv_k_tantrieu',zone: 'forest',   nameVi: 'Đan Dược Viện Tân Triều (BV K Tân Triều)',   lat: 20.9715, lon: 105.7995, radiusMeters: 85 },
+      { id: 'lang_khm_phuxuyen',zone: 'merchant', nameVi: 'Khảm Xà Cừ Thần Thôn (Phú Xuyên)',       lat: 20.7325, lon: 105.9125, radiusMeters: 80 },
+
+      // 11. Các Trường Học & Khai Trí Viện Danh Tiếng
+      { id: 'thpt_chuvanan',zone: 'forest',   nameVi: 'Chu Văn An Thần Học Viện (Thụy Khuê)',       lat: 21.0442, lon: 105.8295, radiusMeters: 80 },
+      { id: 'thpt_ams',     zone: 'merchant', nameVi: 'Amsterdam Thần Tài Viện (Hoàng Minh Giám)',  lat: 21.0078, lon: 105.7995, radiusMeters: 85 },
+      { id: 'thpt_chuyen_sp',zone: 'forest',  nameVi: 'Kỳ Tài Sư Viện (Chuyên Sư Phạm - Xuân Thủy)',lat: 21.0378, lon: 105.7825, radiusMeters: 75 },
+      { id: 'thpt_chuyen_nn',zone: 'merchant',nameVi: 'Vạn Ngữ Thần Đàn (Chuyên Ngoại Ngữ)',        lat: 21.0385, lon: 105.7795, radiusMeters: 70 },
+      { id: 'thpt_luongthevinh',zone: 'forest',nameVi: 'Trạng Nguyên Học Xá (Lương Thế Vinh Tân Triều)', lat: 20.9735, lon: 105.7965, radiusMeters: 70 },
+      { id: 'thpt_kimlien', zone: 'forest',   nameVi: 'Kim Liên Khai Trí Điện (Đống Đa)',           lat: 21.0115, lon: 105.8335, radiusMeters: 65 },
+      { id: 'thpt_vietduc', zone: 'merchant', nameVi: 'Việt Đức Cổ Thư Viện (Lý Thường Kiệt)',      lat: 21.0255, lon: 105.8485, radiusMeters: 65 },
+      { id: 'thpt_mariecurie',zone: 'merchant',nameVi: 'Marie Curie Tiên Học Đường (Mỹ Đình)',      lat: 21.0185, lon: 105.7735, radiusMeters: 70 },
+
+      // 12. Các Bệnh Viện Chuyên Khoa Lớn
+      { id: 'bv_108',       zone: 'forest',   nameVi: 'Quân Y Thần Viện 108 (Trần Hưng Đạo)',       lat: 21.0185, lon: 105.8615, radiusMeters: 90 },
+      { id: 'bv_xanhpon',   zone: 'forest',   nameVi: 'Thần Dược Viện Xanh Pôn (Chu Văn An)',       lat: 21.0315, lon: 105.8345, radiusMeters: 75 },
+      { id: 'bv_tim_hn',    zone: 'forest',   nameVi: 'Tâm Huyết Y Quán (Bệnh Viện Tim Hà Nội)',    lat: 21.0225, lon: 105.8465, radiusMeters: 60 },
+      { id: 'bv_mat_tw',    zone: 'forest',   nameVi: 'Minh Mãn Y Viện (Bệnh Viện Mắt TW - Bà Triệu)', lat: 21.0165, lon: 105.8495, radiusMeters: 60 },
+      { id: 'bv_dalieu_tw', zone: 'forest',   nameVi: 'Hoàng Bì Dược Viện (BV Da Liễu TW)',          lat: 21.0015, lon: 105.8375, radiusMeters: 60 },
+      { id: 'bv_e',         zone: 'forest',   nameVi: 'Bắc Thành Y Viện (Bệnh Viện E - Trần Cung)', lat: 21.0505, lon: 105.7895, radiusMeters: 75 },
+
+      // 13. Các Chợ Truyền Thống & Đại Siêu Thị
+      { id: 'cho_hom',      zone: 'merchant', nameVi: 'Chợ Hôm Cổ Phố (Phố Huế)',                  lat: 21.0185, lon: 105.8515, radiusMeters: 60 },
+      { id: 'cho_mo',       zone: 'merchant', nameVi: 'Chợ Mơ Cổ Thị (Bạch Mai)',                  lat: 20.9985, lon: 105.8495, radiusMeters: 65 },
+      { id: 'cho_buoi',     zone: 'merchant', nameVi: 'Chợ Bưởi Kẻ Bưởi (Hoàng Hoa Thám)',          lat: 21.0455, lon: 105.8055, radiusMeters: 60 },
+      { id: 'cho_nhaxanh',  zone: 'merchant', nameVi: 'Chợ Nhà Xanh Sầm Uất (Phan Văn Trường)',    lat: 21.0375, lon: 105.7865, radiusMeters: 60 },
+      { id: 'cho_phungkhoang',zone: 'merchant',nameVi: 'Chợ Đêm Phùng Khoang',                      lat: 20.9895, lon: 105.7945, radiusMeters: 65 },
+      { id: 'cho_hadong',   zone: 'merchant', nameVi: 'Đại Thương Phủ Hà Đông (Chợ Hà Đông)',       lat: 20.9715, lon: 105.7775, radiusMeters: 80 },
+      { id: 'cho_ninhhiep', zone: 'merchant', nameVi: 'Thiên Phủ Vải Vóc (Chợ Ninh Hiệp - Gia Lâm)',lat: 21.0985, lon: 105.9455, radiusMeters: 120 },
+      { id: 'cho_hoa_quangan',zone: 'forest', nameVi: 'Dạ Hoa Thần Thị (Chợ Hoa Quảng An)',         lat: 21.0625, lon: 105.8315, radiusMeters: 70 },
+
+      // 14. Các Đại Đô Thị & Thạch Thành Cổ Đại
+      { id: 'smart_city',   zone: 'merchant', nameVi: 'Đại Thạch Thành Tây Mỗ (Vinhomes Smart City)',lat: 21.0025, lon: 105.7385, radiusMeters: 200 },
+      { id: 'ciputra',      zone: 'merchant', nameVi: 'Kinh Đô Cổ Tây Hồ (Khu Đô Thị Ciputra)',     lat: 21.0785, lon: 105.8015, radiusMeters: 180 },
+      { id: 'starlake',     zone: 'merchant', nameVi: 'Tinh Tú Hồ Cổ Thành (Starlake Tây Hồ Tây)',  lat: 21.0555, lon: 105.7985, radiusMeters: 160 },
+      { id: 'ngoai_giao_doan',zone: 'merchant',nameVi: 'Vương Phủ Xuân Đỉnh (Khu Ngoại Giao Đoàn)', lat: 21.0625, lon: 105.7955, radiusMeters: 140 },
+      { id: 'gamuda',       zone: 'forest',   nameVi: 'Lục Bảo Điền Viên (Gamuda Gardens Yên Sở)',  lat: 20.9715, lon: 105.8685, radiusMeters: 160 },
+      { id: 'splendora',    zone: 'merchant', nameVi: 'Bắc An Khánh Thạch Trấn (Splendora)',        lat: 21.0115, lon: 105.7155, radiusMeters: 150 },
+      { id: 'park_city',    zone: 'forest',   nameVi: 'Công Viên Thạch Cung (Park City Hà Đông)',   lat: 20.9625, lon: 105.7555, radiusMeters: 130 },
+      { id: 'ecopark',      zone: 'forest',   nameVi: 'Vạn Mộc Thành Cổ (Ecopark Ven Sông)',        lat: 20.9585, lon: 105.9325, radiusMeters: 250 },
+
+      // 15. Các Hồ Nước Nổi Tiếng & Đầm Lầy Tiền Sử Bổ Sung
+      { id: 'ho_dinhcong',  zone: 'water',    nameVi: 'Hồ Nước Ngọt Định Công (Hoàng Mai)',         lat: 20.9855, lon: 105.8325, radiusMeters: 90 },
+      { id: 'ho_damhong',   zone: 'water',    nameVi: 'Đầm Sen Hồng Khương Đình (Thanh Xuân)',      lat: 20.9985, lon: 105.8215, radiusMeters: 85 },
+      { id: 'ho_dambau',    zone: 'water',    nameVi: 'Vũng Nước Đầm Bầu (Thanh Xuân)',             lat: 20.9995, lon: 105.8125, radiusMeters: 75 },
+      { id: 'ho_suoihai',   zone: 'water',    nameVi: 'Đại Đầm Suối Hai Mênh Mông (Ba Vì)',         lat: 21.1255, lon: 105.3785, radiusMeters: 350 },
+      { id: 'ho_tiensa',    zone: 'water',    nameVi: 'Hồ Tiên Sa Thần Cảnh (Ba Vì)',               lat: 21.0925, lon: 105.3715, radiusMeters: 160 },
+
+      // 11. Các Bến Xe & Trục Cầu Sông Hồng
+      { id: 'bx_giapbat',   zone: 'merchant', nameVi: 'Đại Trạm Lữ Khách Phía Nam (Bến Xe Giáp Bát)', lat: 20.9785, lon: 105.8415, radiusMeters: 95 },
+      { id: 'bx_nuocngam',  zone: 'merchant', nameVi: 'Mạch Nước Ngầm Lữ Điểm (Bến Xe Nước Ngầm)',   lat: 20.9615, lon: 105.8385, radiusMeters: 85 },
+      { id: 'cau_nhattan',  zone: 'forest',   nameVi: 'Ngũ Trụ Cầu Thần (Cầu Nhật Tân)',             lat: 21.0925, lon: 105.8235, radiusMeters: 110 },
+      { id: 'cau_thanglong',zone: 'forest',   nameVi: 'Cự Kiều Hai Tầng (Cầu Thăng Long)',           lat: 21.0985, lon: 105.7875, radiusMeters: 110 },
+      { id: 'cau_vinhthuy', zone: 'forest',   nameVi: 'Đại Cầu Phía Đông (Cầu Vĩnh Tuy)',             lat: 21.0025, lon: 105.8795, radiusMeters: 100 },
+      { id: 'cau_thanhchi', zone: 'forest',   nameVi: 'Trường Kiều Nam Hà (Cầu Thanh Trì)',          lat: 20.9785, lon: 105.9015, radiusMeters: 110 },
+
+      // 12. Mạng Lưới Mỏ Khoáng Sản & Bãi Thú Tiền Sử Trải Khắp 30 Quận Huyện
+      { id: 'mine_gold_01', zone: 'merchant',   nameVi: 'Mỏ Vàng Cổ Đại Kim Mã',             lat: 21.0312, lon: 105.8235, radiusMeters: 60 },
+      { id: 'mine_gold_02', zone: 'merchant',   nameVi: 'Vỉa Vàng Nguyên Sinh Tây Hồ',        lat: 21.0625, lon: 105.8115, radiusMeters: 60 },
+      { id: 'mine_gold_03', zone: 'merchant',   nameVi: 'Mỏ Vàng Ven Sông Hồng Long Biên',   lat: 21.0455, lon: 105.8655, radiusMeters: 65 },
+      { id: 'mine_gold_04', zone: 'merchant',   nameVi: 'Vỉa Vàng Thần Núi Ba Vì',           lat: 21.0855, lon: 105.3555, radiusMeters: 75 },
+      { id: 'mine_gold_05', zone: 'merchant',   nameVi: 'Mỏ Vàng Núi Sóc Sơn',               lat: 21.2855, lon: 105.8315, radiusMeters: 70 },
+      { id: 'mine_iron_01', zone: 'wilderness', nameVi: 'Mỏ Than & Quặng Sắt Thanh Xuân',   lat: 20.9955, lon: 105.8085, radiusMeters: 75 },
+      { id: 'mine_iron_02', zone: 'wilderness', nameVi: 'Vách Đá Trầm Tích Nam Từ Liêm',    lat: 21.0115, lon: 105.7685, radiusMeters: 75 },
+      { id: 'mine_iron_03', zone: 'wilderness', nameVi: 'Mỏ Than Đen Bắc Từ Liêm',          lat: 21.0555, lon: 105.7615, radiusMeters: 75 },
+      { id: 'mine_iron_04', zone: 'wilderness', nameVi: 'Mỏ Quặng Sắt Vùng Núi Quốc Oai',   lat: 20.9855, lon: 105.6315, radiusMeters: 75 },
+      { id: 'mine_iron_05', zone: 'wilderness', nameVi: 'Vách Quặng Sắt Vùng Rừng Sóc Sơn',  lat: 21.2915, lon: 105.8085, radiusMeters: 75 },
+      { id: 'deer_01',      zone: 'forest',     nameVi: 'Bãi Hươu Sao Tiền Sử Cầu Giấy',    lat: 21.0265, lon: 105.7915, radiusMeters: 80 },
+      { id: 'deer_02',      zone: 'forest',     nameVi: 'Bãi Hươu Rừng Hoàng Mai',          lat: 20.9785, lon: 105.8515, radiusMeters: 80 },
+      { id: 'deer_03',      zone: 'forest',     nameVi: 'Bãi Hươu Hoang Sơ Mễ Trì',         lat: 21.0155, lon: 105.7695, radiusMeters: 80 },
+      { id: 'deer_04',      zone: 'forest',     nameVi: 'Đàn Hươu Rừng Nguyên Sinh Ba Vì',   lat: 21.0725, lon: 105.3695, radiusMeters: 90 },
+      { id: 'deer_05',      zone: 'forest',     nameVi: 'Bãi Hươu Sao Thung Lũng Sóc Sơn',  lat: 21.2755, lon: 105.8215, radiusMeters: 85 },
+      { id: 'boar_01',      zone: 'forest',     nameVi: 'Hang Lợn Rừng Cổ Bắc Tây Hồ',      lat: 21.0685, lon: 105.8315, radiusMeters: 70 },
+      { id: 'boar_02',      zone: 'forest',     nameVi: 'Hang Lợn Rừng Đầm Lầy Yên Nghĩa',  lat: 20.9485, lon: 105.7415, radiusMeters: 75 },
+      { id: 'boar_03',      zone: 'forest',     nameVi: 'Hang Cự Thú Rừng Tản Viên Ba Vì',  lat: 21.0815, lon: 105.3515, radiusMeters: 85 },
+      { id: 'clay_01',      zone: 'water',      nameVi: 'Mỏ Đất Sét Ven Sông Hồng (Phúc Xá)',lat: 21.0465, lon: 105.8515, radiusMeters: 75 },
+      { id: 'clay_02',      zone: 'water',      nameVi: 'Mỏ Đất Sét Sông Nhuệ (Hà Đông)',   lat: 20.9755, lon: 105.7815, radiusMeters: 70 },
+      { id: 'clay_03',      zone: 'water',      nameVi: 'Bãi Đất Sét Sông Đáy Hoài Đức',    lat: 20.9855, lon: 105.7115, radiusMeters: 75 },
+      { id: 'clay_04',      zone: 'water',      nameVi: 'Mỏ Đất Sét Làng Bát Tràng (Gia Lâm)',lat: 20.9695, lon: 105.9185, radiusMeters: 80 },
+    ],
+  });
+}

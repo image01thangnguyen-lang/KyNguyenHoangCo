@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Preview — Kỷ Nguyên Hoang Cổ</title>
+    <link rel="stylesheet" href="/apps/game/styles.css" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <!--
+      Trang xem nhanh: dựng sẵn một hồ sơ đã chơi vài ngày rồi hiện thẳng màn hình game, để
+      chụp ảnh và soi phần nhìn mà không phải bấm tay. Không phải một phần của bản phát hành.
+
+      Tham số URL: ?tab=map|craft|camp|log|settings & ?hour=<0..23>
+    -->
+    <div id="app-host"></div>
+
+    <script type="module">
+      const params = new URLSearchParams(location.search);
+      localStorage.clear();
+
+      const html = await fetch('/apps/game/index.html').then((r) => r.text());
+      const parsed = new DOMParser().parseFromString(html, 'text/html');
+      const host = document.getElementById('app-host');
+      for (const node of [...parsed.body.children]) {
+        if (node.tagName === 'SCRIPT') continue;
+        host.append(document.importNode(node, true));
+      }
+
+      await import('/apps/game/src/main.ts');
+      await new Promise((r) => setTimeout(r, 60));
+
+      const khc = globalThis.__khc;
+      khc.createProfileInSlot(0, 'Người Sống Sót');
+      khc.enterProfile(0);
+      await new Promise((r) => setTimeout(r, 80));
+
+      // Tua tới giờ mong muốn để soi được cả bảng màu ban ngày lẫn ban đêm.
+      const wantHour = Number(params.get('hour'));
+      if (Number.isFinite(wantHour)) {
+        const nowHour = new Date(khc.now() + 7 * 3_600_000).getUTCHours();
+        const ahead = (wantHour - nowHour + 24) % 24;
+        if (ahead > 0) khc.jumpTime(ahead * 3_600_000);
+      }
+
+      // Một buổi chơi thật: đi bộ, chế đồ, dựng phòng thủ.
+      khc.pedometer.addSteps(2400);
+      khc.sync();
+      await new Promise((r) => setTimeout(r, 60));
+
+      const player = khc.app.profile.player;
+      Object.assign(player.carried, {
+        dry_branch: 42,
+        sharp_stone: 26,
+        vine: 18,
+        log: 64,
+        raw_water: 4,
+        wild_berry: 6,
+        grilled_meat: 2,
+        stone_axe: 1,
+      });
+      player.camp.stations = ['campfire', 'drying_rack'];
+      player.camp.defenseStructures = { wooden_wall: 2, spike_trap: 2 };
+      player.camp.level = 2;
+
+      document.getElementById('overlay-narration').hidden = true;
+      document.getElementById('overlay-demo').hidden = true;
+
+      khc.handlers.onToggleSetting('haptics');
+      khc.handlers.onToggleSetting('haptics');
+
+      if (params.get('pedo') === 'open') document.getElementById('pedo-toggle').click();
+
+      const tab = params.get('tab') ?? 'map';
+      document.querySelector(`[data-tab="${tab}"]`)?.click();
+
+      await new Promise((r) => setTimeout(r, 300));
+
+      // ?measure=1 — liệt kê phần tử nào đang làm trang rộng hơn màn hình.
+      if (params.get('measure') === '1') {
+        const vw = document.documentElement.clientWidth;
+        const offenders = [...document.querySelectorAll('*')]
+          .map((node) => ({ node, rect: node.getBoundingClientRect() }))
+          .filter(({ rect }) => rect.right > vw + 1 || rect.left < -1)
+          .map(({ node, rect }) => `${node.tagName.toLowerCase()}${node.id ? '#' + node.id : ''}.${[...node.classList].join('.')} → left=${Math.round(rect.left)} right=${Math.round(rect.right)} w=${Math.round(rect.width)}`);
+
+        const pre = document.createElement('pre');
+        pre.id = 'measure';
+        pre.textContent = [
+          `viewport=${vw}`,
+          `documentElement.scrollWidth=${document.documentElement.scrollWidth}`,
+          `body.scrollWidth=${document.body.scrollWidth}`,
+          ...offenders.slice(0, 24),
+        ].join('\n');
+        document.body.append(pre);
+      }
+
+      document.title = 'PREVIEW_READY';
+    </script>
+  </body>
+</html>

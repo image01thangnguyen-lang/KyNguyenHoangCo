@@ -1,0 +1,17 @@
+{
+  "name": "ky-nguyen-hoang-co",
+  "private": true,
+  "version": "0.2.0",
+  "description": "Kỷ Nguyên Hoang Cổ — Location-based Survival RPG chơi hoàn toàn offline. Prototype vòng lặp cốt lõi theo kế hoạch v2.0.",
+  "type": "module",
+  "scripts": {
+    "dev": "node tools/dev-server.ts",
+    "test": "node --test --experimental-strip-types packages/game-core/test/*.test.ts",
+    "balance:export": "node tools/export-balance.ts",
+    "poi:pack": "node tools/build-poi-pack.ts"
+  },
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "_note": "KHÔNG có dependencies và devDependencies — cố ý. Toàn bộ dự án chạy bằng Node 24 thuần: TypeScript được Node chạy trực tiếp (type stripping), test dùng node:test, dev server tự viết trong tools/. Một game offline không nên bị chặn bởi npm registry."
+}

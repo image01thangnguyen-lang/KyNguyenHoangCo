@@ -1,0 +1,69 @@
+{
+  "_note": "Thời tiết trong game tính hoàn toàn trên máy theo mùa Việt Nam (§2, §4.1 bản 2.0). Không gọi API. Kết quả xác định theo (ngày, ô lưới) nên hai lần mở app trong cùng một ngày luôn thấy cùng thời tiết, và có thể dự báo trước cho HUD.",
+  "version": 1,
+
+  "regions": {
+    "_note": "Phân vùng thô theo vĩ độ — đủ cho một game, không cần mô hình khí hậu thật.",
+    "north": { "nameVi": "Miền Bắc", "minLat": 20.0, "maxLat": 24.0 },
+    "central": { "nameVi": "Miền Trung", "minLat": 13.5, "maxLat": 20.0 },
+    "south": { "nameVi": "Miền Nam", "minLat": 8.0, "maxLat": 13.5 }
+  },
+
+  "conditions": [
+    { "id": "clear",     "nameVi": "Nắng",          "rain": false },
+    { "id": "cloudy",    "nameVi": "Nhiều mây",     "rain": false },
+    { "id": "drizzle",   "nameVi": "Mưa phùn",      "rain": true,  "rainIntensity": 0.4 },
+    { "id": "rain",      "nameVi": "Mưa",           "rain": true,  "rainIntensity": 1.0 },
+    { "id": "downpour",  "nameVi": "Mưa lớn",       "rain": true,  "rainIntensity": 1.6 },
+    { "id": "heat",      "nameVi": "Nắng gắt",      "rain": false, "heat": true },
+    { "id": "cold",      "nameVi": "Rét",           "rain": false, "cold": true }
+  ],
+
+  "_seasonNote": "rainChance theo tháng (1..12). Miền Bắc mưa hè, nồm ẩm tháng 2–3, rét tháng 12–2. Miền Trung mưa dồn tháng 9–11. Miền Nam mùa mưa tháng 5–11 rõ rệt.",
+  "monthlyRainChance": {
+    "north":   [0.15, 0.30, 0.35, 0.35, 0.50, 0.60, 0.65, 0.70, 0.50, 0.30, 0.20, 0.15],
+    "central": [0.25, 0.15, 0.15, 0.20, 0.30, 0.30, 0.30, 0.40, 0.70, 0.80, 0.75, 0.45],
+    "south":   [0.10, 0.05, 0.10, 0.25, 0.60, 0.70, 0.72, 0.75, 0.78, 0.72, 0.45, 0.20]
+  },
+
+  "monthlyHeatChance": {
+    "north":   [0.00, 0.00, 0.02, 0.10, 0.30, 0.40, 0.40, 0.30, 0.15, 0.05, 0.00, 0.00],
+    "central": [0.02, 0.05, 0.15, 0.30, 0.45, 0.50, 0.50, 0.40, 0.20, 0.05, 0.02, 0.00],
+    "south":   [0.20, 0.30, 0.45, 0.50, 0.30, 0.15, 0.12, 0.12, 0.10, 0.10, 0.15, 0.20]
+  },
+
+  "monthlyColdChance": {
+    "north":   [0.55, 0.40, 0.15, 0.02, 0.00, 0.00, 0.00, 0.00, 0.00, 0.05, 0.25, 0.50],
+    "central": [0.20, 0.12, 0.03, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.02, 0.08, 0.18],
+    "south":   [0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00]
+  },
+
+  "effects": {
+    "_note": "Nguyên tắc §11: mùa mưa dài và nắng gắt là rủi ro giữ chân — nên thời tiết xấu phải MỞ RA lối chơi khác, không được chỉ trừng phạt.",
+    "rain": {
+      "rawWaterPerHourAtCamp": 4,
+      "maxAccumulated": 20,
+      "forestPickupBonus": 0.25,
+      "hydrationDecayMultiplier": 0.8,
+      "messageVi": "Mưa rồi. Đặt bình hứng nước ở trại — hôm nay khỏi phải ra hồ."
+    },
+    "heat": {
+      "hydrationDecayMultiplier": 1.35,
+      "indoorCraftSpeedBonus": 0.15,
+      "messageVi": "Nắng gắt. Uống nước nhiều hơn, hoặc ở trại chế tạo cho mát."
+    },
+    "cold": {
+      "satietyDecayMultiplier": 1.2,
+      "campfireWarmthBonus": true,
+      "nightThreatBonus": 0.1,
+      "messageVi": "Rét. Bụng đói nhanh hơn, và đêm nay lũ thú sẽ liều hơn vì đói."
+    }
+  },
+
+  "optionalRealSync": {
+    "_note": "§2: 'tự đồng bộ thời tiết thật nếu tình cờ có mạng (tùy chọn)'. Mặc định TẮT. Game không bao giờ chờ mạng — nếu bật, chỉ đọc một lần lúc mở app, thất bại thì im lặng dùng thời tiết trong game.",
+    "enabledByDefault": false,
+    "timeoutMs": 2500,
+    "provider": "open-meteo"
+  }
+}

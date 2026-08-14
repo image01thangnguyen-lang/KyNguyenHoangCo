@@ -1,0 +1,22 @@
+{
+  "name": "Kỷ Nguyên Hoang Cổ",
+  "short_name": "Hoang Cổ",
+  "description": "Game sinh tồn theo bước chân thật, chơi hoàn toàn offline. Không server, không tài khoản, không thu thập dữ liệu.",
+  "lang": "vi",
+  "dir": "ltr",
+  "start_url": "/apps/game/index.html",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#12100d",
+  "theme_color": "#12100d",
+  "categories": ["games", "health", "lifestyle"],
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

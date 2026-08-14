@@ -1,0 +1,31 @@
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+.env
+.env.local
+
+# Dữ liệu runtime của server (SQLite)
+apps/server/data/*.db
+apps/server/data/*.db-journal
+apps/server/data/*.db-wal
+apps/server/data/*.db-shm
+
+# Cache POI tải từ Overpass/OSM
+apps/server/.cache/
+
+# Bảng cân bằng xuất ra cho Unity / spreadsheet
+build-artifacts/
+
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Android build & cache
+.gradle/
+android/.gradle/
+android/app/build/
+android/local.properties
+*.apk
+*.aab

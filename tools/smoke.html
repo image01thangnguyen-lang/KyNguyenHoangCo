@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <title>Smoke test — Kỷ Nguyên Hoang Cổ</title>
+    <link rel="stylesheet" href="/apps/game/styles.css" />
+  </head>
+  <body>
+    <!--
+      Smoke test chạy trên trình duyệt thật, không cần thư viện ngoài.
+
+      Cách làm: nạp nguyên phần thân của index.html vào trang này, rồi import main.ts như
+      bình thường. App chạy y hệt bản thật; kịch bản bên dưới điều khiển nó qua `__khc`
+      (cửa sổ gỡ lỗi mà main.ts mở ra) và kiểm tra DOM sau mỗi bước.
+
+      Chạy: node tools/dev-server.ts, rồi mở /tools/smoke.html — hoặc chạy headless và đọc #report.
+    -->
+    <pre id="report">đang chạy…</pre>
+    <div id="app-host"></div>
+
+    <script type="module">
+      const report = document.getElementById('report');
+      let passed = 0;
+      let failed = 0;
+
+      const log = (line) => {
+        report.textContent += '\n' + line;
+      };
+
+      const check = (name, condition, detail = '') => {
+        if (condition) {
+          passed++;
+          log(`  ok   ${name}`);
+        } else {
+          failed++;
+          log(`  FAIL ${name}${detail ? ' :: ' + detail : ''}`);
+        }
+      };
+
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+      const text = (id) => document.getElementById(id)?.textContent?.trim() ?? '';
+
+      try {
+        localStorage.clear();
+
+        // Nạp DOM thật của game vào trang test.
+        const html = await fetch('/apps/game/index.html').then((r) => r.text());
+        const parsed = new DOMParser().parseFromString(html, 'text/html');
+        const host = document.getElementById('app-host');
+        for (const node of [...parsed.body.children]) {
+          if (node.tagName === 'SCRIPT') continue;
+          host.append(document.importNode(node, true));
+        }
+
+        await import('/apps/game/src/main.ts');
+        await sleep(60);
+
+        const khc = globalThis.__khc;
+        check('app khởi động và mở cửa sổ gỡ lỗi', Boolean(khc));
+
+        // --- màn hình chọn hồ sơ ---
+        check('hiện 2 khe hồ sơ (§3)', document.querySelectorAll('#slot-list .slot').length === 2);
+
+        khc.createProfileInSlot(0, 'Người thử');
+        khc.enterProfile(0);
+        await sleep(120);
+
+        check('vào được màn hình chơi', document.getElementById('screen-game').hidden === false);
+        check('HUD hiện giờ trong ngày', /^\d{2}:\d{2}$/.test(text('hud-time')), text('hud-time'));
+        check('HUD hiện thời tiết', text('hud-weather').length > 2, text('hud-weather'));
+        check('thanh Đói có giá trị', Number(text('val-satiety')) > 0, text('val-satiety'));
+
+        // --- vòng lặp cốt lõi: đi bộ → nhặt ---
+        const stepsBefore = khc.app.profile.player.steps.totalSteps;
+        khc.pedometer.addSteps(1200);
+        khc.sync();
+        await sleep(60);
+
+        const stepsAfter = khc.app.profile.player.steps.totalSteps;
+        check('bước chân được ghi nhận', stepsAfter - stepsBefore === 1200, `${stepsBefore} → ${stepsAfter}`);
+
+        const carried = khc.app.profile.player.carried;
+        const totalItems = Object.values(carried).reduce((s, n) => s + n, 0);
+        check('đi bộ sinh ra tài nguyên', totalItems > 0, JSON.stringify(carried));
+
+        // --- lời dẫn của Lạc Lạc ---
+        const narrationVisible = document.getElementById('overlay-narration').hidden === false;
+        check('Lạc Lạc kể beat mở màn (§5.6)', narrationVisible);
+        if (narrationVisible) {
+          check('beat có nội dung', text('narration-text').length > 40);
+          document.getElementById('narration-next').click();
+          await sleep(40);
+        }
+
+        // --- bản đồ ---
+        check('bản đồ có cảnh vật để vẽ', khc.app.view.mapFeatures.length > 0, String(khc.app.view.mapFeatures.length));
+        check('panel vùng hiện tên vùng', text('map-zone').length > 10, text('map-zone').slice(0, 60));
+        check('có nút hành động tại vùng', document.querySelectorAll('#zone-actions .btn').length > 0);
+
+        // --- chế tạo ---
+        document.querySelector('[data-tab="craft"]').click();
+        await sleep(40);
+        check('tab Chế tạo hiện', document.getElementById('tab-craft').hidden === false);
+        check('danh sách công thức có nội dung', document.querySelectorAll('#craft-list .row').length > 10);
+
+        // Cấp đủ nguyên liệu rồi dựng lửa trại — nhiệm vụ mở màn của kịch bản gốc.
+        khc.app.profile.player.carried.dry_branch = 30;
+        khc.app.profile.player.carried.sharp_stone = 15;
+        khc.app.profile.player.carried.vine = 10;
+        khc.handlers.onCraft('campfire');
+        await sleep(40);
+        check('bắt đầu chế tạo lửa trại', khc.app.profile.craftJobs.length === 1);
+
+        khc.jumpTime(60_000);
+        await sleep(60);
+        khc.handlers.onCollectCrafts();
+        await sleep(40);
+        check('lửa trại đã dựng xong', khc.app.profile.player.camp.stations.includes('campfire'));
+
+        khc.handlers.onCraft('stone_axe');
+        khc.jumpTime(60_000);
+        await sleep(60);
+        khc.handlers.onCollectCrafts();
+        await sleep(40);
+        check('chế được rìu đá', (khc.app.profile.player.carried.stone_axe ?? 0) === 1);
+
+        // --- doanh trại và kho ---
+        document.querySelector('[data-tab="camp"]').click();
+        await sleep(40);
+        check('màn hình trại hiện tên cấp trại', text('camp-summary').includes('Túp Lều Tranh'));
+        check('kho hiện vật phẩm', document.querySelectorAll('#inv-carried .item').length > 0);
+
+        khc.app.profile.player.carried.log = 200;
+        khc.app.profile.player.carried.sharp_stone = 80;
+        khc.app.profile.player.carried.vine = 40;
+        khc.handlers.onUpgradeCamp();
+        await sleep(40);
+        check('bắt đầu nâng cấp trại', khc.app.profile.player.camp.upgradeCompleteAtMs !== null);
+
+        khc.jumpTime(31 * 60_000);
+        await sleep(80);
+        check('trại lên cấp 2 (mở lò nung)', khc.app.profile.player.camp.level === 2, String(khc.app.profile.player.camp.level));
+
+        // --- túi đồ ---
+        document.querySelector('[data-tab="bag"]').click();
+        await sleep(40);
+        check('tab Túi đồ hiện', document.getElementById('tab-bag').hidden === false);
+        check('túi đồ có danh sách vật phẩm', document.getElementById('inv-bag') !== null);
+
+        // --- nhật ký ---
+        document.querySelector('[data-tab="log"]').click();
+        await sleep(40);
+        check('bảng nhiệm vụ có nội dung', document.querySelectorAll('#quest-board .row').length > 0);
+        check('hiện tên chương truyện', text('chapter-info').includes('Chương'));
+
+        // --- cài đặt và sao lưu ---
+        document.querySelector('[data-tab="settings"]').click();
+        await sleep(40);
+        check('có công tắc cài đặt', document.querySelectorAll('#settings-body .setting').length >= 6);
+        check(
+          'cam kết không thu thập dữ liệu hiện rõ (§6.3)',
+          text('settings-body').includes('không thu thập'),
+        );
+
+        khc.handlers.onToggleSetting('parentalNightLock');
+        await sleep(30);
+        check('bật được khoá phụ huynh', khc.app.profile.settings.parentalNightLock === true);
+
+        // --- lưu và nạp lại ---
+        const savedSteps = khc.app.profile.player.lifetime.steps;
+        check('save đã ghi vào localStorage', Boolean(localStorage.getItem('khc.save.v1')));
+        const reread = JSON.parse(localStorage.getItem('khc.save.v1'));
+        check('save chứa đúng tiến trình', reread.profiles[0].player.lifetime.steps === savedSteps);
+
+        // --- Trăng Máu ---
+        khc.jumpTime(Math.max(60_000, khc.app.view.bloodMoon.msUntil + 5 * 60_000));
+        await sleep(80);
+        check('tới khung Trăng Máu', khc.app.view.bloodMoon.active === true, khc.app.view.bloodMoon.labelVi);
+
+        khc.handlers.onBloodMoon();
+        await sleep(60);
+        check('mở được màn chọn độ khó', document.getElementById('overlay-action').hidden === false);
+        check('có 3 mức độ khó (§5.5)', document.querySelectorAll('#action-card .difficulty button').length === 3);
+
+        document.querySelectorAll('#action-card .btn')[0].click();
+        await sleep(80);
+        check('vào trận, boss có máu', (khc.app.profile.activeFight?.totalHp ?? 0) > 0);
+        check('thanh máu boss hiện trên UI', document.querySelector('#action-card .fight__bar') !== null);
+      } catch (error) {
+        failed++;
+        log('NGOẠI LỆ: ' + error.message);
+        log(String(error.stack).split('\n').slice(0, 5).join('\n'));
+      }
+
+      report.textContent =
+        `SMOKE TEST — ${failed === 0 ? 'TẤT CẢ ĐỀU QUA' : failed + ' MỤC HỎNG'} (${passed} pass / ${failed} fail)` +
+        report.textContent.replace('đang chạy…', '');
+      document.title = failed === 0 ? 'SMOKE_OK' : 'SMOKE_FAIL';
+    </script>
+  </body>
+</html>

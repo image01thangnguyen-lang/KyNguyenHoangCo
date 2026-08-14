@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1"
+    />
+    <meta name="theme-color" content="#12100d" />
+    <meta name="description" content="Kỷ Nguyên Hoang Cổ — game sinh tồn đi bộ, chơi hoàn toàn offline." />
+    <title>Kỷ Nguyên Hoang Cổ</title>
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <!-- Màn hình chọn hồ sơ: 2 khe trên một máy (§3 — anh em dùng chung điện thoại) -->
+    <section id="screen-profiles" class="screen screen--center">
+      <div class="titlecard">
+        <h1 class="titlecard__name">KỶ NGUYÊN<br />HOANG CỔ</h1>
+        <p class="titlecard__tag">Mỗi bước chân là một tài nguyên.<br />Không mạng. Không tài khoản.</p>
+      </div>
+      <div id="slot-list" class="slots"></div>
+      <div class="profile-actions">
+        <button id="btn-import" class="btn btn--ghost">Nhập file sao lưu</button>
+        <input id="file-import" type="file" accept=".khc,application/json" hidden />
+      </div>
+      <p class="fineprint">Phân loại 12+ · Dữ liệu vị trí và số bước xử lý ngay trên máy, không gửi đi đâu.</p>
+    </section>
+
+    <!-- Màn hình chơi chính -->
+    <section id="screen-game" class="screen" hidden>
+      <header class="hud">
+        <div class="hud__row hud__row--top">
+          <button id="btn-back-profiles" class="chip chip--icon" title="Đổi hồ sơ">☰</button>
+          <div class="hud__clock">
+            <span id="hud-time">--:--</span>
+            <span id="hud-phase" class="hud__phase">—</span>
+          </div>
+          <div id="hud-weather" class="chip">—</div>
+          <div id="hud-steps" class="chip chip--steps">0 bước</div>
+          <button id="btn-notifications" class="chip chip--icon chip--bell" title="Thông báo">
+            🔔<span id="notif-badge" class="notif-badge" hidden></span>
+          </button>
+        </div>
+
+        <div class="bars">
+          <div class="bar bar--satiety" title="Độ no">
+            <span class="bar__icon">🍗</span>
+            <div class="bar__track"><div id="bar-satiety" class="bar__fill"></div></div>
+            <span id="val-satiety" class="bar__value">0</span>
+          </div>
+          <div class="bar bar--hydration" title="Độ khát">
+            <span class="bar__icon">💧</span>
+            <div class="bar__track"><div id="bar-hydration" class="bar__fill"></div></div>
+            <span id="val-hydration" class="bar__value">0</span>
+          </div>
+          <div class="bar bar--hp" title="Thể lực / HP">
+            <span class="bar__icon">❤️</span>
+            <div class="bar__track"><div id="bar-hp" class="bar__fill"></div></div>
+            <span id="val-hp" class="bar__value">0</span>
+          </div>
+        </div>
+
+        <!-- Hộp thông báo popover dạng gom gọn -->
+        <div id="popover-notifications" class="notif-popover" hidden>
+          <div class="notif-popover__head">
+            <strong>Thông Báo</strong>
+            <button id="btn-close-notifs" class="btn btn--tiny btn--ghost">✕</button>
+          </div>
+          <div id="hud-warnings" class="warnings"></div>
+          <div id="hud-bloodmoon" class="bloodmoon-strip" hidden></div>
+          <div id="notif-empty" class="notif-empty">Không có thông báo mới.</div>
+        </div>
+      </header>
+
+      <main class="stage">
+        <!-- Tab: Bản đồ (Full viewport background) -->
+        <div id="tab-map" class="tab tab--map">
+          <canvas id="map-canvas" class="map"></canvas>
+          
+          <!-- Thông tin vùng mỏng gọn ở góc trên bên phải dưới HUD -->
+          <div id="map-zone" class="map__zone"></div>
+          <div id="safety-banner" class="safety-banner" hidden></div>
+        </div>
+
+        <!-- Backdrop khi mở Drawer -->
+        <div id="drawer-backdrop" class="drawer-backdrop" hidden></div>
+
+        <!-- Drawer: Danh sách Hành động tại Vùng (Bottom Sheet) -->
+        <div id="drawer-actions" class="tab tab--drawer tab--drawer-actions" hidden>
+          <div class="drawer-header">
+            <div class="drawer-handle"></div>
+            <div class="panel-head">
+              <h2>Hành động khả dụng</h2>
+              <button class="drawer-close" data-close="actions" title="Đóng">✕</button>
+            </div>
+          </div>
+          <div class="drawer-content">
+            <div id="zone-actions" class="zone-actions"></div>
+          </div>
+        </div>
+
+        <!-- Tab: Chế tạo (Bottom Sheet Drawer) -->
+        <div id="tab-craft" class="tab tab--drawer" hidden>
+          <div class="drawer-header">
+            <div class="drawer-handle"></div>
+            <div class="panel-head">
+              <h2>Chế tạo</h2>
+              <label class="toggle">
+                <input id="filter-craftable" type="checkbox" />
+                <span>Chỉ hiện thứ làm được</span>
+              </label>
+              <button class="drawer-close" data-close="craft" title="Đóng">✕</button>
+            </div>
+          </div>
+          <div class="drawer-content">
+            <div id="craft-jobs" class="jobs"></div>
+            <div id="craft-list" class="recipes"></div>
+          </div>
+        </div>
+
+        <!-- Tab: Doanh trại (Bottom Sheet Drawer) -->
+        <div id="tab-camp" class="tab tab--drawer" hidden>
+          <div class="drawer-header">
+            <div class="drawer-handle"></div>
+            <div class="panel-head">
+              <h2>Doanh trại</h2>
+              <button class="drawer-close" data-close="camp" title="Đóng">✕</button>
+            </div>
+          </div>
+          <div class="drawer-content">
+            <div id="camp-summary" class="camp-summary"></div>
+            <div id="camp-upgrade" class="camp-upgrade"></div>
+            <div id="camp-defense" class="camp-defense"></div>
+            <h3 class="section-title">Đồ đang mang</h3>
+            <div id="inv-carried" class="inventory"></div>
+            <h3 class="section-title">Két an toàn <span class="hint">không mất khi ngất hoặc thua đêm</span></h3>
+            <div id="inv-safe" class="inventory"></div>
+          </div>
+        </div>
+
+        <!-- Tab: Nhật ký (Bottom Sheet Drawer) -->
+        <div id="tab-log" class="tab tab--drawer" hidden>
+          <div class="drawer-header">
+            <div class="drawer-handle"></div>
+            <div class="panel-head">
+              <h2>Nhật ký sinh tồn</h2>
+              <button class="drawer-close" data-close="log" title="Đóng">✕</button>
+            </div>
+          </div>
+          <div class="drawer-content">
+            <div id="quest-board" class="quests"></div>
+            <h3 class="section-title">Chương truyện</h3>
+            <div id="chapter-info" class="chapter"></div>
+            <div id="beat-history" class="beats"></div>
+          </div>
+        </div>
+
+        <!-- Tab: Túi đồ (Bottom Sheet Drawer) -->
+        <div id="tab-bag" class="tab tab--drawer" hidden>
+          <div class="drawer-header">
+            <div class="drawer-handle"></div>
+            <div class="panel-head">
+              <h2>Túi đồ</h2>
+              <button class="drawer-close" data-close="bag" title="Đóng">✕</button>
+            </div>
+          </div>
+          <div class="drawer-content">
+            <div class="bag-summary-bar">
+              <span id="bag-item-count" class="chip">0 vật phẩm</span>
+            </div>
+            <div id="inv-bag" class="inventory"></div>
+          </div>
+        </div>
+
+        <!-- Tab: Cài đặt (Bottom Sheet Drawer) -->
+        <div id="tab-settings" class="tab tab--drawer" hidden>
+          <div class="drawer-header">
+            <div class="drawer-handle"></div>
+            <div class="panel-head">
+              <h2>Cài đặt</h2>
+              <button class="drawer-close" data-close="settings" title="Đóng">✕</button>
+            </div>
+          </div>
+          <div class="drawer-content">
+            <div id="settings-body" class="settings"></div>
+          </div>
+        </div>
+      </main>
+
+      <!-- Nút Quay Về Giữa Bản Đồ (Chỉ hiện khi đang kéo bản đồ ra xa nhân vật) -->
+      <button id="btn-recenter" class="btn-recenter" hidden title="Quay về vị trí của bạn">
+        <span class="btn-recenter__icon">🎯</span>
+        <span class="btn-recenter__label">Về vị trí</span>
+      </button>
+
+      <!-- Thanh Dock nút nổi nằm ngang ở đáy màn hình (6 nút chức năng) -->
+      <nav class="tabbar floating-dock">
+        <button id="btn-open-actions" class="tabbar__btn" data-tab="actions" title="Hành động">
+          <span class="btn__icon">⚡</span>
+          <span class="btn__label">Hành động</span>
+          <span id="action-count-badge" class="action-count-badge" hidden>0</span>
+        </button>
+        <button class="tabbar__btn" data-tab="bag" title="Túi đồ">
+          <span class="btn__icon">👝</span>
+          <span class="btn__label">Túi</span>
+        </button>
+        <button class="tabbar__btn" data-tab="camp" title="Doanh trại">
+          <span class="btn__icon">🏕️</span>
+          <span class="btn__label">Trại</span>
+        </button>
+        <button class="tabbar__btn" data-tab="craft" title="Chế tạo">
+          <span class="btn__icon">🪓</span>
+          <span class="btn__label">Chế tạo</span>
+        </button>
+        <button class="tabbar__btn" data-tab="log" title="Nhật ký">
+          <span class="btn__icon">📜</span>
+          <span class="btn__label">Nhật ký</span>
+        </button>
+        <button class="tabbar__btn" data-tab="settings" title="Cài đặt">
+          <span class="btn__icon">⚙️</span>
+          <span class="btn__label">Cài đặt</span>
+        </button>
+      </nav>
+
+      <!-- Bộ mô phỏng bước chân: máy tính để bàn không có cảm biến -->
+      <div id="pedometer-panel" class="pedo">
+        <div class="pedo__head">
+          <strong id="pedo-source">Nguồn bước: —</strong>
+          <button id="pedo-toggle" class="btn btn--tiny">Mở</button>
+        </div>
+        <div id="pedo-body" class="pedo__body" hidden>
+          <button id="btn-walk-100" class="btn btn--tiny">+100 bước</button>
+          <button id="btn-walk-1000" class="btn btn--tiny">+1.000 bước</button>
+          <button id="btn-auto" class="btn btn--tiny">Tự đi bộ</button>
+          <button id="btn-sensor" class="btn btn--tiny">Dùng cảm biến thật</button>
+          <label class="pedo__jump">
+            Dịch giờ:
+            <button id="btn-hour" class="btn btn--tiny">+1 giờ</button>
+            <button id="btn-morning" class="btn btn--tiny">Tới 7h sáng</button>
+            <button id="btn-tonight" class="btn btn--tiny">Tới 20h</button>
+            <button id="btn-saturday" class="btn btn--tiny">Tới Trăng Máu</button>
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <!-- Lớp phủ: lời dẫn của Lạc Lạc -->
+    <div id="overlay-narration" class="overlay overlay--narration" hidden>
+      <div class="narration">
+        <div class="narration__who">LẠC LẠC</div>
+        <p id="narration-text" class="narration__text"></p>
+        <button id="narration-next" class="btn">Tiếp</button>
+      </div>
+    </div>
+
+    <!-- Lớp phủ: minigame / phòng thủ đêm / Trăng Máu -->
+    <div id="overlay-action" class="overlay" hidden>
+      <div id="action-card" class="card"></div>
+    </div>
+
+    <!-- Lớp phủ: Tạo nhân vật mới & Chọn giới tính -->
+    <div id="overlay-create-profile" class="overlay" hidden>
+      <div class="card card--create">
+        <h2>Khởi Tạo Nhân Vật</h2>
+        <p class="fineprint">Chọn hình tượng và đặt tên người sống sót thời hoang cổ của bạn.</p>
+        <div class="form-group">
+          <label for="create-name">Tên nhân vật</label>
+          <input id="create-name" type="text" maxlength="20" placeholder="Người Sống Sót" autocomplete="off" />
+        </div>
+        <div class="gender-section">
+          <label>Giới tính &amp; Hình tượng</label>
+          <div class="gender-picker">
+            <button type="button" class="gender-card is-active" data-gender="male">
+              <div class="gender-card__avatar" id="avatar-preview-male"></div>
+              <div class="gender-card__info">
+                <strong>Nam Thợ Săn</strong>
+                <small>Dũng mãnh, khố da thú, lông vũ đại bàng</small>
+              </div>
+            </button>
+            <button type="button" class="gender-card" data-gender="female">
+              <div class="gender-card__avatar" id="avatar-preview-female"></div>
+              <div class="gender-card__info">
+                <strong>Nữ Chiến Binh</strong>
+                <small>Nhanh nhẹn, bím tóc quàng vai, lông ngọc biếc</small>
+              </div>
+            </button>
+          </div>
+        </div>
+        <div class="card-actions">
+          <button id="btn-create-submit" class="btn btn--primary">Bắt đầu sinh tồn</button>
+          <button id="btn-create-cancel" class="btn btn--ghost">Huỷ</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lớp phủ: Bắt buộc định vị GPS -->
+    <div id="overlay-gps-required" class="overlay" hidden>
+      <div class="card card--gps">
+        <div class="card__icon-badge">📍</div>
+        <h2>Bật Định Vị GPS</h2>
+        <p>Kỷ Nguyên Hoang Cổ là thế giới sinh tồn gắn liền với hành trình thực tế của bạn.</p>
+        <p class="fineprint" style="margin-top: 8px;">Nhà của bạn là Căn Cứ an toàn. Mỗi sáng đi làm bạn bước ra đường kiếm đồ, chiều về Nhà để chế tạo và phòng thủ!</p>
+        <div class="card-actions" style="margin-top: 18px;">
+          <button id="btn-request-gps" class="btn btn--primary">📡 Cấp quyền &amp; Bật GPS</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lớp phủ: Thiết lập Căn Cứ / Nhà ban đầu -->
+    <div id="overlay-set-home" class="overlay" hidden>
+      <div class="card card--home">
+        <div class="card__icon-badge">🏕️</div>
+        <h2>Thiết Lập Căn Cứ</h2>
+        <p>Hãy chọn vị trí hiện tại của bạn làm <strong>Căn Cứ (Nhà)</strong>.</p>
+        <div class="home-prompt-box">
+          <p class="fineprint">
+            🏢 <strong>Lối chơi sinh tồn công sở:</strong><br />
+            • 🌅 <strong>Sáng đi làm:</strong> Bước chân trên đường giúp bạn tìm thấy tài nguyên hoang dã.<br />
+            • 🌇 <strong>Chiều về nhà:</strong> Trở về Căn Cứ cất kho an toàn, ngủ hồi sức, chế tạo và thủ đêm!
+          </p>
+        </div>
+        <div class="card-actions" style="margin-top: 16px;">
+          <button id="btn-confirm-home" class="btn btn--primary">🏕️ Đặt Căn Cứ tại vị trí này</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lớp phủ: cổng demo -->
+    <div id="overlay-demo" class="overlay" hidden>
+      <div class="card card--demo">
+        <h2 id="demo-title">Trăng đang đỏ dần</h2>
+        <p id="demo-message"></p>
+        <button id="btn-unlock" class="btn btn--primary">Mở khoá trọn đời (mô phỏng)</button>
+        <p class="fineprint">Bản prototype: nút này chỉ đặt cờ trong save, không gọi thanh toán.</p>
+      </div>
+    </div>
+
+    <div id="toast-stack" class="toasts"></div>
+
+    <!--
+      Bẫy lỗi toàn cục. Game offline không có server để gửi log về, nên cách duy nhất để biết
+      có gì hỏng là hiện thẳng ra màn hình. Cũng chính là thứ giúp test tự động đọc được lỗi.
+    -->
+    <pre id="fatal" class="fatal" hidden></pre>
+    <script>
+      (function () {
+        var box = document.getElementById('fatal');
+        function fatal(what) {
+          box.hidden = false;
+          box.textContent += what + '\n';
+        }
+        window.addEventListener('error', function (e) {
+          fatal('LỖI: ' + (e.message || e.error) + '\n  ' + (e.filename || '') + ':' + (e.lineno || ''));
+        });
+        window.addEventListener('unhandledrejection', function (e) {
+          fatal('LỖI (promise): ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
+        });
+      })();
+    </script>
+
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>

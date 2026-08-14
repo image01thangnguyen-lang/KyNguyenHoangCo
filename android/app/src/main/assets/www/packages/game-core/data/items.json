@@ -1,0 +1,58 @@
+{
+  "_note": "Danh mục vật phẩm. 'stack' = số lượng tối đa mỗi ô kho. 'safe' = true nghĩa là được bảo vệ trong két an toàn của trại khi ngất/thua phòng thủ (§5.1, §5.4).",
+  "version": 1,
+  "items": [
+    { "id": "dry_branch",       "nameVi": "Cành khô",          "kind": "material", "stack": 200, "weight": 1 },
+    { "id": "sharp_stone",      "nameVi": "Đá nhọn",           "kind": "material", "stack": 200, "weight": 1 },
+    { "id": "vine",             "nameVi": "Dây leo",           "kind": "material", "stack": 200, "weight": 1 },
+    { "id": "log",              "nameVi": "Gỗ lớn",            "kind": "material", "stack": 500, "weight": 3 },
+    { "id": "stone_block",      "nameVi": "Khối đá",           "kind": "material", "stack": 500, "weight": 4 },
+    { "id": "fiber",            "nameVi": "Sợi thực vật",      "kind": "material", "stack": 200, "weight": 1 },
+    { "id": "rope",             "nameVi": "Dây bện",           "kind": "material", "stack": 100, "weight": 1 },
+    { "id": "clay",             "nameVi": "Đất sét",           "kind": "material", "stack": 200, "weight": 2 },
+    { "id": "fired_brick",      "nameVi": "Gạch nung",         "kind": "material", "stack": 200, "weight": 3 },
+    { "id": "iron_ore",         "nameVi": "Quặng sắt",         "kind": "material", "stack": 100, "weight": 4 },
+    { "id": "iron_ingot",       "nameVi": "Thanh sắt",         "kind": "material", "stack": 100, "weight": 4 },
+    { "id": "red_mushroom",     "nameVi": "Nấm đỏ",            "kind": "material", "stack": 50,  "weight": 1 },
+    { "id": "seed",             "nameVi": "Hạt giống",         "kind": "material", "stack": 50,  "weight": 1 },
+    { "id": "ancient_coin",     "nameVi": "Đồng tiền cổ",      "kind": "material", "stack": 100, "weight": 1, "safe": true },
+    { "id": "leather",          "nameVi": "Da thú dày",        "kind": "material", "stack": 100, "weight": 2 },
+    { "id": "coal",             "nameVi": "Than đá",           "kind": "material", "stack": 200, "weight": 2 },
+    { "id": "gold_ore",         "nameVi": "Quặng vàng",        "kind": "material", "stack": 100, "weight": 4, "safe": true },
+    { "id": "blueprint",        "nameVi": "Bản vẽ chế tạo",    "kind": "material", "stack": 20,  "weight": 1, "safe": true },
+    { "id": "upgrade_core",     "nameVi": "Lõi nâng cấp trại", "kind": "material", "stack": 20,  "weight": 1, "safe": true },
+
+    { "id": "wild_berry",       "nameVi": "Quả dại",           "kind": "food", "stack": 50, "weight": 1, "satiety": 10 },
+    { "id": "raw_fish",         "nameVi": "Cá tươi",           "kind": "food", "stack": 30, "weight": 2, "satiety": 8,  "raw": true },
+    { "id": "raw_meat",         "nameVi": "Thịt tươi",         "kind": "food", "stack": 30, "weight": 2, "satiety": 10, "raw": true },
+    { "id": "grilled_fish",     "nameVi": "Cá nướng",          "kind": "food", "stack": 30, "weight": 2, "satiety": 30 },
+    { "id": "grilled_meat",     "nameVi": "Thịt nướng",        "kind": "food", "stack": 30, "weight": 2, "satiety": 40 },
+    { "id": "dried_meat",       "nameVi": "Thịt khô",          "kind": "food", "stack": 60, "weight": 1, "satiety": 25, "shelfStable": true },
+
+    { "id": "raw_water",        "nameVi": "Nước thô",          "kind": "drink", "stack": 20, "weight": 2, "hydration": 20, "infectionRisk": true },
+    { "id": "boiled_water",     "nameVi": "Nước sôi",          "kind": "drink", "stack": 20, "weight": 2, "hydration": 50 },
+
+    { "id": "health_potion",    "nameVi": "Bình hồi máu",      "kind": "consumable", "stack": 20, "weight": 1, "hp": 35 },
+    { "id": "greater_potion",   "nameVi": "Bình hồi máu lớn",  "kind": "consumable", "stack": 10, "weight": 1, "hp": 70 },
+    { "id": "antidote",         "nameVi": "Thuốc trị bệnh",    "kind": "consumable", "stack": 10, "weight": 1, "curesSickness": true },
+
+    { "id": "torch",            "nameVi": "Ngọn đuốc",         "kind": "tool", "stack": 10, "weight": 1, "durability": 240 },
+    { "id": "stone_axe",        "nameVi": "Rìu đá",            "kind": "tool", "stack": 1,  "weight": 3, "durability": 60, "chopBonus": 1.0 },
+    { "id": "iron_axe",         "nameVi": "Rìu sắt",           "kind": "tool", "stack": 1,  "weight": 4, "durability": 200, "chopBonus": 1.8 },
+    { "id": "fishing_rod",      "nameVi": "Cần câu",           "kind": "tool", "stack": 1,  "weight": 2, "durability": 80 },
+    { "id": "clay_pot",         "nameVi": "Bình đất nung",     "kind": "tool", "stack": 4,  "weight": 2, "waterCapacity": 3 },
+    { "id": "rabbit_trap",      "nameVi": "Bẫy thỏ (Nhỏ)",     "kind": "deployable", "stack": 10, "weight": 2 },
+    { "id": "deer_trap",        "nameVi": "Bẫy hươu (Vừa)",    "kind": "deployable", "stack": 5,  "weight": 4 },
+    { "id": "beast_trap",       "nameVi": "Bẫy cự thú (Lớn)",  "kind": "deployable", "stack": 3,  "weight": 6 },
+    { "id": "spike_trap",       "nameVi": "Bẫy chông",         "kind": "deployable", "stack": 10, "weight": 3, "defense": 8 },
+
+    { "id": "stone_spear",      "nameVi": "Giáo đá",           "kind": "weapon", "stack": 1, "weight": 3, "attack": 10, "durability": 50 },
+    { "id": "bow",              "nameVi": "Cung",              "kind": "weapon", "stack": 1, "weight": 2, "attack": 14, "durability": 80, "needsAmmo": "arrow" },
+    { "id": "arrow",            "nameVi": "Mũi tên",           "kind": "ammo",   "stack": 100, "weight": 1 },
+    { "id": "iron_spear",       "nameVi": "Giáo sắt",          "kind": "weapon", "stack": 1, "weight": 4, "attack": 22, "durability": 160 },
+    { "id": "iron_sword",       "nameVi": "Kiếm sắt",          "kind": "weapon", "stack": 1, "weight": 4, "attack": 28, "durability": 180 },
+
+    { "id": "wooden_shield",    "nameVi": "Khiên gỗ",          "kind": "armor", "stack": 1, "weight": 3, "defense": 8,  "durability": 70 },
+    { "id": "iron_shield",      "nameVi": "Khiên sắt",         "kind": "armor", "stack": 1, "weight": 5, "defense": 16, "durability": 150 }
+  ]
+}
