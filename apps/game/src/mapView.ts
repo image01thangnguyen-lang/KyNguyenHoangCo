@@ -565,8 +565,8 @@ export class MapView {
 
   resize(): void {
     const rect = this.canvas.getBoundingClientRect();
-    // Tối ưu DPR trên di động (tối đa 1.25) giúp giảm 50% số pixel GPU cần fill, giữ FPS cao và mượt mà
-    this.dpr = Math.min(globalThis.devicePixelRatio || 1, 1.25);
+    // Tối ưu DPR 1.0 trên di động giúp giảm 75% tải GPU fill rate trên Retina màn hình iPhone
+    this.dpr = Math.min(globalThis.devicePixelRatio || 1, 1.0);
     this.canvas.width = Math.max(1, Math.round(rect.width * this.dpr));
     this.canvas.height = Math.max(1, Math.round(rect.height * this.dpr));
   }

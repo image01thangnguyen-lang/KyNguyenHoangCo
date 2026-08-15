@@ -978,18 +978,72 @@ function openMerchantStore(poiName         )       {
 let syncTimer                                        = null;
 let rafHandle = 0;
 
+let isPocketModeActive = false;
+
+function isAnyMajorOverlayOpen()          {
+  const overlays = [
+    'overlay-merchant-shop',
+    'overlay-craft-inspect',
+    'overlay-trade-confirm',
+    'overlay-night',
+    'overlay-bloodmoon',
+    'overlay-minigame',
+    'overlay-ar-camera',
+    'overlay-chapter-intro',
+    'overlay-survival-guide',
+  ];
+  for (const id of overlays) {
+    const elNode = document.getElementById(id);
+    if (elNode && !elNode.hidden) return true;
+  }
+  return false;
+}
+
+function togglePocketMode(activate          )       {
+  const target = activate !== undefined ? activate : !isPocketModeActive;
+  isPocketModeActive = target;
+  const overlay = el('overlay-pocket-mode');
+  overlay.hidden = !isPocketModeActive;
+
+  if (isPocketModeActive) {
+    audio.play('click');
+    if (app.profile?.settings.haptics) buzz([0, 30, 40, 30]);
+    updatePocketModeDisplay();
+  } else {
+    audio.play('click');
+    if (app.profile?.settings.haptics) buzz(40);
+    mapView?.resize();
+    render();
+  }
+}
+
+function updatePocketModeDisplay()       {
+  if (!isPocketModeActive) return;
+  const local = toLocalTime(now());
+  const hh = String(local.hour).padStart(2, '0');
+  const mm = String(local.minute).padStart(2, '0');
+  el('pocket-mode-time').textContent = `${hh}:${mm}`;
+  const totalSteps = app.profile?.player?.steps?.totalSteps ?? 0;
+  el('pocket-mode-steps').textContent = `${totalSteps.toLocaleString('vi-VN')} bước`;
+}
+
 function startLoops()       {
   if (syncTimer) clearInterval(syncTimer);
   syncTimer = setInterval(() => sync(), 5000);
 
   let lastFrameTime = 0;
-  // Giới hạn nhịp render ổn định 35 FPS trên thiết bị di động để giữ máy mượt mà và tiết kiệm pin
-  const targetFps = 35;
-  const frameInterval = 1000 / targetFps;
 
   const frame = (timestamp        ) => {
     rafHandle = requestAnimationFrame(frame);
     if (document.hidden) return;
+
+    // Tự động tạm dừng render hoàn toàn (0 FPS) khi ở tab khác, chế độ bỏ túi hoặc mở popup lớn
+    if (app.activeTab !== 'map' || isPocketModeActive || isAnyMajorOverlayOpen()) {
+      return;
+    }
+
+    // Khóa cố định 18 FPS tiết kiệm pin (đủ mượt cho bản đồ 2.5D, giảm 70% tải GPU so với 60 FPS)
+    const frameInterval = 1000 / 18;
 
     const elapsed = timestamp - lastFrameTime;
     if (elapsed < frameInterval) return;
@@ -1002,7 +1056,14 @@ function startLoops()       {
   rafHandle = requestAnimationFrame(frame);
 
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) sync();
+    if (document.hidden) {
+      // Khi TẮT MÀN HÌNH / KHÓA MÁY: Tắt hoàn toàn GPS phần cứng để máy mát lạnh và không tốn pin!
+      geo?.stop();
+    } else {
+      // Khi MỞ SÁNG MÀN HÌNH: Kích hoạt lại GPS để cập nhật toạ độ và đồng bộ bước chân
+      geo?.start();
+      sync();
+    }
   });
 }
 
@@ -1094,6 +1155,7 @@ function sync()       {
 
   persist();
   render();
+  updatePocketModeDisplay();
 }
 
 function persist()       {
@@ -1970,6 +2032,14 @@ function wireStaticControls()       {
 
   el('btn-zoom-out').onclick = () => {
     mapView?.zoomOut();
+  };
+
+  el('btn-pocket-mode').onclick = () => {
+    togglePocketMode(true);
+  };
+
+  el('overlay-pocket-mode').onclick = () => {
+    togglePocketMode(false);
   };
 
   el('btn-recenter').onclick = () => {

@@ -122,7 +122,7 @@ export class GeoWatcher {
       this.nativePollTimer = setInterval(() => this.pollNativeBridge(), 500);
     }
 
-    // 2. Chạy song song bộ theo dõi Geolocation tiêu chuẩn của trình duyệt / WebView
+    // 2. Chạy bộ theo dõi Geolocation thông minh theo chu kỳ (Interval Polling 6s)
     if (!('geolocation' in navigator)) {
       if (!this.state.position) {
         this.state = { ...this.state, deniedVi: 'Thiết bị không hỗ trợ định vị. Game vẫn chơi được ở vùng hoang dã.' };
@@ -131,52 +131,45 @@ export class GeoWatcher {
       return;
     }
 
-    // Thử lấy toạ độ ban đầu tức thì
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        this.lastFixMs = Date.now();
-        this.state = {
-          position: { lat: pos.coords.latitude, lon: pos.coords.longitude },
-          accuracyMeters: pos.coords.accuracy,
-          deniedVi: null,
-        };
-        this.onUpdate(this.state);
-      },
-      () => {
-        /* bỏ qua nếu chưa sẵn sàng */
-      },
-      { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 },
-    );
-
-    this.watchId = navigator.geolocation.watchPosition(
-      (pos) => {
-        this.lastFixMs = Date.now();
-        this.state = {
-          position: { lat: pos.coords.latitude, lon: pos.coords.longitude },
-          accuracyMeters: pos.coords.accuracy,
-          deniedVi: null,
-        };
-        this.onUpdate(this.state);
-      },
-      (error) => {
-        if (!this.state.position) {
+    const fetchLocation = () => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          this.lastFixMs = Date.now();
           this.state = {
-            ...this.state,
-            deniedVi:
-              error.code === error.PERMISSION_DENIED
-                ? 'Chưa cấp quyền vị trí. Game vẫn chơi được: mọi nơi đều có vùng hoang dã hệ số 1,2×.'
-                : 'Chưa bắt được tín hiệu vệ tinh. Ra chỗ thoáng hoặc bật Định vị (GPS) trong Cài đặt máy.',
+            position: { lat: pos.coords.latitude, lon: pos.coords.longitude },
+            accuracyMeters: pos.coords.accuracy,
+            deniedVi: null,
           };
           this.onUpdate(this.state);
-        }
-      },
-      { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 },
-    );
+        },
+        (error) => {
+          if (!this.state.position) {
+            this.state = {
+              ...this.state,
+              deniedVi:
+                error.code === error.PERMISSION_DENIED
+                  ? 'Chưa cấp quyền vị trí. Game vẫn chơi được: mọi nơi đều có vùng hoang dã hệ số 1,2×.'
+                  : 'Chưa bắt được tín hiệu vệ tinh. Ra chỗ thoáng hoặc bật Định vị (GPS) trong Cài đặt máy.',
+            };
+            this.onUpdate(this.state);
+          }
+        },
+        { enableHighAccuracy: true, maximumAge: 5000, timeout: 8000 },
+      );
+    };
+
+    // Lấy toạ độ ngay lập tức khi bắt đầu
+    fetchLocation();
+
+    // Chu kỳ 10 giây lấy toạ độ 1 lần (người đi bộ 10s ~ 12m): cho phép chip GPS của iPhone NGHỈ 95% thời gian, máy mát lạnh tuyệt đối!
+    if (!this.watchId) {
+      this.watchId = setInterval(fetchLocation, 10000)                     ;
+    }
   }
 
   stop()       {
     if (this.watchId !== null) {
-      navigator.geolocation.clearWatch(this.watchId);
+      clearInterval(this.watchId);
       this.watchId = null;
     }
     if (this.nativePollTimer !== null) {

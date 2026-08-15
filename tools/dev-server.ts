@@ -103,6 +103,19 @@ const server = createServer(async (req, res) => {
   }
 });
 
+server.on('error', (e: NodeJS.ErrnoException) => {
+  if (e.code === 'EADDRINUSE') {
+    console.log('');
+    console.log(`⚠️ Cổng ${PORT} đang được mở sẵn (server đang chạy ngầm trên máy).`);
+    console.log(`👉 Bạn có thể truy cập ngay tại: http://localhost:${PORT}/`);
+    console.log(`👉 Hoặc mở trên cổng khác: npm run dev -- ${PORT + 1}`);
+    console.log('');
+    process.exit(0);
+  } else {
+    console.error('Lỗi máy chủ:', e);
+  }
+});
+
 server.listen(PORT, '0.0.0.0', () => {
   console.log('');
   console.log('  KỶ NGUYÊN HOANG CỔ — prototype offline');

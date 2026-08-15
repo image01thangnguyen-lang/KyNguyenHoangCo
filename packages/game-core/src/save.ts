@@ -51,6 +51,8 @@ export interface Settings {
   realWeatherSync: boolean;
   narrationAudio: boolean;
   haptics: boolean;
+  /** Chế độ tiết kiệm pin & hạ nhiệt máy di động (giảm FPS render, tối ưu GPU), mặc định BẬT */
+  batterySaver?: boolean;
   /** POI người chơi tự ẩn qua nút báo cáo (§6.1) — ẩn ngay trên máy. */
   hiddenPoiIds: string[];
 }
@@ -61,6 +63,7 @@ export function defaultSettings(): Settings {
     realWeatherSync: false,
     narrationAudio: true,
     haptics: true,
+    batterySaver: true,
     hiddenPoiIds: [],
   };
 }

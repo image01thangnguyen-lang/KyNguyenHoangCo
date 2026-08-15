@@ -10,9 +10,11 @@ class ViewController: UIViewController, WKUIDelegate, WKNavigationDelegate, CLLo
         super.viewDidLoad()
         view.backgroundColor = UIColor(red: 0.07, green: 0.06, blue: 0.05, alpha: 1.0)
 
-        // Khởi tạo GPS Location Manager
+        // Khởi tạo GPS Location Manager ở chế độ tiết kiệm pin (sai số ~10m, bộ lọc 5m)
         locationManager = CLLocationManager()
         locationManager.delegate = self
+        locationManager.desiredAccuracy = kCLLocationAccuracyNearestTenMeters
+        locationManager.distanceFilter = 5.0
         locationManager.requestWhenInUseAuthorization()
 
         // Cấu hình WKWebView chạy offline mượt mà tràn viền toàn màn hình

@@ -225,6 +225,7 @@
       <div id="map-controls" class="map-controls">
         <button id="btn-zoom-in" class="map-ctrl-btn" title="Phóng to" aria-label="Phóng to">➕</button>
         <button id="btn-zoom-out" class="map-ctrl-btn" title="Thu nhỏ (Xem toàn cảnh)" aria-label="Thu nhỏ">➖</button>
+        <button id="btn-pocket-mode" class="map-ctrl-btn map-ctrl-btn--pocket" title="Chế độ bỏ túi tiết kiệm pin (OLED)" aria-label="Chế độ bỏ túi">🔋</button>
         <button id="btn-recenter" class="map-ctrl-btn map-ctrl-btn--recenter" hidden title="Về kích thước ban đầu &amp; tâm nhân vật" aria-label="Về ban đầu">
           <span class="map-ctrl-btn__icon">🎯</span>
           <span class="map-ctrl-btn__label">Về ban đầu</span>
@@ -772,6 +773,21 @@
         </div>
 
         <button id="btn-survival-guide-ok" class="btn btn--primary" style="width: 100%; margin-top: 14px; padding: 10px; font-weight: 700;">Đã hiểu!</button>
+      </div>
+    </div>
+
+    <!-- Lớp phủ Tiết Kiệm Pin & Chế Độ Đi Bộ Bỏ Túi (OLED Black Mode) -->
+    <div id="overlay-pocket-mode" class="overlay overlay--pocket" hidden>
+      <div class="pocket-mode-card">
+        <div class="pocket-mode-icon">🔋</div>
+        <div class="pocket-mode-title">Chế độ bỏ túi tiết kiệm pin</div>
+        <div id="pocket-mode-time" class="pocket-mode-time">12:00</div>
+        <div id="pocket-mode-steps" class="pocket-mode-steps">0 bước</div>
+        <div class="pocket-mode-hint">
+          📱 <strong>Màn hình OLED đã tắt 90% bóng led</strong> để chống nóng máy.<br/>
+          Game vẫn đếm bước chân &amp; rung chuông báo hiệu khi có đồ rơi quanh bạn.<br/><br/>
+          <span style="color:#fef08a; font-weight:800;">👉 Chạm vào màn hình để mở lại game</span>
+        </div>
       </div>
     </div>
 

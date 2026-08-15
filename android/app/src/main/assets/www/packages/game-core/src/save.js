@@ -51,6 +51,8 @@ import { dayKey } from './time.js';
                            
                           
                    
+                                                                                                
+                         
                                                                         
                          
  
@@ -61,6 +63,7 @@ export function defaultSettings()           {
     realWeatherSync: false,
     narrationAudio: true,
     haptics: true,
+    batterySaver: true,
     hiddenPoiIds: [],
   };
 }
