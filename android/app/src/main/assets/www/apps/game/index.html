@@ -9,6 +9,9 @@
     <meta name="theme-color" content="#12100d" />
     <meta name="description" content="Kỷ Nguyên Hoang Cổ — game sinh tồn đi bộ, chơi hoàn toàn offline." />
     <title>Kỷ Nguyên Hoang Cổ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
@@ -188,11 +191,15 @@
         </div>
       </main>
 
-      <!-- Nút Quay Về Giữa Bản Đồ (Chỉ hiện khi đang kéo bản đồ ra xa nhân vật) -->
-      <button id="btn-recenter" class="btn-recenter" hidden title="Quay về vị trí của bạn">
-        <span class="btn-recenter__icon">🎯</span>
-        <span class="btn-recenter__label">Về vị trí</span>
-      </button>
+      <!-- Cụm điều khiển Zoom & Đặt lại góc nhìn bản đồ -->
+      <div id="map-controls" class="map-controls">
+        <button id="btn-zoom-in" class="map-ctrl-btn" title="Phóng to" aria-label="Phóng to">➕</button>
+        <button id="btn-zoom-out" class="map-ctrl-btn" title="Thu nhỏ (Xem toàn cảnh)" aria-label="Thu nhỏ">➖</button>
+        <button id="btn-recenter" class="map-ctrl-btn map-ctrl-btn--recenter" hidden title="Về kích thước ban đầu &amp; tâm nhân vật" aria-label="Về ban đầu">
+          <span class="map-ctrl-btn__icon">🎯</span>
+          <span class="map-ctrl-btn__label">Về ban đầu</span>
+        </button>
+      </div>
 
       <!-- Thanh Dock nút nổi nằm ngang ở đáy màn hình (6 nút chức năng) -->
       <nav class="tabbar floating-dock">
@@ -346,19 +353,33 @@
     <script>
       (function () {
         var box = document.getElementById('fatal');
+        function isExtensionNoise(what) {
+          var str = String(what || '').toLowerCase();
+          return (
+            str.includes('metamask') ||
+            str.includes('ethereum') ||
+            str.includes('web3') ||
+            str.includes('chrome-extension://') ||
+            str.includes('moz-extension://') ||
+            str.includes('safari-extension://')
+          );
+        }
         function fatal(what) {
+          if (isExtensionNoise(what)) return;
           box.hidden = false;
           box.textContent += what + '\n';
         }
         window.addEventListener('error', function (e) {
-          fatal('LỖI: ' + (e.message || e.error) + '\n  ' + (e.filename || '') + ':' + (e.lineno || ''));
+          var msg = 'LỖI: ' + (e.message || e.error) + '\n  ' + (e.filename || '') + ':' + (e.lineno || '');
+          fatal(msg);
         });
         window.addEventListener('unhandledrejection', function (e) {
-          fatal('LỖI (promise): ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
+          var reason = e.reason && e.reason.message ? e.reason.message : String(e.reason);
+          fatal('LỖI (promise): ' + reason);
         });
       })();
     </script>
 
-    <script type="module" src="./src/main.ts"></script>
+    <script type="module" src="./src/main.js"></script>
   </body>
 </html>

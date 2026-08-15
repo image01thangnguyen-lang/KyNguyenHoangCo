@@ -105,6 +105,17 @@ import { openMinigame } from './minigames.ts';
 const FALLBACK_POSITION: LatLon = { lat: 21.0287, lon: 105.8524 };
 const PACK = sampleHanoiPack();
 
+/** Danh mục toàn bộ các di tích, thắng cảnh, hồ nước và địa danh thực tế đã được tiền sử hoá. */
+const ALL_PACK_FEATURES: MapFeature[] = PACK.pois.map((poi) => ({
+  kind: 'poi',
+  id: poi.id,
+  zone: poi.zone,
+  nameVi: poi.nameVi,
+  lat: poi.lat,
+  lon: poi.lon,
+  radiusMeters: poi.radiusMeters,
+}));
+
 interface App {
   save: SaveFile;
   profile: ProfileSave | null;
@@ -237,16 +248,35 @@ function getHomeCampCenter(): LatLon | null {
   return { lat: cell.centerLat, lon: cell.centerLon };
 }
 
-/** Vị trí dùng để tính toán: GPS thật nếu có, không thì đứng yên ổn định tại điểm mặc định (Hồ Gươm). */
+let smoothRenderPos: LatLon | null = null;
+
+/** Vị trí dùng để tính toán & vẽ: GPS thật với nội suy êm dịu 60 FPS khi người chơi bước đi. */
 function currentPosition(): { position: LatLon | null; render: LatLon; hasFix: boolean } {
   const state = geo?.current();
+  let targetPos: LatLon;
+  let hasFix = false;
+
   if (state?.position && geo?.hasFreshFix()) {
-    return { position: state.position, render: state.position, hasFix: true };
+    targetPos = state.position;
+    hasFix = true;
+  } else {
+    const steps = app.profile?.player?.lifetime?.steps ?? 0;
+    targetPos = steps > 0 ? simulatedWalk(FALLBACK_POSITION, steps) : FALLBACK_POSITION;
   }
-  // Khi không có GPS hoặc chơi thử: đứng yên tại vị trí cơ sở hoặc dịch chuyển êm dịu theo số bước
-  const steps = app.profile?.player?.lifetime?.steps ?? 0;
-  const simulated = steps > 0 ? simulatedWalk(FALLBACK_POSITION, steps) : FALLBACK_POSITION;
-  return { position: simulated, render: simulated, hasFix: false };
+
+  if (!smoothRenderPos) {
+    smoothRenderPos = { ...targetPos };
+  } else {
+    // Nội suy êm dịu giúp nhân vật lướt bước đi tự nhiên ngay trên giao diện bản đồ
+    smoothRenderPos.lat += (targetPos.lat - smoothRenderPos.lat) * 0.15;
+    smoothRenderPos.lon += (targetPos.lon - smoothRenderPos.lon) * 0.15;
+  }
+
+  return {
+    position: targetPos,
+    render: smoothRenderPos,
+    hasFix,
+  };
 }
 
 // ---------------------------------------------------------------- khởi động
@@ -344,9 +374,9 @@ function enterProfile(slot: number): void {
 
   if (!mapView) {
     mapView = new MapView(el<HTMLCanvasElement>('map-canvas'));
-    mapView.onPanChange = (isPanned) => {
+    mapView.onViewportChange = (state) => {
       const btn = el('btn-recenter');
-      if (btn) btn.hidden = !isPanned;
+      if (btn) btn.hidden = !state.isPannedOrZoomed;
     };
     mapView.onDropClick = (drop) => {
       collectWorldDrop(drop);
@@ -506,9 +536,20 @@ function drawMap(): void {
     app.profile.player.traps = tickTraps(app.profile.player.traps ?? [], now());
   }
 
+  // Kết hợp toàn bộ các di tích/thắng cảnh thực tế từ gói bản đồ (Hồ Tây, Lăng Bác, Cầu Long Biên,
+  // Sân Mỹ Đình, Chùa Một Cột, Cổ Loa, Ba Vì...) cùng với các điểm tài nguyên thủ tục quanh người chơi
+  const featureMap = new Map<string, MapFeature>();
+  for (const f of ALL_PACK_FEATURES) {
+    featureMap.set(f.id, f);
+  }
+  for (const f of app.view.mapFeatures) {
+    featureMap.set(f.id, f);
+  }
+  const allVisibleFeatures = Array.from(featureMap.values());
+
   mapView.render({
     center: at,
-    features: app.view.mapFeatures,
+    features: allVisibleFeatures,
     phase: app.view.phase,
     weather,
     gender: app.profile.player.gender ?? 'male',
@@ -815,9 +856,17 @@ function wireStaticControls(): void {
   // Bấm vào vùng backdrop ngoài Drawer để đóng về Bản đồ
   el('drawer-backdrop').onclick = () => switchTab('map');
 
-  // Nút Quay Về Giữa Bản Đồ
+  // Cụm điều khiển Bản đồ: Phóng to (+), Thu nhỏ (−), Về ban đầu (🎯)
+  el('btn-zoom-in').onclick = () => {
+    mapView?.zoomIn();
+  };
+
+  el('btn-zoom-out').onclick = () => {
+    mapView?.zoomOut();
+  };
+
   el('btn-recenter').onclick = () => {
-    mapView?.recenter();
+    mapView?.recenterAndResetZoom();
   };
 
   el('btn-back-profiles').onclick = handlers.onSwitchProfile;

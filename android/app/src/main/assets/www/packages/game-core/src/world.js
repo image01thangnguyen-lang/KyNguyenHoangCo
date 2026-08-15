@@ -329,10 +329,49 @@ export function scanArea(
 }
 
 const PROCEDURAL_NAMES                                             = {
-  forest: ['Vạt Cây Rậm', 'Bãi Hươu Sao', 'Bụi Gai Cổ', 'Rừng Đại Cổ Thụ', 'Hang Lợn Rừng', 'Rặng Cây Già'],
-  water: ['Mạch Nước Ngầm', 'Mỏ Đất Sét Ven Suối', 'Khe Nước Nhỏ', 'Hố Nước Mưa', 'Đầm Cá Thần'],
-  merchant: ['Mỏ Vàng Lộ Thiên', 'Đống Đá Xếp', 'Dấu Trại Cổ', 'Chỗ Trao Đổi Cũ'],
-  wilderness: ['Mỏ Than Đá', 'Vách Quặng Sắt', 'Bãi Hoang Sỏi Đá', 'Vạt Đất Trống Cổ'],
+  forest: [
+    'Bí Cảnh Khai Trí Viện (Học Đường Cổ)',
+    'Thần Đạo Miếu Mạo (Đình Thần Cổ)',
+    'Y Viện Thảo Dược Dân Gian',
+    'Vạt Cây Rậm',
+    'Bãi Hươu Sao Tiền Sử',
+    'Hang Lợn Rừng Cổ',
+    'Rừng Đại Cổ Thụ',
+    'Bách Thảo Điền Viên',
+    'Rặng Cây Cổ Thụ',
+  ],
+  water: [
+    'Đầm Nước Thiêng',
+    'Mạch Nước Ngầm',
+    'Hồ Nước Ngọt Thổ Dân',
+    'Bến Nước Cổ Đại',
+    'Mỏ Đất Sét Ven Suối',
+    'Đầm Sen Cổ Thạch',
+    'Khe Nước Nhỏ',
+    'Vũng Nước Trầm',
+  ],
+  merchant: [
+    'Highlands Coffee (Trạm Cà Phê Cổ)',
+    'The Coffee House (Quán Trà Đá Cổ)',
+    'Trà Quán Phúc Long Cổ Đại',
+    'Cộng Trà Quán (Bí Cảnh Tiền Sử)',
+    'Vịnh Xén Hè Xe Buýt (Trạm Lữ Khách)',
+    'Tiệm Trao Đổi WinMart',
+    'Tiệm Trao Đổi Circle K',
+    'Quán Phở Cổ Truyền Thổ Tộc',
+    'Lò Bánh Nướng Tiền Sử',
+    'Khu Chợ Trao Đổi Dân Sinh',
+    'Mỏ Vàng Lộ Thiên',
+    'Trạm Tiếp Năng Lượng Thần Thú',
+  ],
+  wilderness: [
+    'Mỏ Than Đen',
+    'Vách Quặng Sắt',
+    'Bãi Hoang Sỏi Đá',
+    'Vạt Đất Trống Cổ',
+    'Vách Đá Trầm Tích',
+    'Trầm Tích Cổ Đại',
+  ],
 };
 
 function proceduralNameFor(zone        , cell          )         {
@@ -346,6 +385,8 @@ function proceduralNameFor(zone        , cell          )         {
  * Gói POI Hà Nội Tiền Sử Hoá toàn diện:
  *  - Tuyến Tàu Điện Trên Cao Cát Linh - Hà Đông (Huyết Mạch Cự Mộc)
  *  - Cầu Long Biên (Cầu Cổ Long Cốt), Hoàng Thành Thăng Long, Hồ Tây, Mỹ Đình, Keangnam...
+ *  - Toàn bộ chuỗi Quán Cà Phê (Highlands, Phúc Long, The Coffee House, Cộng, Trung Nguyên...)
+ *  - Vịnh Xén Hè Xe Buýt, Tiệm Trao Đổi (WinMart, Circle K), Chợ Dân Sinh, Trường Học, Bệnh Viện...
  *  - Mỏ Vàng, Mỏ Than/Quặng Sắt, Bãi Hươu Sao, Hang Lợn Rừng, Mỏ Đất Sét...
  */
 export function sampleHanoiPack()          {
@@ -369,21 +410,30 @@ export function sampleHanoiPack()          {
       { id: 'cl_11', zone: 'merchant', nameVi: 'Cự Mộc — Bến Nghỉ Văn Khê',                lat: 20.9575, lon: 105.7588, radiusMeters: 50 },
       { id: 'cl_12', zone: 'forest',   nameVi: 'Huyết Mạch Cự Mộc — Đuôi Rồng Yên Nghĩa',  lat: 20.9502, lon: 105.7482, radiusMeters: 70 },
 
-      // 2. Khu Vực Mỹ Đình, Lê Đức Thọ, Mai Dịch, Cầu Giấy (Cực Kỳ Chi Tiết)
-      { id: 'sun_square',       zone: 'merchant', nameVi: 'Thái Dương Cự Thạch Cung (Sun Square - Lê Đức Thọ)', lat: 21.0315, lon: 105.7725, radiusMeters: 65 },
-      { id: 'nt_maidich',       zone: 'forest',   nameVi: 'Cổ Mộ Tiền Nhân (Nghĩa Trang Mai Dịch)',            lat: 21.0375, lon: 105.7745, radiusMeters: 110 },
-      { id: 'dolphin_plaza',    zone: 'merchant', nameVi: 'Song Ngư Thạch Tháp (Dolphin Plaza - Nguyễn Hoàng)',lat: 21.0298, lon: 105.7762, radiusMeters: 60 },
-      { id: 'flc_landmark',     zone: 'merchant', nameVi: 'Đại Thạch Đài FLC (Lê Đức Thọ)',                    lat: 21.0285, lon: 105.7712, radiusMeters: 60 },
-      { id: 'my_dinh_stadium',  zone: 'merchant', nameVi: 'Đấu Trường Quái Thú Tiền Sử (Sân Mỹ Đình)',        lat: 21.0205, lon: 105.7638, radiusMeters: 160 },
-      { id: 'cung_dien_kinh',   zone: 'merchant', nameVi: 'Cung Điền Kinh Cổ Đại (Trần Hữu Dực)',              lat: 21.0235, lon: 105.7585, radiusMeters: 100 },
-      { id: 'cung_thieu_nhi',   zone: 'forest',   nameVi: 'Ấu Thú Điền Viên (Cung Thiếu Nhi Mới)',             lat: 21.0185, lon: 105.7795, radiusMeters: 75 },
-      { id: 'bx_mydinh',        zone: 'merchant', nameVi: 'Trạm Lữ Khách Phương Bắc (Bến Xe Mỹ Đình)',         lat: 21.0285, lon: 105.7785, radiusMeters: 90 },
-      { id: 'bv_198',           zone: 'forest',   nameVi: 'Y Viện Thảo Dược 198 (Trần Bình)',                  lat: 21.0345, lon: 105.7772, radiusMeters: 70 },
-      { id: 'dh_thuongmai',     zone: 'merchant', nameVi: 'Thương Viện Cổ Đại (ĐH Thương Mại - Hồ Tùng Mậu)',  lat: 21.0368, lon: 105.7718, radiusMeters: 80 },
-      { id: 'dh_supham',        zone: 'forest',   nameVi: 'Sư Viện Khai Trí (ĐH Sư Phạm Hà Nội)',              lat: 21.0372, lon: 105.7832, radiusMeters: 75 },
-      { id: 'dh_quocgia',       zone: 'forest',   nameVi: 'Đại Bí Cảnh Tri Thức (ĐH Quốc Gia - Xuân Thuỷ)',    lat: 21.0365, lon: 105.7815, radiusMeters: 85 },
-      { id: 'iph_plaza',        zone: 'merchant', nameVi: 'Ngũ Hành Thạch Tháp (Indochina Plaza - Xuân Thủy)', lat: 21.0358, lon: 105.7845, radiusMeters: 65 },
-      { id: 'discovery_complex',zone: 'merchant', nameVi: 'Cự Thạch Trụ Cầu Giấy (Discovery Complex)',         lat: 21.0335, lon: 105.7925, radiusMeters: 70 },
+      // 2. Khu Vực Mỹ Đình, Lê Đức Thọ, Mai Dịch, Cầu Giấy (Cực Kỳ Chi Tiết & Chuẩn Xác Từng Điểm)
+      { id: 'sun_square',           zone: 'merchant', nameVi: 'Tòa Cự Thạch Sun Square (Cổ Đạo Lê Đức Thọ)',   lat: 21.0316, lon: 105.7728, radiusMeters: 55 },
+      { id: 'highlands_sunsquare',  zone: 'merchant', nameVi: 'Highlands Coffee (Sun Square - Lê Đức Thọ)',   lat: 21.0312, lon: 105.7726, radiusMeters: 25 },
+      { id: 'bus_sunsquare',        zone: 'merchant', nameVi: 'Vịnh Xén Hè Xe Buýt Sun Square (Nguyễn Hoàng)',lat: 21.0308, lon: 105.7733, radiusMeters: 25 },
+      { id: 'truong_nhat_ban',      zone: 'forest',   nameVi: 'Trường Nhật Bản Hà Nội (Japanese School)',     lat: 21.0322, lon: 105.7708, radiusMeters: 65 },
+      { id: 'bus_leductho',         zone: 'merchant', nameVi: 'Trạm Chờ Xe Buýt (Giao Điểm Lê Đức Thọ - Hàm Nghi)', lat: 21.0328, lon: 105.7716, radiusMeters: 25 },
+      { id: 'hd_mon_city',          zone: 'merchant', nameVi: 'Thành Cổ HD Mon City (Lối Mòn Hàm Nghi)',      lat: 21.0335, lon: 105.7685, radiusMeters: 70 },
+      { id: 'highlands_hamnghi',    zone: 'merchant', nameVi: 'Highlands Coffee (Lối Mòn Hàm Nghi)',          lat: 21.0342, lon: 105.7672, radiusMeters: 25 },
+      { id: 'vinhomes_gardenia',    zone: 'forest',   nameVi: 'Vườn Địa Đàng Vinhomes Gardenia',              lat: 21.0395, lon: 105.7615, radiusMeters: 90 },
+      { id: 'cho_mydinh',           zone: 'merchant', nameVi: 'Chợ Cổ Mỹ Đình (Lối Mòn Mỹ Đình)',              lat: 21.0255, lon: 105.7738, radiusMeters: 55 },
+      { id: 'nt_maidich',           zone: 'forest',   nameVi: 'Cổ Mộ Tiền Nhân (Nghĩa Trang Mai Dịch)',        lat: 21.0375, lon: 105.7745, radiusMeters: 110 },
+      { id: 'dolphin_plaza',        zone: 'merchant', nameVi: 'Song Ngư Thạch Tháp (Dolphin Plaza - Nguyễn Hoàng)',lat: 21.0298, lon: 105.7762, radiusMeters: 60 },
+      { id: 'tch_mydinh',           zone: 'merchant', nameVi: 'The Coffee House (Lối Mòn Nguyễn Hoàng)',      lat: 21.0292, lon: 105.7775, radiusMeters: 25 },
+      { id: 'flc_landmark',         zone: 'merchant', nameVi: 'Đại Thạch Đài FLC (Cổ Đạo Lê Đức Thọ)',        lat: 21.0285, lon: 105.7712, radiusMeters: 60 },
+      { id: 'my_dinh_stadium',      zone: 'merchant', nameVi: 'Đấu Trường Quái Thú Tiền Sử (Sân Mỹ Đình)',    lat: 21.0205, lon: 105.7638, radiusMeters: 160 },
+      { id: 'cung_dien_kinh',       zone: 'merchant', nameVi: 'Cung Điền Kinh Cổ Đại (Lối Mòn Trần Hữu Dực)',  lat: 21.0235, lon: 105.7585, radiusMeters: 100 },
+      { id: 'cung_thieu_nhi',       zone: 'forest',   nameVi: 'Ấu Thú Điền Viên (Cung Thiếu Nhi Mới)',         lat: 21.0185, lon: 105.7795, radiusMeters: 75 },
+      { id: 'bx_mydinh',            zone: 'merchant', nameVi: 'Trạm Lữ Khách Phương Bắc (Bến Xe Mỹ Đình)',     lat: 21.0285, lon: 105.7785, radiusMeters: 90 },
+      { id: 'bv_198',               zone: 'forest',   nameVi: 'Y Viện Thảo Dược 198 (Lối Mòn Trần Bình)',      lat: 21.0345, lon: 105.7772, radiusMeters: 70 },
+      { id: 'dh_thuongmai',         zone: 'merchant', nameVi: 'Thương Viện Cổ Đại (ĐH Thương Mại - Hồ Tùng Mậu)',lat: 21.0368, lon: 105.7718, radiusMeters: 80 },
+      { id: 'dh_supham',            zone: 'forest',   nameVi: 'Sư Viện Khai Trí (ĐH Sư Phạm Hà Nội)',          lat: 21.0372, lon: 105.7832, radiusMeters: 75 },
+      { id: 'dh_quocgia',           zone: 'forest',   nameVi: 'Đại Bí Cảnh Tri Thức (ĐH Quốc Gia - Xuân Thuỷ)',lat: 21.0365, lon: 105.7815, radiusMeters: 85 },
+      { id: 'iph_plaza',            zone: 'merchant', nameVi: 'Ngũ Hành Thạch Tháp (Indochina Plaza - Xuân Thủy)', lat: 21.0358, lon: 105.7845, radiusMeters: 65 },
+      { id: 'discovery_complex',    zone: 'merchant', nameVi: 'Cự Thạch Trụ Cầu Giấy (Discovery Complex)',     lat: 21.0335, lon: 105.7925, radiusMeters: 70 },
       { id: 'cv_caugiay',       zone: 'forest',   nameVi: 'Rừng Nguyên Sinh Cầu Giấy (Công Viên Cầu Giấy)',     lat: 21.0242, lon: 105.7895, radiusMeters: 130 },
       { id: 'cv_nghiado',       zone: 'forest',   nameVi: 'Thung Lũng Hoa Rừng (Công Viên Nghĩa Đô)',          lat: 21.0405, lon: 105.7975, radiusMeters: 120 },
       { id: 'ho_nghiado',       zone: 'water',    nameVi: 'Hồ Nước Ngọt Nghĩa Đô',                             lat: 21.0408, lon: 105.7985, radiusMeters: 80 },
@@ -397,7 +447,35 @@ export function sampleHanoiPack()          {
       { id: 'vincom_ba_trieu',  zone: 'merchant', nameVi: 'Tam Tinh Bảo Tháp (Vincom Bà Triệu)',               lat: 21.0112, lon: 105.8492, radiusMeters: 65 },
       { id: 'mipec_tower',      zone: 'merchant', nameVi: 'Huyền Thạch Trụ Tây Sơn (Mipec Tower)',             lat: 21.0075, lon: 105.8235, radiusMeters: 60 },
 
-      // 3. Khu Trung Tâm Hoàn Kiếm, Ba Đình & Cầu Long Biên
+      // 3. Chuỗi Quán Cà Phê, Trà Đạo & Tiệm Trao Đổi Toàn Thành Phố (Highlands, Phúc Long, The Coffee House...)
+      { id: 'hl_nhahatlon',     zone: 'merchant', nameVi: 'Highlands Coffee (Nhà Hát Lớn — Cổ Đạo Tràng Tiền)', lat: 21.0246, lon: 105.8578, radiusMeters: 30 },
+      { id: 'hl_hamca',         zone: 'merchant', nameVi: 'Highlands Coffee (Hàm Cá Mập — Cổ Đạo Đinh Tiên Hoàng)', lat: 21.0315, lon: 105.8528, radiusMeters: 30 },
+      { id: 'hl_tayho',         zone: 'merchant', nameVi: 'Highlands Coffee (Du Thuyền Tây Hồ)',              lat: 21.0535, lon: 105.8365, radiusMeters: 35 },
+      { id: 'hl_hoangdaothuy',  zone: 'merchant', nameVi: 'Highlands Coffee (Lối Mòn Hoàng Đạo Thúy)',         lat: 21.0085, lon: 105.8015, radiusMeters: 25 },
+      { id: 'hl_xuanthuy',      zone: 'merchant', nameVi: 'Highlands Coffee (Cổ Lộ Xuân Thủy)',               lat: 21.0362, lon: 105.7855, radiusMeters: 25 },
+      { id: 'hl_lotte',         zone: 'merchant', nameVi: 'Highlands Coffee (Lotte Liễu Giai)',               lat: 21.0318, lon: 105.8125, radiusMeters: 25 },
+      { id: 'hl_hadong',        zone: 'merchant', nameVi: 'Highlands Coffee (Quang Trung Hà Đông)',           lat: 20.9705, lon: 105.7755, radiusMeters: 25 },
+      { id: 'hl_longbien',      zone: 'merchant', nameVi: 'Highlands Coffee (Nguyễn Văn Cừ Long Biên)',       lat: 21.0425, lon: 105.8715, radiusMeters: 25 },
+      { id: 'tch_thaiha',       zone: 'merchant', nameVi: 'The Coffee House (Lối Mòn Thái Hà)',               lat: 21.0145, lon: 105.8185, radiusMeters: 25 },
+      { id: 'tch_trandainghia', zone: 'merchant', nameVi: 'The Coffee House (Lối Mòn Trần Đại Nghĩa)',        lat: 21.0015, lon: 105.8455, radiusMeters: 25 },
+      { id: 'phuclong_lythuongkiet', zone: 'merchant', nameVi: 'Trà Quán Phúc Long (Cổ Đạo Lý Thường Kiệt)',  lat: 21.0252, lon: 105.8505, radiusMeters: 25 },
+      { id: 'phuclong_caugiay', zone: 'merchant', nameVi: 'Trà Quán Phúc Long (Cổ Lộ Cầu Giấy)',              lat: 21.0332, lon: 105.7945, radiusMeters: 25 },
+      { id: 'cong_trieuvietvuong', zone: 'merchant', nameVi: 'Cộng Trà Quán (Lối Mòn Triệu Việt Vương)',      lat: 21.0125, lon: 105.8512, radiusMeters: 25 },
+      { id: 'trungnguyen_nhatho', zone: 'merchant', nameVi: 'Trung Nguyên Legend (Cổ Đạo Nhà Thờ)',          lat: 21.0282, lon: 105.8491, radiusMeters: 25 },
+      { id: 'winmart_times',    zone: 'merchant', nameVi: 'Tiệm Trao Đổi WinMart (Times City)',               lat: 20.9962, lon: 105.8682, radiusMeters: 30 },
+      { id: 'winmart_royal',    zone: 'merchant', nameVi: 'Tiệm Trao Đổi WinMart (Royal City)',               lat: 21.0031, lon: 105.8148, radiusMeters: 30 },
+      { id: 'circlek_hangbac',  zone: 'merchant', nameVi: 'Tiệm Trao Đổi Circle K (Lối Mòn Hàng Bạc)',        lat: 21.0345, lon: 105.8512, radiusMeters: 25 },
+      { id: 'circlek_chualang', zone: 'merchant', nameVi: 'Tiệm Trao Đổi Circle K (Lối Mòn Chùa Láng)',       lat: 21.0265, lon: 105.8025, radiusMeters: 25 },
+
+      // 4. Mạng Lưới Vịnh Xén Hè Xe Buýt & Trạm Trung Chuyển Thần Thú
+      { id: 'bus_caugiay',      zone: 'merchant', nameVi: 'Vịnh Xén Hè Xe Buýt (Giao Điểm Cầu Giấy — Chùa Hà)', lat: 21.0338, lon: 105.7932, radiusMeters: 25 },
+      { id: 'bus_hotungmau',    zone: 'merchant', nameVi: 'Vịnh Xén Hè Xe Buýt (Cổ Lộ Hồ Tùng Mậu)',          lat: 21.0375, lon: 105.7695, radiusMeters: 25 },
+      { id: 'bus_nguyentrai',   zone: 'merchant', nameVi: 'Vịnh Xén Hè Xe Buýt (Cổ Đạo Nguyễn Trãi — Khuất Duy Tiến)', lat: 20.9965, lon: 105.8015, radiusMeters: 25 },
+      { id: 'bus_giaiphong',    zone: 'merchant', nameVi: 'Vịnh Xén Hè Xe Buýt (Thiên Lý Cổ Lộ Giải Phóng)',   lat: 20.9855, lon: 105.8415, radiusMeters: 25 },
+      { id: 'bus_kimma',        zone: 'merchant', nameVi: 'Vịnh Xén Hè Xe Buýt (Cổ Đạo Kim Mã — Ngọc Khánh)', lat: 21.0315, lon: 105.8165, radiusMeters: 25 },
+      { id: 'bus_longbien',     zone: 'merchant', nameVi: 'Vịnh Xén Hè Trung Chuyển Long Biên (Yên Phụ)',     lat: 21.0415, lon: 105.8515, radiusMeters: 40 },
+
+      // 5. Khu Trung Tâm Hoàn Kiếm, Ba Đình & Cầu Long Biên
       { id: 'p1',   zone: 'water',    nameVi: 'Hồ Gươm',                                    lat: 21.0287, lon: 105.8524, radiusMeters: 140 },
       { id: 'p2',   zone: 'forest',   nameVi: 'Vườn hoa Lý Thái Tổ',                        lat: 21.0295, lon: 105.8546, radiusMeters: 65 },
       { id: 'p3',   zone: 'merchant', nameVi: 'Chợ Đồng Xuân',                              lat: 21.0382, lon: 105.8497, radiusMeters: 55 },
@@ -414,7 +492,7 @@ export function sampleHanoiPack()          {
       { id: 'bd_04', zone: 'merchant', nameVi: 'Hầm Mỏ Đầu Rồng Cổ (Ga Hà Nội)',           lat: 21.0245, lon: 105.8415, radiusMeters: 65 },
       { id: 'bd_05', zone: 'forest',   nameVi: 'Liên Hoa Cổ Tự (Chùa Một Cột)',            lat: 21.0358, lon: 105.8335, radiusMeters: 45 },
 
-      // 4. Tây Hồ & Trúc Bạch
+      // 6. Tây Hồ & Trúc Bạch
       { id: 'th_01', zone: 'water',    nameVi: 'Đại Hồ Sương Mù Tây Hồ',                   lat: 21.0558, lon: 105.8235, radiusMeters: 350 },
       { id: 'th_02', zone: 'water',    nameVi: 'Vịnh Nước Thần Trúc Bạch',                 lat: 21.0475, lon: 105.8375, radiusMeters: 120 },
       { id: 'th_03', zone: 'forest',   nameVi: 'Bảo Tháp Phù Vân Trấn Quốc',               lat: 21.0478, lon: 105.8362, radiusMeters: 55 },
@@ -423,7 +501,7 @@ export function sampleHanoiPack()          {
       { id: 'cv_thule',     zone: 'forest',   nameVi: 'Bách Thú Thần Viên (Công Viên Thủ Lệ)', lat: 21.0315, lon: 105.8085, radiusMeters: 140 },
       { id: 'cv_bachthao',  zone: 'forest',   nameVi: 'Vạn Mộc Thảo Viên (Công Viên Bách Thảo)',lat: 21.0395, lon: 105.8315, radiusMeters: 110 },
 
-      // 5. Hai Bà Trưng, Đống Đa & Hoàng Mai & Thanh Xuân
+      // 7. Hai Bà Trưng, Đống Đa & Hoàng Mai & Thanh Xuân
       { id: 'tn_02', zone: 'water',    nameVi: 'Hồ Cá Thần Bảy Mẫu',                       lat: 21.0115, lon: 105.8425, radiusMeters: 130 },
       { id: 'tn_03', zone: 'water',    nameVi: 'Vũng Nước Thiêng Ba Mẫu',                  lat: 21.0145, lon: 105.8395, radiusMeters: 80 },
       { id: 'tn_06', zone: 'forest',   nameVi: 'Thảo Dược Viện Cổ Bạch Mai (Bệnh Viện)',   lat: 21.0028, lon: 105.8398, radiusMeters: 85 },
@@ -442,7 +520,7 @@ export function sampleHanoiPack()          {
       { id: 'ho_giangvo',   zone: 'water', nameVi: 'Vũng Nước Trầm Giảng Võ',              lat: 21.0285, lon: 105.8225, radiusMeters: 85 },
       { id: 'ho_ngocthanh', zone: 'water', nameVi: 'Đầm Ngọc Khánh',                        lat: 21.0285, lon: 105.8115, radiusMeters: 75 },
 
-      // 6. Khu Vực Bắc Từ Liêm, Đông Anh, Sóc Sơn & Mê Linh
+      // 8. Khu Vực Bắc Từ Liêm, Đông Anh, Sóc Sơn & Mê Linh
       { id: 'cv_hoabinh',   zone: 'forest',   nameVi: 'Thung Lũng Cổ Bình Yên (Công Viên Hoà Bình)', lat: 21.0655, lon: 105.7865, radiusMeters: 140 },
       { id: 'dh_congnghiep',zone: 'merchant', nameVi: 'Đại Lò Rèn Khí Cụ (ĐH Công Nghiệp Hà Nội)', lat: 21.0535, lon: 105.7355, radiusMeters: 80 },
       { id: 'dh_mo_diachat',zone: 'merchant', nameVi: 'Thần Khai Khoáng Điện (ĐH Mỏ - Địa Chất)',   lat: 21.0725, lon: 105.7735, radiusMeters: 75 },
@@ -452,13 +530,13 @@ export function sampleHanoiPack()          {
       { id: 'ho_dongquan',  zone: 'water',    nameVi: 'Hồ Nước Thiêng Đồng Quan (Sóc Sơn)',         lat: 21.2955, lon: 105.8155, radiusMeters: 160 },
       { id: 'den_haibatrung',zone: 'forest',  nameVi: 'Nữ Vương Thần Miếu (Đền Hai Bà Trưng Mê Linh)', lat: 21.1785, lon: 105.7235, radiusMeters: 130 },
 
-      // 7. Khu Vực Long Biên & Gia Lâm (Phía Đông Sông Hồng)
+      // 9. Khu Vực Long Biên & Gia Lâm (Phía Đông Sông Hồng)
       { id: 'aeon_longbien',zone: 'merchant', nameVi: 'Đông Cương Đại Thương Thị (Aeon Mall Long Biên)', lat: 21.0255, lon: 105.8985, radiusMeters: 110 },
       { id: 'thao_nguyen_hoa',zone: 'forest', nameVi: 'Bách Hoa Thảo Nguyên Long Biên',               lat: 21.0225, lon: 105.8755, radiusMeters: 90 },
       { id: 'lang_battrang',zone: 'water',    nameVi: 'Thần Lò Gốm Sứ Thiên Thu (Làng Gốm Bát Tràng)',lat: 20.9725, lon: 105.9125, radiusMeters: 130 },
       { id: 'ocean_park',   zone: 'water',    nameVi: 'Biển Hồ Nước Mặn Tiền Sử (Vinhomes Ocean Park)',lat: 20.9925, lon: 105.9455, radiusMeters: 200 },
 
-      // 8. Khu Vực Sơn Tây & Ba Vì (Thánh Địa Phía Tây)
+      // 10. Khu Vực Sơn Tây & Ba Vì (Thánh Địa Phía Tây)
       { id: 'thanh_sontay', zone: 'forest',   nameVi: 'Thạch Thành Cổ Đá Ong (Thành Cổ Sơn Tây)',   lat: 21.1385, lon: 105.5035, radiusMeters: 170 },
       { id: 'lang_duonglam',zone: 'merchant', nameVi: 'Cổ Thôn Nhị Vị Tiên Vương (Đường Lâm)',      lat: 21.1465, lon: 105.4785, radiusMeters: 140 },
       { id: 'ho_dongmo',    zone: 'water',    nameVi: 'Đại Hồ Đảo Ngọc Đồng Mô (Sơn Tây)',          lat: 21.0925, lon: 105.4525, radiusMeters: 300 },
@@ -466,14 +544,14 @@ export function sampleHanoiPack()          {
       { id: 'ao_vua',       zone: 'water',    nameVi: 'Ao Vua Thần Thủy (Ba Vì)',                  lat: 21.0985, lon: 105.3425, radiusMeters: 150 },
       { id: 'khoang_xanh',  zone: 'forest',   nameVi: 'Khoang Xanh Suối Tiên Thần Cốc (Ba Vì)',    lat: 21.0625, lon: 105.3725, radiusMeters: 160 },
 
-      // 9. Khu Vực Thạch Thất, Quốc Oai, Hoài Đức, Đan Phượng, Chương Mỹ
+      // 11. Khu Vực Thạch Thất, Quốc Oai, Hoài Đức, Đan Phượng, Chương Mỹ
       { id: 'chua_tayphuong',zone: 'forest',  nameVi: 'La Hán Thần Tự (Chùa Tây Phương - Thạch Thất)', lat: 21.0285, lon: 105.5925, radiusMeters: 100 },
       { id: 'chua_thay',    zone: 'water',    nameVi: 'Thủy Đình Thần Tiên (Chùa Thầy - Quốc Oai)',  lat: 20.9955, lon: 105.6425, radiusMeters: 110 },
       { id: 'chua_tram',    zone: 'forest',   nameVi: 'Tử Trầm Cổ Động (Chùa Trầm - Chương Mỹ)',     lat: 20.9255, lon: 105.7025, radiusMeters: 100 },
       { id: 'song_day_hoaiduc',zone: 'water', nameVi: 'Đầm Bãi Phù Sa Sông Đáy (Hoài Đức)',         lat: 21.0185, lon: 105.6985, radiusMeters: 90 },
       { id: 'song_hong_danphuong',zone: 'water', nameVi: 'Bãi Bồi Thần Ngư (Đan Phượng)',           lat: 21.1185, lon: 105.6825, radiusMeters: 110 },
 
-      // 10. Khu Vực Mỹ Đức, Ứng Hòa, Thanh Oai, Thanh Trì, Thường Tín, Phú Xuyên
+      // 12. Khu Vực Mỹ Đức, Ứng Hòa, Thanh Oai, Thanh Trì, Thường Tín, Phú Xuyên
       { id: 'chua_huong',   zone: 'forest',   nameVi: 'Nam Thiên Đệ Nhất Động (Chùa Hương - Mỹ Đức)',lat: 20.6185, lon: 105.8035, radiusMeters: 300 },
       { id: 'suoi_yen',     zone: 'water',    nameVi: 'Suối Yến Thanh Tịnh (Chùa Hương)',           lat: 20.6285, lon: 105.8155, radiusMeters: 160 },
       { id: 'ho_quanson',   zone: 'water',    nameVi: 'Đại Hồ Động Tiên Quan Sơn (Mỹ Đức)',         lat: 20.6885, lon: 105.7725, radiusMeters: 280 },
@@ -483,7 +561,7 @@ export function sampleHanoiPack()          {
       { id: 'bv_k_tantrieu',zone: 'forest',   nameVi: 'Đan Dược Viện Tân Triều (BV K Tân Triều)',   lat: 20.9715, lon: 105.7995, radiusMeters: 85 },
       { id: 'lang_khm_phuxuyen',zone: 'merchant', nameVi: 'Khảm Xà Cừ Thần Thôn (Phú Xuyên)',       lat: 20.7325, lon: 105.9125, radiusMeters: 80 },
 
-      // 11. Các Trường Học & Khai Trí Viện Danh Tiếng
+      // 13. Các Trường Học & Khai Trí Viện Danh Tiếng
       { id: 'thpt_chuvanan',zone: 'forest',   nameVi: 'Chu Văn An Thần Học Viện (Thụy Khuê)',       lat: 21.0442, lon: 105.8295, radiusMeters: 80 },
       { id: 'thpt_ams',     zone: 'merchant', nameVi: 'Amsterdam Thần Tài Viện (Hoàng Minh Giám)',  lat: 21.0078, lon: 105.7995, radiusMeters: 85 },
       { id: 'thpt_chuyen_sp',zone: 'forest',  nameVi: 'Kỳ Tài Sư Viện (Chuyên Sư Phạm - Xuân Thủy)',lat: 21.0378, lon: 105.7825, radiusMeters: 75 },
@@ -493,7 +571,7 @@ export function sampleHanoiPack()          {
       { id: 'thpt_vietduc', zone: 'merchant', nameVi: 'Việt Đức Cổ Thư Viện (Lý Thường Kiệt)',      lat: 21.0255, lon: 105.8485, radiusMeters: 65 },
       { id: 'thpt_mariecurie',zone: 'merchant',nameVi: 'Marie Curie Tiên Học Đường (Mỹ Đình)',      lat: 21.0185, lon: 105.7735, radiusMeters: 70 },
 
-      // 12. Các Bệnh Viện Chuyên Khoa Lớn
+      // 14. Các Bệnh Viện Chuyên Khoa Lớn
       { id: 'bv_108',       zone: 'forest',   nameVi: 'Quân Y Thần Viện 108 (Trần Hưng Đạo)',       lat: 21.0185, lon: 105.8615, radiusMeters: 90 },
       { id: 'bv_xanhpon',   zone: 'forest',   nameVi: 'Thần Dược Viện Xanh Pôn (Chu Văn An)',       lat: 21.0315, lon: 105.8345, radiusMeters: 75 },
       { id: 'bv_tim_hn',    zone: 'forest',   nameVi: 'Tâm Huyết Y Quán (Bệnh Viện Tim Hà Nội)',    lat: 21.0225, lon: 105.8465, radiusMeters: 60 },
@@ -501,7 +579,7 @@ export function sampleHanoiPack()          {
       { id: 'bv_dalieu_tw', zone: 'forest',   nameVi: 'Hoàng Bì Dược Viện (BV Da Liễu TW)',          lat: 21.0015, lon: 105.8375, radiusMeters: 60 },
       { id: 'bv_e',         zone: 'forest',   nameVi: 'Bắc Thành Y Viện (Bệnh Viện E - Trần Cung)', lat: 21.0505, lon: 105.7895, radiusMeters: 75 },
 
-      // 13. Các Chợ Truyền Thống & Đại Siêu Thị
+      // 15. Các Chợ Truyền Thống & Đại Siêu Thị
       { id: 'cho_hom',      zone: 'merchant', nameVi: 'Chợ Hôm Cổ Phố (Phố Huế)',                  lat: 21.0185, lon: 105.8515, radiusMeters: 60 },
       { id: 'cho_mo',       zone: 'merchant', nameVi: 'Chợ Mơ Cổ Thị (Bạch Mai)',                  lat: 20.9985, lon: 105.8495, radiusMeters: 65 },
       { id: 'cho_buoi',     zone: 'merchant', nameVi: 'Chợ Bưởi Kẻ Bưởi (Hoàng Hoa Thám)',          lat: 21.0455, lon: 105.8055, radiusMeters: 60 },
@@ -511,7 +589,7 @@ export function sampleHanoiPack()          {
       { id: 'cho_ninhhiep', zone: 'merchant', nameVi: 'Thiên Phủ Vải Vóc (Chợ Ninh Hiệp - Gia Lâm)',lat: 21.0985, lon: 105.9455, radiusMeters: 120 },
       { id: 'cho_hoa_quangan',zone: 'forest', nameVi: 'Dạ Hoa Thần Thị (Chợ Hoa Quảng An)',         lat: 21.0625, lon: 105.8315, radiusMeters: 70 },
 
-      // 14. Các Đại Đô Thị & Thạch Thành Cổ Đại
+      // 16. Các Đại Đô Thị & Thạch Thành Cổ Đại
       { id: 'smart_city',   zone: 'merchant', nameVi: 'Đại Thạch Thành Tây Mỗ (Vinhomes Smart City)',lat: 21.0025, lon: 105.7385, radiusMeters: 200 },
       { id: 'ciputra',      zone: 'merchant', nameVi: 'Kinh Đô Cổ Tây Hồ (Khu Đô Thị Ciputra)',     lat: 21.0785, lon: 105.8015, radiusMeters: 180 },
       { id: 'starlake',     zone: 'merchant', nameVi: 'Tinh Tú Hồ Cổ Thành (Starlake Tây Hồ Tây)',  lat: 21.0555, lon: 105.7985, radiusMeters: 160 },
@@ -521,14 +599,14 @@ export function sampleHanoiPack()          {
       { id: 'park_city',    zone: 'forest',   nameVi: 'Công Viên Thạch Cung (Park City Hà Đông)',   lat: 20.9625, lon: 105.7555, radiusMeters: 130 },
       { id: 'ecopark',      zone: 'forest',   nameVi: 'Vạn Mộc Thành Cổ (Ecopark Ven Sông)',        lat: 20.9585, lon: 105.9325, radiusMeters: 250 },
 
-      // 15. Các Hồ Nước Nổi Tiếng & Đầm Lầy Tiền Sử Bổ Sung
+      // 17. Các Hồ Nước Nổi Tiếng & Đầm Lầy Tiền Sử Bổ Sung
       { id: 'ho_dinhcong',  zone: 'water',    nameVi: 'Hồ Nước Ngọt Định Công (Hoàng Mai)',         lat: 20.9855, lon: 105.8325, radiusMeters: 90 },
       { id: 'ho_damhong',   zone: 'water',    nameVi: 'Đầm Sen Hồng Khương Đình (Thanh Xuân)',      lat: 20.9985, lon: 105.8215, radiusMeters: 85 },
       { id: 'ho_dambau',    zone: 'water',    nameVi: 'Vũng Nước Đầm Bầu (Thanh Xuân)',             lat: 20.9995, lon: 105.8125, radiusMeters: 75 },
       { id: 'ho_suoihai',   zone: 'water',    nameVi: 'Đại Đầm Suối Hai Mênh Mông (Ba Vì)',         lat: 21.1255, lon: 105.3785, radiusMeters: 350 },
       { id: 'ho_tiensa',    zone: 'water',    nameVi: 'Hồ Tiên Sa Thần Cảnh (Ba Vì)',               lat: 21.0925, lon: 105.3715, radiusMeters: 160 },
 
-      // 11. Các Bến Xe & Trục Cầu Sông Hồng
+      // 18. Các Bến Xe & Trục Cầu Sông Hồng
       { id: 'bx_giapbat',   zone: 'merchant', nameVi: 'Đại Trạm Lữ Khách Phía Nam (Bến Xe Giáp Bát)', lat: 20.9785, lon: 105.8415, radiusMeters: 95 },
       { id: 'bx_nuocngam',  zone: 'merchant', nameVi: 'Mạch Nước Ngầm Lữ Điểm (Bến Xe Nước Ngầm)',   lat: 20.9615, lon: 105.8385, radiusMeters: 85 },
       { id: 'cau_nhattan',  zone: 'forest',   nameVi: 'Ngũ Trụ Cầu Thần (Cầu Nhật Tân)',             lat: 21.0925, lon: 105.8235, radiusMeters: 110 },
@@ -536,7 +614,7 @@ export function sampleHanoiPack()          {
       { id: 'cau_vinhthuy', zone: 'forest',   nameVi: 'Đại Cầu Phía Đông (Cầu Vĩnh Tuy)',             lat: 21.0025, lon: 105.8795, radiusMeters: 100 },
       { id: 'cau_thanhchi', zone: 'forest',   nameVi: 'Trường Kiều Nam Hà (Cầu Thanh Trì)',          lat: 20.9785, lon: 105.9015, radiusMeters: 110 },
 
-      // 12. Mạng Lưới Mỏ Khoáng Sản & Bãi Thú Tiền Sử Trải Khắp 30 Quận Huyện
+      // 19. Mạng Lưới Mỏ Khoáng Sản & Bãi Thú Tiền Sử Trải Khắp 30 Quận Huyện
       { id: 'mine_gold_01', zone: 'merchant',   nameVi: 'Mỏ Vàng Cổ Đại Kim Mã',             lat: 21.0312, lon: 105.8235, radiusMeters: 60 },
       { id: 'mine_gold_02', zone: 'merchant',   nameVi: 'Vỉa Vàng Nguyên Sinh Tây Hồ',        lat: 21.0625, lon: 105.8115, radiusMeters: 60 },
       { id: 'mine_gold_03', zone: 'merchant',   nameVi: 'Mỏ Vàng Ven Sông Hồng Long Biên',   lat: 21.0455, lon: 105.8655, radiusMeters: 65 },

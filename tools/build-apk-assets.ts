@@ -5,7 +5,7 @@
 
 import { mkdir, readFile, writeFile, readdir, cp, rm } from 'node:fs/promises';
 import { stripTypeScriptTypes } from 'node:module';
-import { join, dirname, extname } from 'node:path';
+import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
@@ -37,6 +37,12 @@ async function copyAndTransformTree(srcDir: string, destDir: string): Promise<vo
       if (entry.name.endsWith('.ts')) {
         const destJs = dest.slice(0, -3) + '.js';
         await transformTsToJs(src, destJs);
+      } else if (entry.name.endsWith('.html')) {
+        // Đổi src="...main.ts" thành src="...main.js" trong các file HTML
+        let html = await readFile(src, 'utf8');
+        html = html.replace(/\.ts(["'])/g, '.js$1');
+        await ensureDir(dirname(dest));
+        await writeFile(dest, html, 'utf8');
       } else {
         await ensureDir(dirname(dest));
         await cp(src, dest);
@@ -60,13 +66,21 @@ export async function buildApkAssets(): Promise<void> {
   const coreSrc = join(ROOT, 'packages', 'game-core');
   await copyAndTransformTree(coreSrc, join(OUT_DIR, 'packages', 'game-core'));
 
-  // 3. Tạo file index.html ở gốc www để WebView mở trực tiếp
-  console.log('📄 Tạo root index.html cho Android...');
-  let indexHtml = await readFile(join(ROOT, 'apps', 'game', 'index.html'), 'utf8');
-  // Sửa đường dẫn src="src/main.ts" thành src="apps/game/src/main.js" và href="styles.css" thành "apps/game/styles.css"
-  indexHtml = indexHtml.replace('href="styles.css"', 'href="apps/game/styles.css"');
-  indexHtml = indexHtml.replace('src="src/main.ts"', 'src="apps/game/src/main.js"');
-  await writeFile(join(OUT_DIR, 'index.html'), indexHtml, 'utf8');
+  // 3. Tạo file index.html chuyển tiếp ở gốc www
+  console.log('📄 Tạo root index.html chuyển tiếp...');
+  const rootIndexHtml = `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="refresh" content="0; url=apps/game/index.html" />
+    <title>Kỷ Nguyên Hoang Cổ</title>
+    <script>
+      window.location.replace("apps/game/index.html");
+    </script>
+  </head>
+  <body style="background:#12100d;margin:0;"></body>
+</html>`;
+  await writeFile(join(OUT_DIR, 'index.html'), rootIndexHtml, 'utf8');
 
   console.log('✅ Đã đóng gói thành công toàn bộ assets vào:', OUT_DIR);
 }

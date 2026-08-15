@@ -65,6 +65,7 @@ export function wipeSave()       {
  */
 export class GeoWatcher {
           watchId                = null;
+          nativePollTimer                                        = null;
           state           = { position: null, accuracyMeters: null, deniedVi: null };
           lastFixMs = 0;
                    onUpdate                           ;
@@ -75,12 +76,77 @@ export class GeoWatcher {
     this.onUpdate = onUpdate;
   }
 
+          pollNativeBridge()          {
+    const bridge = (globalThis                                                                              )
+      .AndroidBridge;
+    if (bridge?.getNativeLocation) {
+      try {
+        const raw = bridge.getNativeLocation();
+        if (raw) {
+          const parsed = JSON.parse(raw)                                                                ;
+          if (parsed && typeof parsed.lat === 'number' && typeof parsed.lon === 'number') {
+            this.lastFixMs = Date.now();
+            this.state = {
+              position: { lat: parsed.lat, lon: parsed.lon },
+              accuracyMeters: parsed.accuracy || 10,
+              deniedVi: null,
+            };
+            this.onUpdate(this.state);
+            return true;
+          }
+        }
+      } catch {
+        /* bỏ qua nếu parse lỗi */
+      }
+    }
+    return false;
+  }
+
   start()       {
+    // 0. Đăng ký hàm nhận toạ độ trực tiếp từ Android Native Event (0ms latency)
+    (globalThis                                                                                                                    ).__onNativeLocation = (data) => {
+      if (data && typeof data.lat === 'number' && typeof data.lon === 'number') {
+        this.lastFixMs = Date.now();
+        this.state = {
+          position: { lat: data.lat, lon: data.lon },
+          accuracyMeters: data.accuracy || 8,
+          deniedVi: null,
+        };
+        this.onUpdate(this.state);
+      }
+    };
+
+    // 1. Thử đọc GPS phần cứng trực tiếp từ Android Native Bridge (nhanh & chính xác 100%)
+    this.pollNativeBridge();
+    if (!this.nativePollTimer) {
+      this.nativePollTimer = setInterval(() => this.pollNativeBridge(), 500);
+    }
+
+    // 2. Chạy song song bộ theo dõi Geolocation tiêu chuẩn của trình duyệt / WebView
     if (!('geolocation' in navigator)) {
-      this.state = { ...this.state, deniedVi: 'Thiết bị không hỗ trợ định vị. Game vẫn chơi được ở vùng hoang dã.' };
-      this.onUpdate(this.state);
+      if (!this.state.position) {
+        this.state = { ...this.state, deniedVi: 'Thiết bị không hỗ trợ định vị. Game vẫn chơi được ở vùng hoang dã.' };
+        this.onUpdate(this.state);
+      }
       return;
     }
+
+    // Thử lấy toạ độ ban đầu tức thì
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        this.lastFixMs = Date.now();
+        this.state = {
+          position: { lat: pos.coords.latitude, lon: pos.coords.longitude },
+          accuracyMeters: pos.coords.accuracy,
+          deniedVi: null,
+        };
+        this.onUpdate(this.state);
+      },
+      () => {
+        /* bỏ qua nếu chưa sẵn sàng */
+      },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 },
+    );
 
     this.watchId = navigator.geolocation.watchPosition(
       (pos) => {
@@ -93,16 +159,18 @@ export class GeoWatcher {
         this.onUpdate(this.state);
       },
       (error) => {
-        this.state = {
-          ...this.state,
-          deniedVi:
-            error.code === error.PERMISSION_DENIED
-              ? 'Chưa cấp quyền vị trí. Game vẫn chơi được: mọi nơi đều có vùng hoang dã hệ số 1,2×.'
-              : 'Chưa bắt được tín hiệu vệ tinh. Ra chỗ thoáng hoặc cứ chơi tiếp ở vùng hoang dã.',
-        };
-        this.onUpdate(this.state);
+        if (!this.state.position) {
+          this.state = {
+            ...this.state,
+            deniedVi:
+              error.code === error.PERMISSION_DENIED
+                ? 'Chưa cấp quyền vị trí. Game vẫn chơi được: mọi nơi đều có vùng hoang dã hệ số 1,2×.'
+                : 'Chưa bắt được tín hiệu vệ tinh. Ra chỗ thoáng hoặc bật Định vị (GPS) trong Cài đặt máy.',
+          };
+          this.onUpdate(this.state);
+        }
       },
-      { enableHighAccuracy: true, maximumAge: 15_000, timeout: 20_000 },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 },
     );
   }
 
@@ -110,6 +178,10 @@ export class GeoWatcher {
     if (this.watchId !== null) {
       navigator.geolocation.clearWatch(this.watchId);
       this.watchId = null;
+    }
+    if (this.nativePollTimer !== null) {
+      clearInterval(this.nativePollTimer);
+      this.nativePollTimer = null;
     }
   }
 
