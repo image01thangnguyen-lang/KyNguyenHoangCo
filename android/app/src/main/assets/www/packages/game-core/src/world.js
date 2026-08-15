@@ -587,6 +587,19 @@ export function sampleHanoiPack()          {
       { id: 'ho_giangvo',   zone: 'water', nameVi: 'Vũng Nước Trầm Giảng Võ',              lat: 21.0285, lon: 105.8225, radiusMeters: 85 },
       { id: 'ho_ngocthanh', zone: 'water', nameVi: 'Đầm Ngọc Khánh',                        lat: 21.0285, lon: 105.8115, radiusMeters: 75 },
 
+      // --- THƯỢNG ĐÌNH & THANH XUÂN ---
+      { id: 'nha_may_bia_thuongdinh', zone: 'merchant', nameVi: 'Lò Nấu Thần Tửu Tiền Sử (Nhà Máy Bia Hà Nội - Thượng Đình)', lat: 20.9945, lon: 105.8215, radiusMeters: 120 },
+      { id: 'cv_thuongdinh',          zone: 'forest',   nameVi: 'Thảo Nguyên Hoang Cổ Thượng Đình (Công Viên Thượng Đình)',  lat: 20.9915, lon: 105.8255, radiusMeters: 100 },
+      { id: 'cho_thuongdinh',         zone: 'merchant', nameVi: 'Chợ Phiên Cổ Đại (Chợ Thượng Đình)',                        lat: 20.9935, lon: 105.8195, radiusMeters: 75 },
+      { id: 'ho_thuongdinh',          zone: 'water',    nameVi: 'Hồ Câu Cá Thần Thượng Đình (Hồ Thượng Đình)',               lat: 20.9928, lon: 105.8172, radiusMeters: 80 },
+      { id: 'highlands_thuongdinh',   zone: 'merchant', nameVi: 'Highlands Coffee (Lối Mòn Thượng Đình)',                    lat: 20.9950, lon: 105.8230, radiusMeters: 28 },
+      { id: 'tch_thuongdinh',         zone: 'merchant', nameVi: 'The Coffee House (Khu Thượng Đình)',                        lat: 20.9960, lon: 105.8240, radiusMeters: 28 },
+      { id: 'cong_thuongdinh',        zone: 'merchant', nameVi: 'Cộng Cà Phê (Cổ Đạo Nguyễn Trãi - Thượng Đình)',           lat: 20.9925, lon: 105.8265, radiusMeters: 28 },
+      { id: 'cv_nguyentrai_tx',       zone: 'forest',   nameVi: 'Vườn Rừng Nguyễn Trãi (Công Viên Nhỏ Thanh Xuân)',         lat: 20.9975, lon: 105.8180, radiusMeters: 60 },
+      { id: 'bx_giapbat',             zone: 'merchant', nameVi: 'Trạm Lữ Khách Phương Nam (Bến Xe Giáp Bát)',               lat: 20.9908, lon: 105.8388, radiusMeters: 90 },
+      { id: 'hl_giapbat',             zone: 'merchant', nameVi: 'Highlands Coffee (Bến Xe Giáp Bát)',                       lat: 20.9912, lon: 105.8395, radiusMeters: 28 },
+      { id: 'vincom_nguyen_chi_thanh_tx', zone: 'merchant', nameVi: 'Đại Tháp Vincom (Cổ Đạo Nguyễn Chí Thanh - Thanh Xuân)', lat: 21.0030, lon: 105.8088, radiusMeters: 70 },
+
       // 8. Khu Vực Bắc Từ Liêm, Đông Anh, Mê Linh & Sóc Sơn
       { id: 'cv_hoabinh',   zone: 'forest',   nameVi: 'Thung Lũng Cổ Bình Yên (Công Viên Hoà Bình)', lat: 21.0655, lon: 105.7865, radiusMeters: 140 },
       { id: 'dh_congnghiep',zone: 'merchant', nameVi: 'Đại Lò Rèn Khí Cụ (ĐH Công Nghiệp Hà Nội)', lat: 21.0535, lon: 105.7355, radiusMeters: 80 },
@@ -697,7 +710,123 @@ export function sampleHanoiPack()          {
       { id: 'park_city',    zone: 'forest',   nameVi: 'Công Viên Thạch Cung (Park City Hà Đông)',   lat: 20.9625, lon: 105.7555, radiusMeters: 130 },
       { id: 'ecopark',      zone: 'forest',   nameVi: 'Vạn Mộc Thành Cổ (Ecopark Ven Sông)',        lat: 20.9585, lon: 105.9325, radiusMeters: 250 },
 
-      // 17. Các Hồ Nước Nổi Tiếng & Đầm Lầy Tiền Sử Bổ Sung
+      // 17. Bổ Sung Chi Tiết Từng Cửa Hàng Theo Phường/Xã Còn Thiếu
+
+      // --- CẦU GIẤY: Trung Hòa, Yên Hòa, Quan Hoa, Dịch Vọng ---
+      { id: 'cho_trungho',          zone: 'merchant', nameVi: 'Chợ Trung Hòa Cổ (Trung Hòa - Cầu Giấy)',               lat: 21.0168, lon: 105.7985, radiusMeters: 60 },
+      { id: 'highlands_trungho',    zone: 'merchant', nameVi: 'Highlands Coffee (Trần Duy Hưng - Trung Hòa)',           lat: 21.0175, lon: 105.7972, radiusMeters: 28 },
+      { id: 'tch_trungho',          zone: 'merchant', nameVi: 'The Coffee House (Nguyễn Thị Định - Trung Hòa)',         lat: 21.0162, lon: 105.7998, radiusMeters: 28 },
+      { id: 'cong_yenh oa',         zone: 'merchant', nameVi: 'Cộng Cà Phê (Yên Hòa - Cầu Giấy)',                      lat: 21.0198, lon: 105.7948, radiusMeters: 28 },
+      { id: 'vinmart_yenh oa',      zone: 'merchant', nameVi: 'Tiệm Trao Đổi WinMart (Yên Hòa)',                        lat: 21.0205, lon: 105.7942, radiusMeters: 35 },
+      { id: 'cho_yenh oa',          zone: 'merchant', nameVi: 'Chợ Yên Hòa Cổ Phiên (Yên Hòa - Cầu Giấy)',             lat: 21.0215, lon: 105.7938, radiusMeters: 55 },
+      { id: 'aha_quanhoa',          zone: 'merchant', nameVi: 'Aha Cafe (Quan Hoa - Cầu Giấy)',                         lat: 21.0388, lon: 105.7908, radiusMeters: 28 },
+      { id: 'cho_quanhoa',          zone: 'merchant', nameVi: 'Chợ Cổ Quan Hoa (Cổ Đạo Hoàng Quốc Việt)',              lat: 21.0395, lon: 105.7918, radiusMeters: 55 },
+      { id: 'highlands_dichvong',   zone: 'merchant', nameVi: 'Highlands Coffee (Xuân Thủy - Dịch Vọng)',               lat: 21.0355, lon: 105.7872, radiusMeters: 28 },
+      { id: 'starbucks_dichvonghau',zone: 'merchant', nameVi: 'Starbucks Coffee (Cầu Giấy - Dịch Vọng Hậu)',            lat: 21.0322, lon: 105.7858, radiusMeters: 35 },
+      { id: 'phela_dichvong',       zone: 'merchant', nameVi: 'Trà Ô Long Phê La (Trần Thái Tông - Dịch Vọng)',         lat: 21.0278, lon: 105.7895, radiusMeters: 30 },
+      { id: 'mixue_dichvonghau',    zone: 'merchant', nameVi: 'Mixue Trà Kem Tuyết (Dịch Vọng Hậu)',                    lat: 21.0315, lon: 105.7845, radiusMeters: 25 },
+      { id: 'ho_nghiado2',          zone: 'water',    nameVi: 'Hồ Nhỏ Cây Xanh Cầu Giấy (Trần Thái Tông)',             lat: 21.0272, lon: 105.7908, radiusMeters: 50 },
+
+      // --- HOÀNG MAI: Trương Định, Tương Mai, Thịnh Liệt, Hoàng Văn Thụ ---
+      { id: 'cho_truongdinh',       zone: 'merchant', nameVi: 'Chợ Cổ Trương Định (Hai Bà Trưng / Hoàng Mai)',          lat: 21.0028, lon: 105.8538, radiusMeters: 65 },
+      { id: 'highlands_truongdinh', zone: 'merchant', nameVi: 'Highlands Coffee (Trương Định - Hoàng Mai)',             lat: 21.0022, lon: 105.8545, radiusMeters: 28 },
+      { id: 'tch_tuongmai',         zone: 'merchant', nameVi: 'The Coffee House (Tương Mai - Hoàng Mai)',               lat: 20.9968, lon: 105.8572, radiusMeters: 28 },
+      { id: 'cong_tuongmai',        zone: 'merchant', nameVi: 'Cộng Cà Phê (Đường Tương Mai - Hoàng Mai)',              lat: 20.9975, lon: 105.8558, radiusMeters: 28 },
+      { id: 'cho_tuongmai',         zone: 'merchant', nameVi: 'Chợ Tương Mai Cổ Phiên (Tương Mai)',                     lat: 20.9985, lon: 105.8565, radiusMeters: 60 },
+      { id: 'vincom_hm',            zone: 'merchant', nameVi: 'Đại Tháp Thương Hội (Vincom Hoàng Mai)',                 lat: 20.9862, lon: 105.8462, radiusMeters: 90 },
+      { id: 'highlands_hm2',        zone: 'merchant', nameVi: 'Highlands Coffee (Vincom Hoàng Mai)',                    lat: 20.9868, lon: 105.8468, radiusMeters: 28 },
+      { id: 'cho_thinhli et',       zone: 'merchant', nameVi: 'Chợ Thịnh Liệt (Hoàng Mai)',                             lat: 20.9768, lon: 105.8428, radiusMeters: 60 },
+      { id: 'aha_hoangvanthu',      zone: 'merchant', nameVi: 'Aha Cafe (Hoàng Văn Thụ - Hoàng Mai)',                   lat: 20.9842, lon: 105.8388, radiusMeters: 28 },
+
+      // --- ĐỐNG ĐA: Phương Liên, Trung Liệt, Nam Đồng, Phương Mai ---
+      { id: 'cho_namdo ng',         zone: 'merchant', nameVi: 'Chợ Nam Đồng Cổ (Đống Đa)',                              lat: 21.0138, lon: 105.8298, radiusMeters: 60 },
+      { id: 'highlands_namdong',    zone: 'merchant', nameVi: 'Highlands Coffee (Nam Đồng - Đống Đa)',                  lat: 21.0145, lon: 105.8305, radiusMeters: 28 },
+      { id: 'tch_phuongmai',        zone: 'merchant', nameVi: 'The Coffee House (Phương Mai - Đống Đa)',                lat: 21.0072, lon: 105.8368, radiusMeters: 28 },
+      { id: 'cong_phuonglien',      zone: 'merchant', nameVi: 'Cộng Cà Phê (Phương Liên - Đống Đa)',                    lat: 21.0095, lon: 105.8355, radiusMeters: 28 },
+      { id: 'cho_phuonglien',       zone: 'merchant', nameVi: 'Chợ Phương Liên (Đống Đa)',                              lat: 21.0088, lon: 105.8342, radiusMeters: 55 },
+      { id: 'aha_trunglie t',       zone: 'merchant', nameVi: 'Aha Cafe (Trung Liệt - Đống Đa)',                        lat: 21.0122, lon: 105.8262, radiusMeters: 28 },
+      { id: 'mixue_phuongmai',      zone: 'merchant', nameVi: 'Mixue Trà Kem Tuyết (Phương Mai)',                       lat: 21.0065, lon: 105.8375, radiusMeters: 25 },
+      { id: 'cho_trunglie t',       zone: 'merchant', nameVi: 'Chợ Trung Liệt Cổ (Đống Đa)',                            lat: 21.0118, lon: 105.8258, radiusMeters: 55 },
+
+      // --- ĐAN PHƯỢNG: Thị Trấn, Đan Phượng, Song Phượng ---
+      { id: 'ubnd_danph uong',      zone: 'merchant', nameVi: 'Trung Tâm Hành Chính Đan Phượng (UBND Huyện)',           lat: 21.0755, lon: 105.6575, radiusMeters: 80 },
+      { id: 'cho_danphu ong',       zone: 'merchant', nameVi: 'Chợ Phiên Đan Phượng (TT Phùng)',                        lat: 21.0765, lon: 105.6555, radiusMeters: 75 },
+      { id: 'highlands_danphuong',  zone: 'merchant', nameVi: 'Highlands Coffee (TT Phùng - Đan Phượng)',               lat: 21.0758, lon: 105.6562, radiusMeters: 28 },
+      { id: 'ho_tanhoi_dp',         zone: 'water',    nameVi: 'Hồ Tân Hội - Bãi Câu Cá Đan Phượng',                    lat: 21.0628, lon: 105.6748, radiusMeters: 80 },
+      { id: 'lang_moc_thanh_oai',   zone: 'merchant', nameVi: 'Làng Nghề Mộc Song Phượng (Đan Phượng)',                 lat: 21.0835, lon: 105.6665, radiusMeters: 85 },
+
+      // --- HOÀI ĐỨC: Trạm Trôi, An Khánh, Di Trạch ---
+      { id: 'tt_tramtroi',          zone: 'merchant', nameVi: 'Thị Trấn Trạm Trôi (Hoài Đức)',                          lat: 21.0235, lon: 105.7085, radiusMeters: 90 },
+      { id: 'cho_hoaiduc',          zone: 'merchant', nameVi: 'Chợ Hoài Đức (Trạm Trôi)',                               lat: 21.0228, lon: 105.7078, radiusMeters: 70 },
+      { id: 'highlands_hoaiduc',    zone: 'merchant', nameVi: 'Highlands Coffee (Trạm Trôi - Hoài Đức)',                lat: 21.0242, lon: 105.7092, radiusMeters: 28 },
+      { id: 'kdt_ankhanh',          zone: 'merchant', nameVi: 'Khu Đô Thị An Khánh (Splendora - Hoài Đức)',             lat: 21.0112, lon: 105.7148, radiusMeters: 130 },
+      { id: 'lang_la_phu',          zone: 'merchant', nameVi: 'Làng Nghề Dệt Lụa La Phù (Hoài Đức)',                   lat: 20.9985, lon: 105.7318, radiusMeters: 90 },
+
+      // --- THẠCH THẤT: Liên Quan, Thạch Hoà, Đại Đồng ---
+      { id: 'tt_lienquan',          zone: 'merchant', nameVi: 'Thị Trấn Liên Quan (Thạch Thất)',                        lat: 21.0155, lon: 105.5688, radiusMeters: 90 },
+      { id: 'cho_thachthat',        zone: 'merchant', nameVi: 'Chợ Thạch Thất (Liên Quan)',                             lat: 21.0148, lon: 105.5675, radiusMeters: 70 },
+      { id: 'highlands_thachthat',  zone: 'merchant', nameVi: 'Highlands Coffee (Liên Quan - Thạch Thất)',              lat: 21.0162, lon: 105.5695, radiusMeters: 28 },
+      { id: 'lang_moc_chanh',       zone: 'merchant', nameVi: 'Làng Nghề Mộc Chàng Sơn (Thạch Thất)',                  lat: 21.0228, lon: 105.5728, radiusMeters: 90 },
+      { id: 'khu_cong_nghe',        zone: 'merchant', nameVi: 'Thần Kỹ Thành Hòa Lạc (Khu CNC Hòa Lạc)',               lat: 21.0085, lon: 105.5258, radiusMeters: 180 },
+
+      // --- QUỐC OAI: Quốc Oai, Sài Sơn, Ngọc Liệp ---
+      { id: 'tt_quocoai',           zone: 'merchant', nameVi: 'Thị Trấn Quốc Oai (Quốc Oai)',                           lat: 20.9975, lon: 105.6568, radiusMeters: 85 },
+      { id: 'cho_quocoai',          zone: 'merchant', nameVi: 'Chợ Quốc Oai (Thị Trấn)',                                lat: 20.9968, lon: 105.6558, radiusMeters: 65 },
+      { id: 'highlands_quocoai',    zone: 'merchant', nameVi: 'Highlands Coffee (Thị Trấn Quốc Oai)',                   lat: 20.9982, lon: 105.6575, radiusMeters: 28 },
+      { id: 'lang_lua_quocoai',     zone: 'forest',   nameVi: 'Đồng Lúa Vàng Ngọc Liệp (Quốc Oai)',                    lat: 21.0088, lon: 105.6748, radiusMeters: 110 },
+
+      // --- CHƯƠNG MỸ: Chúc Sơn, Xuân Mai, Lam Điền ---
+      { id: 'tt_chucson',           zone: 'merchant', nameVi: 'Thị Trấn Chúc Sơn (Chương Mỹ)',                          lat: 20.9268, lon: 105.7278, radiusMeters: 90 },
+      { id: 'cho_chucson',          zone: 'merchant', nameVi: 'Chợ Chúc Sơn (Chương Mỹ)',                               lat: 20.9262, lon: 105.7268, radiusMeters: 70 },
+      { id: 'tt_xuanmai',           zone: 'merchant', nameVi: 'Thị Trấn Xuân Mai (Chương Mỹ)',                          lat: 20.8745, lon: 105.6158, radiusMeters: 95 },
+      { id: 'cho_xuanmai',          zone: 'merchant', nameVi: 'Chợ Xuân Mai (Chương Mỹ)',                               lat: 20.8738, lon: 105.6148, radiusMeters: 70 },
+      { id: 'highlands_xuanmai',    zone: 'merchant', nameVi: 'Highlands Coffee (Xuân Mai - Chương Mỹ)',                lat: 20.8752, lon: 105.6162, radiusMeters: 28 },
+      { id: 'ho_xuanmai',           zone: 'water',    nameVi: 'Hồ Xuân Mai Thần Thuỷ (Chương Mỹ)',                      lat: 20.8828, lon: 105.6228, radiusMeters: 130 },
+
+      // --- THANH OAI: Thị Trấn Kim Bài, Bích Hòa ---
+      { id: 'tt_kimbai',            zone: 'merchant', nameVi: 'Thị Trấn Kim Bài (Thanh Oai)',                           lat: 20.8658, lon: 105.8178, radiusMeters: 85 },
+      { id: 'cho_kimbai',           zone: 'merchant', nameVi: 'Chợ Kim Bài (Thanh Oai)',                                lat: 20.8652, lon: 105.8168, radiusMeters: 65 },
+      { id: 'highlands_kimbai',     zone: 'merchant', nameVi: 'Highlands Coffee (Kim Bài - Thanh Oai)',                 lat: 20.8665, lon: 105.8182, radiusMeters: 28 },
+      { id: 'lang_non_la',          zone: 'forest',   nameVi: 'Làng Nghề Nón Lá Chuông (Thanh Oai)',                    lat: 20.8548, lon: 105.7998, radiusMeters: 90 },
+      { id: 'lang_may_tre',         zone: 'forest',   nameVi: 'Làng Nghề Mây Tre Đan Phú Vinh (Chương Mỹ - Thanh Oai)',lat: 20.9115, lon: 105.7648, radiusMeters: 95 },
+
+      // --- THƯỜNG TÍN: Thị Trấn Thường Tín, Hà Hồi ---
+      { id: 'tt_thuongtin',         zone: 'merchant', nameVi: 'Thị Trấn Thường Tín (Thường Tín)',                       lat: 20.8718, lon: 105.8738, radiusMeters: 90 },
+      { id: 'cho_thuongtin',        zone: 'merchant', nameVi: 'Chợ Thường Tín Cổ Phố (Thường Tín)',                     lat: 20.8712, lon: 105.8728, radiusMeters: 70 },
+      { id: 'highlands_thuongtin',  zone: 'merchant', nameVi: 'Highlands Coffee (Thị Trấn Thường Tín)',                 lat: 20.8725, lon: 105.8745, radiusMeters: 28 },
+      { id: 'lang_sơn_mai',         zone: 'merchant', nameVi: 'Làng Nghề Sơn Mài Duyên Thái (Thường Tín)',              lat: 20.8888, lon: 105.8858, radiusMeters: 90 },
+      { id: 'lang_thu_cong',        zone: 'merchant', nameVi: 'Làng Nghề Thủ Công Hà Hồi (Thường Tín)',                 lat: 20.9018, lon: 105.8688, radiusMeters: 80 },
+
+      // --- THANH TRÌ: Văn Điển, Ngũ Hiệp, Tứ Hiệp ---
+      { id: 'tt_vandien',           zone: 'merchant', nameVi: 'Khu Công Nghiệp Văn Điển (Thanh Trì)',                   lat: 20.9568, lon: 105.8468, radiusMeters: 110 },
+      { id: 'cho_nguhiep',          zone: 'merchant', nameVi: 'Chợ Ngũ Hiệp (Thanh Trì)',                               lat: 20.9658, lon: 105.8238, radiusMeters: 65 },
+      { id: 'highlands_vandien',    zone: 'merchant', nameVi: 'Highlands Coffee (Văn Điển - Thanh Trì)',                lat: 20.9575, lon: 105.8475, radiusMeters: 28 },
+      { id: 'tch_tuhiep',           zone: 'merchant', nameVi: 'The Coffee House (Tứ Hiệp - Thanh Trì)',                 lat: 20.9728, lon: 105.8318, radiusMeters: 28 },
+      { id: 'cong_nguhiep',         zone: 'merchant', nameVi: 'Cộng Cà Phê (Ngũ Hiệp - Thanh Trì)',                    lat: 20.9662, lon: 105.8245, radiusMeters: 28 },
+      { id: 'lang_gom_vandien',     zone: 'merchant', nameVi: 'Lò Gốm Sứ Cổ Văn Điển (Thanh Trì)',                     lat: 20.9555, lon: 105.8458, radiusMeters: 85 },
+
+      // --- PHÚ XUYÊN: Thị Trấn Phú Minh, Phú Túc ---
+      { id: 'tt_phuminh',           zone: 'merchant', nameVi: 'Thị Trấn Phú Minh (Phú Xuyên)',                          lat: 20.7178, lon: 105.9068, radiusMeters: 85 },
+      { id: 'cho_phuxuyen',         zone: 'merchant', nameVi: 'Chợ Phú Xuyên Cổ (Phú Minh)',                            lat: 20.7172, lon: 105.9058, radiusMeters: 65 },
+      { id: 'highlands_phuxuyen',   zone: 'merchant', nameVi: 'Highlands Coffee (Thị Trấn Phú Xuyên)',                  lat: 20.7185, lon: 105.9075, radiusMeters: 28 },
+      { id: 'lang_ren_da_si',       zone: 'merchant', nameVi: 'Lò Rèn Cổ Đại Đa Sỹ (Phú Xuyên)',                       lat: 20.7258, lon: 105.9148, radiusMeters: 85 },
+      { id: 'ho_phuxuyen',          zone: 'water',    nameVi: 'Hồ Câu Cá Tiên Phú Xuyên',                               lat: 20.7228, lon: 105.8988, radiusMeters: 80 },
+
+      // --- ỨNG HÒA: Thị Trấn Vân Đình, Hoa Sơn ---
+      { id: 'tt_vandinh',           zone: 'merchant', nameVi: 'Thị Trấn Vân Đình (Ứng Hòa)',                            lat: 20.7568, lon: 105.7778, radiusMeters: 90 },
+      { id: 'cho_vandinh',          zone: 'merchant', nameVi: 'Chợ Vân Đình Cổ Phố (Ứng Hòa)',                          lat: 20.7562, lon: 105.7768, radiusMeters: 70 },
+      { id: 'highlands_unghoa',     zone: 'merchant', nameVi: 'Highlands Coffee (Vân Đình - Ứng Hòa)',                  lat: 20.7575, lon: 105.7785, radiusMeters: 28 },
+      { id: 'ho_unghoa',            zone: 'water',    nameVi: 'Hồ Vân Đình Thần Thủy (Ứng Hòa)',                        lat: 20.7628, lon: 105.7838, radiusMeters: 100 },
+      { id: 'lang_lua_unghoa',      zone: 'forest',   nameVi: 'Đồng Lúa Tiền Sử Hoa Sơn (Ứng Hòa)',                    lat: 20.7828, lon: 105.8038, radiusMeters: 120 },
+
+      // --- MỸ ĐỨC (Ngoài Chùa Hương): Thị Trấn Tế Tiêu, Hương Sơn ---
+      { id: 'tt_tetieu',            zone: 'merchant', nameVi: 'Thị Trấn Tế Tiêu (Mỹ Đức)',                              lat: 20.6858, lon: 105.7458, radiusMeters: 85 },
+      { id: 'cho_mytieu',           zone: 'merchant', nameVi: 'Chợ Tế Tiêu Cổ (Mỹ Đức)',                                lat: 20.6852, lon: 105.7448, radiusMeters: 65 },
+      { id: 'highlands_myduc',      zone: 'merchant', nameVi: 'Highlands Coffee (Tế Tiêu - Mỹ Đức)',                    lat: 20.6865, lon: 105.7465, radiusMeters: 28 },
+      { id: 'song_day_myduc',       zone: 'water',    nameVi: 'Bãi Bồi Sông Đáy Mỹ Đức (Hương Sơn)',                    lat: 20.6528, lon: 105.7758, radiusMeters: 130 },
+      { id: 'rung_huong_son',       zone: 'forest',   nameVi: 'Rừng Nguyên Sinh Hương Sơn (Mỹ Đức)',                    lat: 20.6328, lon: 105.7958, radiusMeters: 200 },
+
+      // 18. Các Hồ Nước Nổi Tiếng & Đầm Lầy Tiền Sử Bổ Sung
       { id: 'ho_dinhcong',  zone: 'water',    nameVi: 'Hồ Nước Ngọt Định Công (Hoàng Mai)',         lat: 20.9855, lon: 105.8325, radiusMeters: 90 },
       { id: 'ho_damhong',   zone: 'water',    nameVi: 'Đầm Sen Hồng Khương Đình (Thanh Xuân)',      lat: 20.9985, lon: 105.8215, radiusMeters: 85 },
       { id: 'ho_dambau',    zone: 'water',    nameVi: 'Vũng Nước Đầm Bầu (Thanh Xuân)',             lat: 20.9995, lon: 105.8125, radiusMeters: 75 },
