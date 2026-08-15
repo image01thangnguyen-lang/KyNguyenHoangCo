@@ -639,12 +639,19 @@ export function renderCamp(view: GameView, profile: ProfileSave, handlers: Handl
   const defWins = profile.player.lifetime.nightDefenseWins;
   const bmWins = profile.player.lifetime.bloodMoonWins;
 
+  const transit = profile.player.transit;
+  const todayKm = ((transit?.todayTransitMeters ?? 0) / 1000).toFixed(1);
+  const lifetimeKm = ((transit?.lifetimeTransitMeters ?? 0) / 1000).toFixed(1);
+  const transitPoints = transit?.transitPoints ?? 0;
+  const outpostsCount = transit?.visitedOutpostsToday?.length ?? 0;
+  const revealedCells = transit?.revealedCellIds?.length ?? 0;
+
   statsBox.innerHTML = `
     <div class="stats-panel" style="background:rgba(0,0,0,0.35);border:1px solid rgba(217,119,6,0.25);border-radius:8px;padding:10px 12px;margin-bottom:12px;">
       <div style="font-weight:700;color:var(--gold);font-size:0.92rem;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
         <span>🏆 BẢNG KỶ LỤC &amp; THÀNH TÍCH SINH TỒN</span>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:0.85rem;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:0.85rem;margin-bottom:10px;">
         <div style="background:rgba(255,255,255,0.04);padding:6px 8px;border-radius:6px;">
           <span style="color:var(--ink-muted);font-size:0.75rem;display:block;">SỐ NGÀY SINH TỒN</span>
           <strong style="color:#fde047;font-size:1.05rem;">${days} ngày</strong>
@@ -660,6 +667,31 @@ export function renderCamp(view: GameView, profile: ProfileSave, handlers: Handl
         <div style="background:rgba(255,255,255,0.04);padding:6px 8px;border-radius:6px;">
           <span style="color:var(--ink-muted);font-size:0.75rem;display:block;">DIỆT BOSS TRĂNG MÁU</span>
           <strong style="color:#f87171;font-size:1.05rem;">${bmWins} boss</strong>
+        </div>
+      </div>
+
+      <!-- Nhật Ký Du Hành Viễn Chinh (Xe buýt, Metro, Xe máy) -->
+      <div style="border-top:1px dashed rgba(217,119,6,0.3);padding-top:8px;">
+        <div style="font-weight:700;color:#38bdf8;font-size:0.85rem;margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+          <span>🦅 NHẬT KÝ VIỄN CHINH (DU HÀNH ĐA PHƯƠNG THỨC)</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:0.8rem;">
+          <div style="background:rgba(56,189,248,0.08);padding:5px 7px;border-radius:5px;border:1px solid rgba(56,189,248,0.2);">
+            <span style="color:#94a3b8;font-size:0.7rem;display:block;">HÀNH TRÌNH HÔM NAY</span>
+            <strong style="color:#38bdf8;">${todayKm} km (Tổng ${lifetimeKm} km)</strong>
+          </div>
+          <div style="background:rgba(251,191,36,0.08);padding:5px 7px;border-radius:5px;border:1px solid rgba(251,191,36,0.2);">
+            <span style="color:#94a3b8;font-size:0.7rem;display:block;">ĐIỂM VIỄN CHINH</span>
+            <strong style="color:#fef08a;">${transitPoints.toLocaleString('vi-VN')} điểm</strong>
+          </div>
+          <div style="background:rgba(74,222,128,0.08);padding:5px 7px;border-radius:5px;border:1px solid rgba(74,222,128,0.2);">
+            <span style="color:#94a3b8;font-size:0.7rem;display:block;">TIỀN ĐỒN TRẠM DỪNG</span>
+            <strong style="color:#4ade80;">${outpostsCount} trạm hôm nay</strong>
+          </div>
+          <div style="background:rgba(168,85,247,0.08);padding:5px 7px;border-radius:5px;border:1px solid rgba(168,85,247,0.2);">
+            <span style="color:#94a3b8;font-size:0.7rem;display:block;">MỞ SÁNG CỔ ĐỒ</span>
+            <strong style="color:#c084fc;">${revealedCells} ô bản đồ</strong>
+          </div>
         </div>
       </div>
     </div>
@@ -1187,7 +1219,7 @@ function renderInventory(
   box.className = 'inventory-grid';
   box.replaceChildren();
 
-  const entries = Object.entries(inventory).filter(([, qty]) => qty > 0);
+  const entries = Object.entries(inventory).filter(([id, qty]) => qty > 0 && id !== 'ancient_coin');
   entries.sort((a, b) => b[1] - a[1]);
 
   for (const [itemId, qty] of entries) {
@@ -1240,13 +1272,39 @@ export function renderBagPanel(profile: ProfileSave, handlers: Handlers): void {
     btnQuick.onclick = () => handlers.onQuickStorePrecious?.();
   }
 
+  // Cập nhật Thanh Ví Tiền Vàng (Không tốn ô chứa & 0 kg)
+  const carriedGold = countOf(profile.player.carried, 'ancient_coin');
+  const safeGold = countOf(profile.player.safeStorage, 'ancient_coin');
+  let goldWallet = document.getElementById('bag-gold-wallet');
+  if (!goldWallet) {
+    const drawerContent = document.querySelector('#tab-bag .drawer-content');
+    if (drawerContent) {
+      goldWallet = document.createElement('div');
+      goldWallet.id = 'bag-gold-wallet';
+      goldWallet.style.cssText = 'background:linear-gradient(135deg, rgba(45,34,18,0.95), rgba(24,18,10,0.95));border:1px solid rgba(251,191,36,0.4);border-radius:10px;padding:9px 13px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 3px 12px rgba(0,0,0,0.3);';
+      drawerContent.prepend(goldWallet);
+    }
+  }
+  if (goldWallet) {
+    goldWallet.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:1.4rem;">🪙</span>
+        <div>
+          <div style="font-weight:800;color:#fef08a;font-size:0.95rem;">Ví Tiền Vàng Cổ: <strong>${carriedGold.toLocaleString('vi-VN')} Vàng</strong></div>
+          <div style="font-size:0.75rem;color:var(--gold-faint);">Trong két an toàn: <strong>${safeGold.toLocaleString('vi-VN')} Vàng</strong></div>
+        </div>
+      </div>
+      <span class="chip" style="color:#4ade80;background:rgba(74,222,128,0.15);border-color:rgba(74,222,128,0.3);font-size:0.75rem;font-weight:700;">✨ 0 ô · 0 kg</span>
+    `;
+  }
+
   const box = el('inv-bag');
   box.className = 'inventory-grid';
   box.replaceChildren();
 
   const isSafeTab = bagTabState === 'safe';
   const inventory = isSafeTab ? (profile.player.safeStorage ?? {}) : (profile.player.carried ?? {});
-  const entries = Object.entries(inventory).filter(([, qty]) => qty > 0);
+  const entries = Object.entries(inventory).filter(([id, qty]) => qty > 0 && id !== 'ancient_coin');
   entries.sort((a, b) => b[1] - a[1]);
 
   const totalTypes = entries.length;

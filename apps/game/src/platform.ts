@@ -63,18 +63,44 @@ export interface GeoState {
  * Chỉ đọc vị trí khi app đang mở (§4.1) — không có GPS chạy nền, không xin quyền vị trí nền.
  * Đây là quyết định kiến trúc quan trọng: pin nền xấp xỉ 0 và qua duyệt cửa hàng dễ hơn hẳn.
  */
+export interface GeoMovement {
+  distanceMeters: number;
+  speedKmh: number;
+}
+
 export class GeoWatcher {
   private watchId: number | null = null;
   private nativePollTimer: ReturnType<typeof setInterval> | null = null;
   private state: GeoState = { position: null, accuracyMeters: null, deniedVi: null };
   private lastFixMs = 0;
+  private lastFixPos: LatLon | null = null;
   private started = false;
-  private readonly onUpdate: (state: GeoState) => void;
+  private readonly onUpdate: (state: GeoState, movement?: GeoMovement) => void;
 
-  // Gán tường minh thay vì dùng parameter property: parameter property là cú pháp TypeScript
-  // KHÔNG bóc được bằng type stripping, mà cả dự án chạy .ts trực tiếp không qua bước biên dịch.
-  constructor(onUpdate: (state: GeoState) => void) {
+  constructor(onUpdate: (state: GeoState, movement?: GeoMovement) => void) {
     this.onUpdate = onUpdate;
+  }
+
+  private handleNewPosition(newPos: LatLon, accuracy: number, timestampMs: number): void {
+    let movement: GeoMovement | undefined;
+
+    if (this.lastFixPos && this.lastFixMs > 0) {
+      const elapsedSec = (timestampMs - this.lastFixMs) / 1000;
+      if (elapsedSec >= 1.0 && elapsedSec <= 60.0) {
+        const dist = distanceMeters(this.lastFixPos, newPos);
+        const speedKmh = (dist / elapsedSec) * 3.6;
+        movement = { distanceMeters: dist, speedKmh };
+      }
+    }
+
+    this.lastFixMs = timestampMs;
+    this.lastFixPos = newPos;
+    this.state = {
+      position: newPos,
+      accuracyMeters: accuracy,
+      deniedVi: null,
+    };
+    this.onUpdate(this.state, movement);
   }
 
   private pollNativeBridge(): boolean {
@@ -86,13 +112,7 @@ export class GeoWatcher {
         if (raw) {
           const parsed = JSON.parse(raw) as { lat: number; lon: number; accuracy: number; time: number };
           if (parsed && typeof parsed.lat === 'number' && typeof parsed.lon === 'number') {
-            this.lastFixMs = Date.now();
-            this.state = {
-              position: { lat: parsed.lat, lon: parsed.lon },
-              accuracyMeters: parsed.accuracy || 10,
-              deniedVi: null,
-            };
-            this.onUpdate(this.state);
+            this.handleNewPosition({ lat: parsed.lat, lon: parsed.lon }, parsed.accuracy || 10, parsed.time || Date.now());
             return true;
           }
         }
@@ -109,26 +129,17 @@ export class GeoWatcher {
     // 0. Đăng ký hàm nhận toạ độ push từ Android Native (0ms latency, 0 pin — Android chủ động gọi khi có fix)
     (globalThis as unknown as { __onNativeLocation?: (data: { lat: number; lon: number; accuracy: number; time: number }) => void }).__onNativeLocation = (data) => {
       if (data && typeof data.lat === 'number' && typeof data.lon === 'number') {
-        this.lastFixMs = Date.now();
-        this.state = {
-          position: { lat: data.lat, lon: data.lon },
-          accuracyMeters: data.accuracy || 8,
-          deniedVi: null,
-        };
-        this.onUpdate(this.state);
+        this.handleNewPosition({ lat: data.lat, lon: data.lon }, data.accuracy || 8, data.time || Date.now());
       }
     };
 
     // 1. Android Native Bridge — poll 15 giây/lần (fallback khi push event không có).
-    //    Giảm 30× so với 500ms cũ. Người đi bộ 15s ~ 18m: đủ để xác định POI và spawn drop.
     this.pollNativeBridge();
     if (!this.nativePollTimer) {
       this.nativePollTimer = setInterval(() => this.pollNativeBridge(), 15_000);
     }
 
-    // 2. Web Geolocation — getCurrentPosition mỗi 15 giây
-    //    maximumAge: 12000 → OS trả cache GPS cũ ≤12s, chip GPS không cần thức dậy hỏi vệ tinh.
-    //    Với người đi bộ 1,2m/s, 12s sai lệch ~14m — chấp nhận được cho game, pin tiết kiệm đáng kể.
+    // 2. Web Geolocation — getCurrentPosition mỗi 10-15 giây
     if (!('geolocation' in navigator)) {
       if (!this.state.position) {
         this.state = { ...this.state, deniedVi: 'Thiết bị không hỗ trợ định vị. Game vẫn chơi được ở vùng hoang dã.' };
@@ -140,13 +151,11 @@ export class GeoWatcher {
     const fetchLocation = () => {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          this.lastFixMs = Date.now();
-          this.state = {
-            position: { lat: pos.coords.latitude, lon: pos.coords.longitude },
-            accuracyMeters: pos.coords.accuracy,
-            deniedVi: null,
-          };
-          this.onUpdate(this.state);
+          this.handleNewPosition(
+            { lat: pos.coords.latitude, lon: pos.coords.longitude },
+            pos.coords.accuracy,
+            pos.timestamp || Date.now(),
+          );
         },
         (error) => {
           if (!this.state.position) {
@@ -160,15 +169,14 @@ export class GeoWatcher {
             this.onUpdate(this.state);
           }
         },
-        { enableHighAccuracy: true, maximumAge: 12_000, timeout: 10_000 },
+        { enableHighAccuracy: true, maximumAge: 10_000, timeout: 10_000 },
       );
     };
 
     fetchLocation(); // Fix ngay lập tức lần đầu
 
-    // Chu kỳ 15 giây — khớp với Native Bridge, người đi bộ 15s ~ 18m, đủ xác định POI.
     if (!this.watchId) {
-      this.watchId = setInterval(fetchLocation, 15_000) as unknown as number;
+      this.watchId = setInterval(fetchLocation, 12_000) as unknown as number;
     }
   }
 

@@ -31,4 +31,6 @@ export * from './lunar.ts';
 export * from './coop.ts';
 export * from './merchant.ts';
 export * from './weekendQuests.ts';
+export * from './transit.ts';
+export * from './beasts.ts';
 export * from './game.ts';

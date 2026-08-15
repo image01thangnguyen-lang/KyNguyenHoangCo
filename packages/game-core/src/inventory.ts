@@ -14,7 +14,7 @@ export function countOf(inv: Inventory | undefined | null, itemId: ItemId): numb
 export function slotsUsed(inv: Inventory): number {
   let slots = 0;
   for (const [itemId, qty] of Object.entries(inv)) {
-    if (qty <= 0) continue;
+    if (qty <= 0 || itemId === 'ancient_coin') continue;
     slots += Math.ceil(qty / getItem(itemId).stack);
   }
   return slots;
@@ -55,6 +55,7 @@ export function removeItems(inv: Inventory, needs: ItemStack[]): Inventory {
 export function totalWeight(inv: Inventory): number {
   let weight = 0;
   for (const [itemId, qty] of Object.entries(inv)) {
+    if (qty <= 0 || itemId === 'ancient_coin') continue;
     weight += getItem(itemId).weight * qty;
   }
   return weight;

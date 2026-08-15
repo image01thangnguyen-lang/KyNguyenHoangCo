@@ -18,18 +18,15 @@ Chỉ hai thời điểm cần mạng (không thể tránh với mọi ứng d�
 
 ## 1. TẦM NHÌN VÀ TRỤ CỘT THIẾT KẾ
 
-**Câu định vị:** Biến mỗi bước chân quanh khu phố thành tài nguyên sinh tồn trong thế giới 10.000 năm trước — một cuộc phiêu lưu trọn vẹn nằm gọn trong túi bạn, không cần mạng, không cần server.
+**Câu định vị:** Biến mỗi bước chân quanh khu phố và mỗi chuyến xe buýt thành tài nguyên sinh tồn trong thế giới 10.000 năm trước — một cuộc phiêu lưu trọn vẹn nằm gọn trong túi bạn, không cần mạng, không cần server.
 
-Bốn trụ cột:
+Năm trụ cột thiết kế:
 
-1. **Bước chân là tài nguyên.** Đi bộ luôn có lãi ròng; không bao giờ trừng phạt vận động.
-2. **Thế giới thật là bản đồ.** Công viên, hồ nước, cửa hàng quanh nhà là nội dung game.
-3. **An toàn trên hết.** Không cơ chế nào thưởng cho hành vi nguy hiểm.
-4. **Sinh tồn cùng mái nhà.** Trải nghiệm gia đình đến từ việc chơi cạnh nhau; co-op cục bộ qua Wi-Fi/Bluetooth (vẫn không cần Internet) dự kiến ở bản 1.1.
-
-Game tham chiếu quan trọng nhất cho bản offline là **Zombies, Run!**: game offline không có cộng đồng trực tuyến giữ chân người chơi, nên phải giữ chân bằng **kể chuyện** — giọng dẫn của AI Lạc Lạc khi đi bộ chính là linh hồn sản phẩm. Pokémon GO vẫn là bài học về an toàn và POI; Pikmin Bloom là chuẩn mực về đếm bước tiết kiệm pin.
-
-Các tinh chỉnh thiết kế đã chốt ở bản 1.0 **giữ nguyên toàn bộ**: sửa nghịch lý độ đói (đói giảm theo thời gian, không phạt người đi nhiều), ban đêm là phòng thủ trại tại nhà thay vì quái đuổi ngoài đường, chỉ dùng POI công cộng, khóa tương tác khi di chuyển nhanh hơn 12 km/h.
+1. **Bước chân là tài nguyên tinh — Chuyến đi là tài nguyên mở:** Đi bộ để thu hoạch sâu đồ quý; Đi xe buýt/xe máy để mở rộng bản đồ và thu thập thụ động.
+2. **Thế giới thật là bản đồ:** Công viên, hồ nước, trạm xe buýt quanh nhà là nội dung game.
+3. **An toàn trên hết:** Tự động rảnh tay (Hands-free) khi đi xe; khóa mọi tương tác phức tạp khi đang di chuyển nhanh, chỉ mở tương tác nhanh 30s khi xe đỗ tại trạm.
+4. **Sinh tồn cùng mái nhà:** Trải nghiệm gia đình đến từ việc chơi cạnh nhau; co-op cục bộ qua Wi-Fi/Bluetooth (vẫn không cần Internet) dự kiến ở bản 1.1.
+5. **Kể chuyện dẫn lối:** AI Lạc Lạc vừa dẫn chuyện theo bước chân đi bộ, vừa đóng vai trò Radio cổ đại thuyết minh khi đi xe buýt. *(Chi tiết kịch bản xem tại [kich-ban-game-da-phuong-thuc.md](docs/kich-ban-game-da-phuong-thuc.md))*.
 
 ---
 

@@ -89,6 +89,12 @@ import {
   MAX_STRENGTH_LEVEL,
   getStrengthUpgradeInfo,
   maxWeightCapacity,
+  processTransitMovement,
+  canCollectOutpost,
+  collectOutpostSupply,
+  checkBeastTerritory,
+  checkNightAmbientThreat,
+  raidBeastDen,
 } from '../../../packages/game-core/src/index.ts';
 import type {
   DifficultyId,
@@ -271,6 +277,109 @@ function resumeCompass(): void {
 function pauseCompass(): void {
   compassActive = false;
 }
+
+// ---------------------------------------------------------------- DU HÀNH VIỄN CHINH & TIỀN ĐỒN TRẠM DỪNG
+
+let currentMovementSpeedKmh = 0;
+let lastNearOutpost: MapFeature | null = null;
+let lastRadioNarrativeMs = 0;
+
+function checkNearOutpostSupply(): void {
+  if (!app.profile) return;
+  const { render: playerAt } = currentPosition();
+  const outposts = cachedCombinedFeatures.filter(
+    (f) =>
+      f.id.includes('bus') ||
+      f.nameVi.includes('Xe Buýt') ||
+      f.nameVi.includes('Tiền Đồn') ||
+      f.nameVi.includes('Trạm Dừng') ||
+      f.id.includes('outpost'),
+  );
+
+  let nearest: MapFeature | null = null;
+  let minDist = 45; // trong tầm 45m
+
+  for (const op of outposts) {
+    const d = distanceMeters(playerAt, { lat: op.lat, lon: op.lon });
+    if (d <= minDist) {
+      minDist = d;
+      nearest = op;
+    }
+  }
+
+  const outpostBanner = document.getElementById('outpost-supply-banner');
+  const transitBanner = document.getElementById('transit-hud-banner');
+
+  // Cập nhật Transit HUD Banner khi di chuyển nhanh (>=12 km/h)
+  if (transitBanner) {
+    if (currentMovementSpeedKmh >= 12.0) {
+      transitBanner.hidden = false;
+      const speedEl = document.getElementById('transit-hud-speed');
+      if (speedEl) speedEl.textContent = `${Math.round(currentMovementSpeedKmh)} km/h`;
+    } else {
+      transitBanner.hidden = true;
+    }
+  }
+
+  // Cập nhật Outpost Supply Banner khi dừng chân gần trạm xe buýt
+  if (outpostBanner) {
+    if (nearest && currentMovementSpeedKmh <= 12.0 && canCollectOutpost(app.profile.player.transit, nearest.id)) {
+      lastNearOutpost = nearest;
+      outpostBanner.hidden = false;
+      const nameEl = document.getElementById('outpost-supply-name');
+      if (nameEl) nameEl.textContent = nearest.nameVi;
+    } else {
+      outpostBanner.hidden = true;
+      lastNearOutpost = null;
+    }
+  }
+}
+
+function claimNearOutpostSupply(): void {
+  if (!app.profile || !lastNearOutpost) return;
+  const result = collectOutpostSupply(
+    app.profile.player.transit,
+    app.profile.player.carried,
+    lastNearOutpost.id,
+    lastNearOutpost.nameVi,
+  );
+
+  if (result.ok) {
+    app.profile.player.transit = result.nextTransit;
+    app.profile.player.carried = result.nextCarried;
+    persist();
+    audio.play('quest_complete');
+    buzz([30, 40, 30]);
+    toast(result.messageVi, 'good');
+    const outpostBanner = document.getElementById('outpost-supply-banner');
+    if (outpostBanner) outpostBanner.hidden = true;
+    sync();
+  } else {
+    toast(result.messageVi, 'bad');
+  }
+}
+
+function checkRadioNarrative(speedKmh: number, at?: LatLon): void {
+  if (!app.profile || !app.profile.settings.narrationAudio) return;
+  const nowMs = Date.now();
+  if (nowMs - lastRadioNarrativeMs < 60_000) return; // Giãn cách tối thiểu 1 phút giữa các mẩu radio
+
+  let textToSay: string | null = null;
+
+  if (speedKmh >= 25.0) {
+    textToSay = 'Lạc Lạc đây! Tốc độ du hành của bạn thật ấn tượng. Linh Điểu đang sải cánh gom lấy những luồng linh khí dọc đường!';
+  } else if (lastNearOutpost) {
+    textToSay = `Chúng ta vừa tới gần ${lastNearOutpost.nameVi}. Nếu xe dừng bánh, hãy nhận rương tiếp tế của trạm nhé!`;
+  }
+
+  if (textToSay) {
+    lastRadioNarrativeMs = nowMs;
+    audio.play('beat_notify');
+    speech.speak(textToSay);
+    toast(`📻 Lạc Lạc Radio: "${textToSay}"`);
+  }
+}
+
 
 
 export interface NavigationTurn {
@@ -915,9 +1024,55 @@ function enterProfile(slot: number): void {
   }
   mapView.resize();
 
+  // Tự động kích hoạt cảm biến đếm bước chân
+  pedometer.autoStart();
+
+  // Cầu nối nhận bước chân trực tiếp từ Android Native Hardware Sensor
+  (globalThis as any).__onNativeStep = (count = 1) => {
+    pedometer.onNativeStep(count);
+    sync();
+  };
+
   if (!geo) {
-    geo = new GeoWatcher(() => sync());
+    geo = new GeoWatcher((_state, movement) => {
+      if (movement) {
+        currentMovementSpeedKmh = movement.speedKmh;
+        if (movement.speedKmh >= 0.5 && movement.speedKmh <= 9.5 && movement.distanceMeters >= 2.0 && movement.distanceMeters <= 250) {
+          pedometer.addGpsDistanceWalked(movement.distanceMeters);
+        } else if (movement.speedKmh >= 12.0 && app.profile) {
+          const at = _state.position || currentPosition().position;
+          const transitRes = processTransitMovement(
+            app.profile.player.transit,
+            app.profile.player.carried,
+            movement.distanceMeters,
+            movement.speedKmh,
+            at?.lat,
+            at?.lon,
+          );
+          app.profile.player.transit = transitRes.nextTransit;
+          app.profile.player.carried = transitRes.nextCarried;
+          persist();
+
+          for (const ev of transitRes.eventsVi) {
+            toast(ev, 'good');
+          }
+          if (transitRes.dropsGained.length > 0) {
+            audio.play('pickup');
+            if (app.profile.settings.haptics) buzz(20);
+          }
+          checkRadioNarrative(movement.speedKmh, at);
+        }
+      }
+      checkNearOutpostSupply();
+      sync();
+    });
     geo.start();
+  }
+
+  // Nút Nhận Tiếp Tế tại Tiền Đồn Trạm Dừng Xe Buýt
+  const btnClaimSupply = document.getElementById('btn-claim-outpost-supply');
+  if (btnClaimSupply) {
+    btnClaimSupply.onclick = () => claimNearOutpostSupply();
   }
 
   // Nút Cấp quyền GPS
@@ -974,6 +1129,58 @@ function enterProfile(slot: number): void {
       const cd = getPoiCooldownRemaining(poiId, 'forage');
       if (!cd.ready) {
         toast(`⏳ Tài nguyên tại ${currentExplorePoi.nameVi} đang phục hồi (${cd.messageVi}). Hãy quay lại sau!`, 'warn');
+        return;
+      }
+
+      // 1. Nếu là Hang Ổ Dã Thú -> Tiến hành Đột Kích Săn Thú
+      if (
+        currentExplorePoi.id.startsWith('den_') ||
+        currentExplorePoi.nameVi.includes('Hang') ||
+        currentExplorePoi.nameVi.includes('Động') ||
+        currentExplorePoi.nameVi.includes('Tổ Cáo') ||
+        currentExplorePoi.nameVi.includes('Bãi Thỏ') ||
+        currentExplorePoi.nameVi.includes('Tổ Nhím') ||
+        currentExplorePoi.nameVi.includes('Ổ Rắn') ||
+        currentExplorePoi.nameVi.includes('Bãi Hươu') ||
+        currentExplorePoi.nameVi.includes('Bầy Sói') ||
+        currentExplorePoi.nameVi.includes('Đầm Hắc Mãng Xà')
+      ) {
+        const raidRes = raidBeastDen(app.profile.player, currentExplorePoi.id, now());
+        if (raidRes.ok) {
+          app.profile.player = raidRes.nextPlayer;
+          persist();
+          audio.play('quest_complete');
+          if (app.profile.settings.haptics) buzz([0, 150, 100, 250]);
+          const lootDesc = raidRes.lootGained.map((l) => `${l.qty}× ${getItem(l.itemId).nameVi}`).join(', ');
+          toast(`⚔️ ${raidRes.messageVi}\n🎁 Chiến lợi phẩm: ${lootDesc} (Mất: ${raidRes.hpLost} HP)`, 'good');
+          el('overlay-poi-explore').hidden = true;
+          render();
+        } else {
+          toast(raidRes.messageVi, 'warn');
+        }
+        return;
+      }
+
+      const isPharmacy =
+        currentExplorePoi.id.includes('pharm') ||
+        currentExplorePoi.nameVi.includes('Long Châu') ||
+        currentExplorePoi.nameVi.includes('Pharmacity') ||
+        currentExplorePoi.nameVi.includes('Thảo Dược') ||
+        currentExplorePoi.nameVi.includes('Thần Dược') ||
+        currentExplorePoi.nameVi.includes('Y Viện');
+
+      if (isPharmacy) {
+        app.profile.player.carried = addItems(app.profile.player.carried, [
+          { itemId: 'health_potion', qty: 1 },
+          { itemId: 'antidote', qty: 1 },
+        ]);
+        recordPoiAction(poiId, 'forage');
+        el('overlay-poi-explore').hidden = true;
+        toast(`💊 Nhận Gói Dược Cứu Sinh (1 Bình Hồi Máu + 1 Thuốc Giải Độc) từ ${currentExplorePoi.nameVi}! (Hồi chiêu 30')`, 'good');
+        audio.play('pickup');
+        if (app.profile.settings.haptics) buzz(20);
+        persist();
+        render();
         return;
       }
 
@@ -1034,11 +1241,32 @@ function enterProfile(slot: number): void {
         return;
       }
 
-      app.profile.player.survival.hp = Math.min(100, (app.profile.player.survival.hp ?? 100) + 25);
-      app.profile.player.survival.hydration = Math.min(100, (app.profile.player.survival.hydration ?? 100) + 20);
+      const isPharmacy =
+        currentExplorePoi.id.includes('pharm') ||
+        currentExplorePoi.nameVi.includes('Long Châu') ||
+        currentExplorePoi.nameVi.includes('Pharmacity') ||
+        currentExplorePoi.nameVi.includes('Thảo Dược') ||
+        currentExplorePoi.nameVi.includes('Thần Dược') ||
+        currentExplorePoi.nameVi.includes('Y Viện');
+
+      const hpHealed = isPharmacy ? 50 : 25;
+      const thirstHealed = isPharmacy ? 30 : 20;
+
+      app.profile.player.survival.hp = Math.min(100, (app.profile.player.survival.hp ?? 100) + hpHealed);
+      app.profile.player.survival.hydration = Math.min(100, (app.profile.player.survival.hydration ?? 100) + thirstHealed);
+
+      if (isPharmacy && app.profile.player.survival.isSick) {
+        app.profile.player.survival.isSick = false;
+      }
+
       recordPoiAction(poiId, 'rest');
       el('overlay-poi-explore').hidden = true;
-      toast(`🍵 Đã nghỉ chân tại ${currentExplorePoi.nameVi}! Hồi phục +25 HP và +20 Khát. (Hồi chiêu 45')`, 'good');
+      toast(
+        isPharmacy
+          ? `💊 Đã được danh y tại ${currentExplorePoi.nameVi} cấp cứu & giải trừ bệnh tật! Hồi phục +${hpHealed} HP, +${thirstHealed} Khát. (Hồi chiêu 45')`
+          : `🍵 Đã nghỉ chân tại ${currentExplorePoi.nameVi}! Hồi phục +${hpHealed} HP và +${thirstHealed} Khát. (Hồi chiêu 45')`,
+        'good',
+      );
       audio.play('water');
       persist();
       render();
@@ -1152,7 +1380,37 @@ function openPoiExploreSheet(feat: MapFeature): void {
 
   const n = feat.nameVi;
 
-  if (n.includes('Chùa') || n.includes('Đền') || n.includes('Một Cột') || n.includes('Trấn Quốc')) {
+  const isDen =
+    feat.id.startsWith('den_') ||
+    n.includes('Hang') ||
+    n.includes('Động') ||
+    n.includes('Tổ Cáo') ||
+    n.includes('Bãi Thỏ') ||
+    n.includes('Tổ Nhím') ||
+    n.includes('Ổ Rắn') ||
+    n.includes('Bãi Hươu') ||
+    n.includes('Bầy Sói') ||
+    n.includes('Đầm Hắc Mãng Xà');
+
+  if (isDen) {
+    icon = '🪨';
+    if (feat.id.startsWith('den_fox') || n.includes('Tổ Cáo')) icon = '🦊';
+    else if (feat.id.startsWith('den_rabbit') || n.includes('Bãi Thỏ')) icon = '🐇';
+    else if (feat.id.startsWith('den_hedgehog') || n.includes('Tổ Nhím')) icon = '🦔';
+    else if (feat.id.startsWith('den_snake') || n.includes('Ổ Rắn')) icon = '🐍';
+    else if (feat.id.startsWith('den_boar') || n.includes('Lợn Rừng')) icon = '🐗';
+    else if (feat.id.startsWith('den_deer') || n.includes('Hươu')) icon = '🦌';
+    else if (feat.id.startsWith('den_wolf') || n.includes('Sói')) icon = '🐺';
+    else if (feat.id.startsWith('den_tiger') || n.includes('Hổ')) icon = '🐅';
+    else if (feat.id.startsWith('den_bear') || n.includes('Gấu')) icon = '🐻';
+
+    tag = 'TỔ DÃ THÚ TIỀN SỬ';
+    lore = 'Nơi trú ngụ của loài sinh vật hoang dã tiền sử tại các vạt cỏ và công viên rợp bóng cây. Hãy sẵn sàng trang bị để săn bắt hoặc thu phục!';
+  } else if (n.includes('Vườn Hoa') || n.includes('Công Viên')) {
+    icon = '🌳';
+    tag = 'CÔNG VIÊN CÂY XANH';
+    lore = 'Vùng sinh thái xanh ngát giữa lòng thành phố, nơi không khí trong lành, cây cỏ tươi tốt và ẩn chứa nhiều dấu tích cổ sinh.';
+  } else if (n.includes('Chùa') || n.includes('Đền') || n.includes('Một Cột') || n.includes('Trấn Quốc')) {
     icon = '🪷';
     tag = 'THÁNH ĐỊA TÂM LINH';
     lore = 'Vùng đất phong thủy tụ khí bên hồ nước, nơi các bậc hiền nhân tiền sử lập đàn cầu quốc thái dân an và thuần dưỡng linh thú.';
@@ -1195,8 +1453,16 @@ function openPoiExploreSheet(feat: MapFeature): void {
     distEl.innerHTML = `🟢 <strong>Đang ở trong phạm vi (${dist}m)</strong> — Có thể tương tác!`;
     distEl.style.color = '#4ade80';
 
-    btnForage.disabled = !forageCd.ready;
-    btnForage.textContent = forageCd.ready ? '🌿 Khám Phá & Nhặt Đồ' : `⏳ Đang hồi (${forageCd.messageVi})`;
+    if (isDen) {
+      const isRaided = (app.profile.player.beastState?.raidedDenIds ?? []).includes(feat.id);
+      btnForage.disabled = isRaided;
+      btnForage.textContent = isRaided ? '✅ Đã Dẹp Tan Hang Ổ' : '⚔️ Đột Kích Hang Ổ (Săn Thú)';
+      btnRest.style.display = 'none';
+    } else {
+      btnRest.style.display = 'inline-flex';
+      btnForage.disabled = !forageCd.ready;
+      btnForage.textContent = forageCd.ready ? '🌿 Khám Phá & Nhặt Đồ' : `⏳ Đang hồi (${forageCd.messageVi})`;
+    }
 
     btnRest.disabled = !restCd.ready;
     btnRest.textContent = restCd.ready ? '🍵 Nghỉ Chân (+25 HP)' : `⏳ Vừa nghỉ (${restCd.messageVi})`;
@@ -1207,11 +1473,12 @@ function openPoiExploreSheet(feat: MapFeature): void {
     distEl.innerHTML = `📍 Cách bạn <strong>${dist}m</strong> — Hãy đi lại gần (≤${radius}m) để kích hoạt!`;
     distEl.style.color = '#f59e0b';
     btnForage.disabled = true;
-    btnForage.textContent = `🚶 Hãy lại gần (${dist}m)`;
+    btnForage.textContent = isDen ? `🚶 Lại gần để Đột Kích (${dist}m)` : `🚶 Hãy lại gần (${dist}m)`;
     btnRest.disabled = true;
     btnRest.textContent = `🍵 Nghỉ Chân`;
     btnMonument.disabled = true;
     btnMonument.textContent = `📜 Khắc Bia`;
+    btnRest.style.display = isDen ? 'none' : 'inline-flex';
   }
 
   el('overlay-poi-explore').hidden = false;
@@ -1503,9 +1770,40 @@ function sync(): void {
   );
 
   persist();
+  // Kiểm tra Lãnh Địa Quái Thú Sương Đỏ
+  const { render: currentAt } = currentPosition();
+  const activeTerritory = checkBeastTerritory(currentAt.lat, currentAt.lon);
+  const hudTerritoryBanner = document.getElementById('territory-threat-banner');
+  if (hudTerritoryBanner) {
+    if (activeTerritory) {
+      hudTerritoryBanner.hidden = false;
+      hudTerritoryBanner.innerHTML = `⚠️ <strong>${activeTerritory.nameVi}</strong> • Nguy cơ Đe Dọa Cấp ${activeTerritory.threatLevel} (X${activeTerritory.resourceMultiplier} Tài Nguyên)`;
+    } else {
+      hudTerritoryBanner.hidden = true;
+    }
+  }
+
+  // Kiểm tra Áp lực Màn Đêm
+  const localTime = toLocalTime(now());
+  const nightThreat = checkNightAmbientThreat(
+    currentAt.lat,
+    currentAt.lon,
+    localTime.hour,
+    app.profile.player.carried,
+    cachedCombinedFeatures,
+  );
+  if (nightThreat.isThreatActive && now() - lastNightThreatWarnMs > 45_000) {
+    lastNightThreatWarnMs = now();
+    app.profile.player.survival.hp = Math.max(5, (app.profile.player.survival.hp ?? 100) - nightThreat.hpDrained);
+    toast(nightThreat.messageVi || '🌑 Màn đêm lạnh lẽo bủa vây! Dã thú rình rập trong bóng tối.', 'warn');
+    buzz([0, 80, 50, 80]);
+  }
+
   render();
   updatePocketModeDisplay();
 }
+
+let lastNightThreatWarnMs = 0;
 
 function persist(): void {
   if (app.profile) app.save = putProfile(app.save, app.save.activeSlot, app.profile);
@@ -1550,6 +1848,9 @@ function drawMap(): void {
 
   const { render: at, hasFix } = currentPosition();
   const weather = weatherFor(at, now());
+  const localTime = toLocalTime(now());
+  const isNight = localTime.hour >= 18 || localTime.hour < 6;
+  const hasTorch = (app.profile.player.carried['torch'] ?? 0) > 0;
 
   mapView.render({
     center: at,
@@ -1564,6 +1865,9 @@ function drawMap(): void {
     traps: app.profile.player.traps,
     activePetId: app.profile.player.pets?.find((p: any) => p.isActive)?.petId ?? null,
     strengthLevel: app.profile.player.strengthLevel ?? 1,
+    speedKmh: currentMovementSpeedKmh,
+    hasTorch,
+    isNight,
   });
 }
 

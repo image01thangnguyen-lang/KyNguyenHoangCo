@@ -200,6 +200,65 @@ export interface PlacedTrap {
   scavenged?: boolean;
 }
 
+export interface PlayerTransitState {
+  /** Quãng đường du hành bằng phương tiện hôm nay (mét) */
+  todayTransitMeters: number;
+  /** Tổng quãng đường du hành bằng phương tiện cả đời (mét) */
+  lifetimeTransitMeters: number;
+  /** Điểm Viễn Chinh tích lũy khi đi xe buýt/tàu điện */
+  transitPoints: number;
+  /** Danh sách các ID Tiền Đồn Trạm Dừng đã ghé nhận tiếp tế hôm nay */
+  visitedOutpostsToday: string[];
+  /** Danh sách các ô lưới bản đồ đã xóa sạch sương mù (Fog of War) */
+  revealedCellIds?: string[];
+  /** Mốc thời gian lần cuối sync viễn chinh */
+  lastTransitMs?: number;
+}
+
+export interface BeastTrack {
+  id: string;
+  lat: number;
+  lon: number;
+  beastType: 'wolf' | 'tiger' | 'bear' | 'serpent';
+  beastNameVi: string;
+  discoveredAtMs: number;
+  cluePoints: number;
+}
+
+export interface BeastDen {
+  id: string;
+  nameVi: string;
+  beastType: 'wolf' | 'tiger' | 'bear' | 'serpent';
+  level: number;
+  hp: number;
+  maxHp: number;
+  attack: number;
+  defense: number;
+  lat: number;
+  lon: number;
+  radiusMeters: number;
+  requiredClues: number;
+  isRaided: boolean;
+  lootTable: { itemId: ItemId; min: number; max: number }[];
+}
+
+export interface BeastTerritory {
+  id: string;
+  nameVi: string;
+  lat: number;
+  lon: number;
+  radiusMeters: number;
+  threatLevel: number;
+  resourceMultiplier: number;
+  dominantBeast: 'wolf' | 'tiger' | 'bear' | 'serpent';
+}
+
+export interface PlayerBeastState {
+  discoveredClues: number;
+  raidedDenIds: string[];
+  lastAmbientThreatCheckMs?: number;
+}
+
 export type Gender = 'male' | 'female';
 
 /** Hồ sơ chơi — một máy chứa tối đa 2 hồ sơ (§3: anh em dùng chung điện thoại). */
@@ -222,6 +281,10 @@ export interface PlayerState {
   incubatingEgg?: any | null;
   /** Danh sách linh thú / thú cưng tiền sử đồng hành */
   pets?: any[];
+  /** Trạng thái du hành viễn chinh bằng phương tiện (Xe buýt, Metro, Xe máy) */
+  transit?: PlayerTransitState;
+  /** Trạng thái săn dã thú, dấu vết và hang ổ quái vật */
+  beastState?: PlayerBeastState;
   /** Cấp bậc thợ thủ công chế tác (1..4) */
   artisanLevel?: number;
   /** Cấp độ mở rộng của Két An Toàn bằng Đồng Vàng Cổ (1..6) */

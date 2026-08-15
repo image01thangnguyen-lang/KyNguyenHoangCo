@@ -14,6 +14,7 @@ import {
   metersToLatDegrees,
   metersToLonDegrees,
 } from '../../../packages/game-core/src/world.ts';
+import { HANOI_BEAST_TERRITORIES } from '../../../packages/game-core/src/index.ts';
 import type { LatLon, MapFeature, PlacedTrap } from '../../../packages/game-core/src/index.ts';
 import type { WeatherToday } from '../../../packages/game-core/src/weather.ts';
 import type { Phase } from '../../../packages/game-core/src/time.ts';
@@ -50,6 +51,12 @@ export interface RenderInput {
   activePetId?: string | null;
   /** Cấp độ Thể Lực của nhân vật (1..10) để hiển thị hào quang và hiệu ứng sức mạnh. */
   strengthLevel?: number;
+  /** Vận tốc di chuyển hiện tại (km/h) để kích hoạt chế độ viễn chinh / Linh Điểu */
+  speedKmh?: number;
+  /** Có đang cầm Đuốc Lửa trên tay trong đêm không */
+  hasTorch?: boolean;
+  /** Có phải đang ban đêm không */
+  isNight?: boolean;
 }
 
 export function itemEmoji(id: string): string {
@@ -180,27 +187,27 @@ const PALETTE = {
     sealRed: '#dc2626',
   },
   night: {
-    parchment: '#0e141f',
-    parchmentTexture: '#090e16',
-    blockFill: '#141c2b',
-    blockStroke: '#202d45',
-    roadMain: '#283852',
-    roadMainCasing: '#42587d',
-    roadSec: '#1e2b40',
-    roadSecCasing: '#314463',
-    roadTrail: '#172233',
-    roadTrailCasing: '#283852',
-    parkFill: '#0e221e',
-    parkStroke: '#183b33',
-    parkInner: '#0b1b17',
-    waterFill: '#0e303b',
-    waterStroke: '#1c505f',
-    waterShimmer: 'rgba(56, 189, 248, 0.45)',
-    textInk: '#e2e8f0',
-    textGold: '#38bdf8',
-    textSec: '#94a3b8',
-    gridLine: 'rgba(56, 189, 248, 0.15)',
-    sealRed: '#ef4444',
+    parchment: '#1c2638', // Nền lụa dạ lam huyền ảo, sáng rõ và sắc nét
+    parchmentTexture: '#141d2c',
+    blockFill: '#243247', // Phân lô khối phố màu lam đậm tương phản
+    blockStroke: '#384d6b',
+    roadMain: '#5a7ba7', // Đại lộ ánh trăng sáng rực rỡ, nhìn cực rõ nét
+    roadMainCasing: '#7ea4d6',
+    roadSec: '#476387', // Đường liên khu
+    roadSecCasing: '#6488b8',
+    roadTrail: '#374d6c', // Đường nhỏ / ngõ ngách
+    roadTrailCasing: '#52729e',
+    parkFill: '#1a4238', // Công viên xanh ngọc bích đêm
+    parkStroke: '#2d6a5c',
+    parkInner: '#123028',
+    waterFill: '#1c556b', // Sông hồ dạ thủy ngọc bích sáng lấp lánh
+    waterStroke: '#2f829e',
+    waterShimmer: 'rgba(125, 211, 252, 0.75)',
+    textInk: '#f8fafc', // Chữ trắng sáng nổi bật
+    textGold: '#7dd3fc', // Chữ ánh kim lam phát sáng
+    textSec: '#cbd5e1',
+    gridLine: 'rgba(125, 211, 252, 0.22)',
+    sealRed: '#f43f5e',
   },
 } as const;
 
@@ -587,6 +594,9 @@ export class MapView {
       this.drawWaterFeature(feature, project, pxPerMeter, palette);
     }
 
+    // 4b. Lãnh địa dã thú sương đỏ (Red Mist Beast Territories)
+    this.drawBeastTerritories(project, pxPerMeter, palette);
+
     // 5. Cắm trại doanh trại
     if (input.homeCellCenter) {
       this.drawCampBadge(project(input.homeCellCenter), pxPerMeter, palette);
@@ -609,6 +619,11 @@ export class MapView {
 
     // 9. Nhân vật Dũng Sĩ Hoàng Cổ đứng giữa cung đường
     this.drawPlayer(w / 2 + this.panX, h / 2 + this.panY, pxPerMeter, input, palette);
+
+    // 9b. Linh Điểu Tiền Sử bay lượn & Vệt Gió Thần Tốc khi di chuyển nhanh (Xe buýt / Xe máy)
+    if (input.speedKmh && input.speedKmh >= 12) {
+      this.drawSpiritBirdAndWindTrails(w, h, w / 2 + this.panX, h / 2 + this.panY, input.speedKmh, palette);
+    }
 
     // 10. Hiệu ứng thời tiết mưa & không khí cổ kính
     if (input.weather.raining) {
@@ -982,6 +997,73 @@ export class MapView {
     ctx.fillText(labelText, x, Math.round(pillY + labelH / 2));
 
     ctx.restore();
+  }
+
+  // ================================================================
+  // 4b. LÃNH ĐỊA DÃ THÚ SƯƠNG ĐỎ (RED MIST BEAST TERRITORIES)
+  // ================================================================
+
+  private drawBeastTerritories(
+    project: (at: LatLon) => [number, number],
+    pxPerMeter: number,
+    palette: typeof PALETTE.day,
+  ): void {
+    const { ctx } = this;
+    const w = this.canvas.width;
+    const h = this.canvas.height;
+
+    for (const terr of HANOI_BEAST_TERRITORIES) {
+      const [rawX, rawY] = project({ lat: terr.lat, lon: terr.lon });
+      const x = Math.round(rawX);
+      const y = Math.round(rawY);
+      const radiusPx = terr.radiusMeters * pxPerMeter;
+
+      if (x < -radiusPx || x > w + radiusPx || y < -radiusPx || y > h + radiusPx) continue;
+
+      ctx.save();
+
+      // 1. Quầng Sương Mù Đỏ Thần Bí (Pulsating Red Mist)
+      const pulse = Math.sin(this.tick / 15) * 0.15;
+      const mistGrad = ctx.createRadialGradient(x, y, radiusPx * 0.2, x, y, radiusPx);
+      mistGrad.addColorStop(0, `rgba(225, 29, 72, ${0.35 + pulse})`);
+      mistGrad.addColorStop(0.65, `rgba(190, 18, 60, ${0.20 + pulse * 0.5})`);
+      mistGrad.addColorStop(1, 'rgba(136, 19, 55, 0)');
+
+      ctx.fillStyle = mistGrad;
+      ctx.beginPath();
+      ctx.ellipse(x, y, radiusPx, radiusPx * 0.72, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 2. Viền gai hung hiểm bao quanh lãnh địa
+      ctx.strokeStyle = `rgba(244, 63, 94, ${0.55 + pulse})`;
+      ctx.lineWidth = 2 * this.dpr;
+      ctx.setLineDash([8 * this.dpr, 6 * this.dpr]);
+      ctx.beginPath();
+      ctx.ellipse(x, y, radiusPx, radiusPx * 0.72, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // 3. Biểu tượng & Thẻ tên Lãnh Địa Quái Thú
+      const badgeY = y - radiusPx * 0.6;
+      ctx.font = `bold ${10.5 * this.dpr}px 'Be Vietnam Pro', system-ui, sans-serif`;
+      const labelText = `⚠️ ${terr.nameVi} (X${terr.resourceMultiplier} Tài Nguyên)`;
+      const labelW = ctx.measureText(labelText).width + 16 * this.dpr;
+
+      ctx.fillStyle = 'rgba(76, 5, 25, 0.92)';
+      ctx.strokeStyle = '#f43f5e';
+      ctx.lineWidth = 1.4 * this.dpr;
+      ctx.beginPath();
+      ctx.roundRect(x - labelW / 2, badgeY - 10 * this.dpr, labelW, 20 * this.dpr, 4 * this.dpr);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#fecdd3';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(labelText, x, badgeY);
+
+      ctx.restore();
+    }
   }
 
   // ================================================================
@@ -1369,6 +1451,19 @@ export class MapView {
     ctx.closePath();
     ctx.fill();
 
+    // 0b. ĐUỐC LỬA BAN ĐÊM: Vòng Hào Quang Ấm Áp 3D xua đuổi dã thú bóng tối
+    if (input.hasTorch && input.isNight) {
+      const torchGrad = ctx.createRadialGradient(rx, Math.round(y), 8 * this.dpr, rx, Math.round(y), 32 * pxPerMeter);
+      torchGrad.addColorStop(0, 'rgba(251, 146, 60, 0.45)');
+      torchGrad.addColorStop(0.5, 'rgba(234, 88, 12, 0.22)');
+      torchGrad.addColorStop(0.85, 'rgba(194, 65, 12, 0.08)');
+      torchGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = torchGrad;
+      ctx.beginPath();
+      ctx.ellipse(rx, Math.round(y), 32 * pxPerMeter, 32 * pxPerMeter * 0.72, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
     // 1. Vòng Radar tương tác 30m (bán kính nhặt tài nguyên)
     ctx.strokeStyle = isFemale ? 'rgba(45, 212, 191, 0.65)' : 'rgba(217, 119, 6, 0.65)';
     ctx.lineWidth = 1.8 * this.dpr;
@@ -1745,6 +1840,123 @@ export class MapView {
     ctx.restore();
   }
 
+  private drawSpiritBirdAndWindTrails(
+    w: number,
+    h: number,
+    rx: number,
+    rpy: number,
+    speedKmh: number,
+    palette: typeof PALETTE.day,
+  ): void {
+    const { ctx } = this;
+    ctx.save();
+
+    // 1. Vệt gió lướt thần tốc (Speed Wind Streaks) dọc theo màn hình
+    const streakCount = Math.min(18, Math.round(speedKmh / 3));
+    ctx.strokeStyle = 'rgba(254, 240, 138, 0.45)';
+    ctx.lineWidth = 1.4 * this.dpr;
+    for (let i = 0; i < streakCount; i++) {
+      const sx = (this.tick * 18 + i * 73) % w;
+      const sy = (this.tick * 8 + i * 47) % h;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(sx - (20 + speedKmh * 0.8) * this.dpr, sy + (6 + speedKmh * 0.2) * this.dpr);
+      ctx.stroke();
+    }
+
+    // 2. Linh Điểu Hoàng Cổ (Spirit Falcon) bay lượn trên cao bên cạnh người chơi
+    const birdAngle = (this.tick / 15) % (Math.PI * 2);
+    const birdDist = 32 * this.dpr;
+    const birdX = rx + Math.cos(birdAngle) * birdDist + 18 * this.dpr;
+    const birdY = rpy - 38 * this.dpr + Math.sin(birdAngle * 1.5) * 8 * this.dpr;
+    const wingFlap = Math.sin(this.tick / 3.5) * 12 * this.dpr;
+
+    // Hào quang linh điểu phát sáng
+    const aura = ctx.createRadialGradient(birdX, birdY, 2 * this.dpr, birdX, birdY, 22 * this.dpr);
+    aura.addColorStop(0, 'rgba(254, 240, 138, 0.85)');
+    aura.addColorStop(0.5, 'rgba(245, 158, 11, 0.4)');
+    aura.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = aura;
+    ctx.beginPath();
+    ctx.arc(birdX, birdY, 22 * this.dpr, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Thân Linh Điểu
+    ctx.fillStyle = '#b45309';
+    ctx.beginPath();
+    ctx.ellipse(birdX, birdY, 9 * this.dpr, 4.5 * this.dpr, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Cánh Linh Điểu sải rộng rực lửa
+    ctx.fillStyle = '#f59e0b';
+    ctx.strokeStyle = '#fef08a';
+    ctx.lineWidth = 1.2 * this.dpr;
+
+    // Cánh trái
+    ctx.beginPath();
+    ctx.moveTo(birdX - 2 * this.dpr, birdY);
+    ctx.quadraticCurveTo(birdX - 16 * this.dpr, birdY - wingFlap, birdX - 18 * this.dpr, birdY - wingFlap - 4 * this.dpr);
+    ctx.lineTo(birdX - 5 * this.dpr, birdY + 3 * this.dpr);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Cánh phải
+    ctx.beginPath();
+    ctx.moveTo(birdX + 2 * this.dpr, birdY);
+    ctx.quadraticCurveTo(birdX + 16 * this.dpr, birdY - wingFlap, birdX + 18 * this.dpr, birdY - wingFlap - 4 * this.dpr);
+    ctx.lineTo(birdX + 5 * this.dpr, birdY + 3 * this.dpr);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Đầu và mỏ vàng
+    ctx.fillStyle = '#fef08a';
+    ctx.beginPath();
+    ctx.arc(birdX + 7 * this.dpr, birdY - 2 * this.dpr, 3.5 * this.dpr, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath();
+    ctx.moveTo(birdX + 9 * this.dpr, birdY - 2 * this.dpr);
+    ctx.lineTo(birdX + 14 * this.dpr, birdY - 1 * this.dpr);
+    ctx.lineTo(birdX + 9 * this.dpr, birdY);
+    ctx.closePath();
+    ctx.fill();
+
+    // Đuôi phượng hoàng xòe 3 nhánh
+    ctx.strokeStyle = '#dc2626';
+    ctx.lineWidth = 1.6 * this.dpr;
+    ctx.beginPath();
+    ctx.moveTo(birdX - 7 * this.dpr, birdY + 1 * this.dpr);
+    ctx.lineTo(birdX - 18 * this.dpr, birdY + 6 * this.dpr);
+    ctx.moveTo(birdX - 7 * this.dpr, birdY + 1 * this.dpr);
+    ctx.lineTo(birdX - 17 * this.dpr, birdY + 11 * this.dpr);
+    ctx.stroke();
+
+    // Thẻ trạng thái du hành viễn chinh
+    const speedTag = `🦅 LINH ĐIỂU VIỄN CHINH • ${Math.round(speedKmh)} KM/H`;
+    ctx.font = `bold ${8.5 * this.dpr}px 'Be Vietnam Pro', system-ui, sans-serif`;
+    const tagW = Math.round(ctx.measureText(speedTag).width + 16 * this.dpr);
+    const tagH = Math.round(18 * this.dpr);
+    const tagX = Math.round(birdX - tagW / 2);
+    const tagY = Math.round(birdY - 24 * this.dpr);
+
+    ctx.fillStyle = '#1c0e04';
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 1.4 * this.dpr;
+    ctx.beginPath();
+    ctx.roundRect(tagX, tagY, tagW, tagH, 4 * this.dpr);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#fef08a';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(speedTag, birdX, Math.round(tagY + tagH / 2));
+
+    ctx.restore();
+  }
+
   private drawRain(w: number, h: number, intensity: number): void {
     const { ctx } = this;
     ctx.save();
@@ -1773,10 +1985,19 @@ export class MapView {
     if (fid.includes('highlands') || name.includes('Highlands') || name.includes('Cà phê')) return '☕';
     if (name.includes('Phúc Long') || name.includes('The Coffee House') || name.includes('Trà') || name.includes('Cộng')) return '🍵';
     if (name.includes('WinMart') || name.includes('Circle K') || name.includes('Tạp Hoá') || name.includes('Tiệm Trao Đổi')) return '🏪';
-    if (fid.includes('bus') || name.includes('Xe Buýt') || name.includes('Bến Xe') || name.includes('Vịnh Xén Hè')) return '🚌';
-    if (fid.includes('nhat_ban') || name.includes('Nhật Bản') || name.includes('Phù Tang')) return '⛩️';
-    if (name.includes('Sun Square') || name.includes('Thái Dương')) return '☀️';
-    if (name.includes('Cổ Mộ') || name.includes('Mai Dịch') || fid.includes('maidich')) return '🪦';
+    if (fid.includes('bus') || name.includes('Xe Buýt') || name.includes('Bến Xe') || name.includes('Vịnh Xén Hè') || fid.includes('outpost') || name.includes('Tiền Đồn') || name.includes('Trạm Dừng')) return '🚏';
+    if (fid.startsWith('den_fox') || name.includes('Tổ Cáo')) return '🦊';
+    if (fid.startsWith('den_rabbit') || name.includes('Bãi Thỏ')) return '🐇';
+    if (fid.startsWith('den_hedgehog') || name.includes('Tổ Nhím')) return '🦔';
+    if (fid.startsWith('den_snake') || name.includes('Ổ Rắn') || name.includes('Mãng Xà')) return '🐍';
+    if (fid.startsWith('den_boar') || name.includes('Lợn Rừng')) return '🐗';
+    if (fid.startsWith('den_deer') || name.includes('Hươu')) return '🦌';
+    if (fid.startsWith('den_wolf') || name.includes('Sói')) return '🐺';
+    if (fid.startsWith('den_tiger') || name.includes('Hổ')) return '🐅';
+    if (fid.startsWith('den_bear') || name.includes('Gấu')) return '🐻';
+    if (fid.startsWith('den_') || name.includes('Hang') || name.includes('Động')) return '🪨';
+    if (name.includes('Vườn Hoa') || name.includes('Công Viên')) return '🌳';
+    if (fid.includes('pharm') || name.includes('Long Châu') || name.includes('Pharmacity') || name.includes('Nhà Thuốc') || name.includes('Thần Dược')) return '💊';
     if (name.includes('Y Viện') || name.includes('Thảo Dược') || name.includes('Bạch Mai') || name.includes('198')) return '🌿';
     if (name.includes('Học Viện') || name.includes('Tri Thức') || name.includes('Đại Học')) return '📜';
     if (name.includes('Đấu Trường') || name.includes('Mỹ Đình') || name.includes('Sân Vận Động')) return '🏟️';

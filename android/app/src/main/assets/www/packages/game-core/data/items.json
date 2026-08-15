@@ -42,6 +42,7 @@
 
     { "id": "raw_water",        "nameVi": "Nước thô",          "kind": "drink", "stack": 20, "weight": 2, "hydration": 20, "infectionRisk": true },
     { "id": "boiled_water",     "nameVi": "Nước sôi",          "kind": "drink", "stack": 20, "weight": 2, "hydration": 50 },
+    { "id": "clean_water",      "nameVi": "Nước sạch",         "kind": "drink", "stack": 20, "weight": 2, "hydration": 50 },
 
     { "id": "health_potion",    "nameVi": "Bình hồi máu",      "kind": "consumable", "stack": 20, "weight": 1, "hp": 35 },
     { "id": "greater_potion",   "nameVi": "Bình hồi máu lớn",  "kind": "consumable", "stack": 10, "weight": 1, "hp": 70 },

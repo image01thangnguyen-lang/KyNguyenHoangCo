@@ -4,6 +4,10 @@ import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -33,11 +37,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-public class MainActivity extends AppCompatActivity implements LocationListener {
+public class MainActivity extends AppCompatActivity implements LocationListener, SensorEventListener {
 
     private static final int PERMISSION_REQUEST_CODE = 1001;
     private WebView webView;
     private LocationManager locationManager;
+    private SensorManager sensorManager;
+    private Sensor stepDetectorSensor;
+    private Sensor stepCounterSensor;
+    private float lastStepCounterVal = -1;
     private Location lastKnownGpsLocation = null;
     private GeolocationPermissions.Callback pendingGeoCallback = null;
     private String pendingGeoOrigin = null;
@@ -55,12 +63,18 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
         setContentView(R.layout.activity_main);
 
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        if (sensorManager != null) {
+            stepDetectorSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR);
+            stepCounterSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER);
+        }
 
         webView = findViewById(R.id.game_webview);
         setupWebView();
 
         checkAndRequestPermissions();
         startNativeLocationTracking();
+        startNativeStepSensor();
 
         // Nạp trang web offline qua giao thức an toàn HTTPS
         webView.loadUrl("https://appassets.androidplatform.net/assets/www/apps/game/index.html");
@@ -333,18 +347,58 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
         decorView.setSystemUiVisibility(uiOptions);
     }
 
+    private void startNativeStepSensor() {
+        if (sensorManager == null) return;
+        if (stepDetectorSensor != null) {
+            sensorManager.registerListener(this, stepDetectorSensor, SensorManager.SENSOR_DELAY_NORMAL);
+        }
+        if (stepCounterSensor != null) {
+            sensorManager.registerListener(this, stepCounterSensor, SensorManager.SENSOR_DELAY_NORMAL);
+        }
+    }
+
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+        if (event == null || event.sensor == null) return;
+
+        if (event.sensor.getType() == Sensor.TYPE_STEP_DETECTOR) {
+            dispatchNativeStep(1);
+        } else if (event.sensor.getType() == Sensor.TYPE_STEP_COUNTER) {
+            float current = event.values[0];
+            if (lastStepCounterVal >= 0 && current > lastStepCounterVal) {
+                int delta = Math.round(current - lastStepCounterVal);
+                if (delta > 0 && delta < 100) {
+                    dispatchNativeStep(delta);
+                }
+            }
+            lastStepCounterVal = current;
+        }
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+    }
+
+    private void dispatchNativeStep(int count) {
+        if (webView != null && count > 0) {
+            webView.post(() -> {
+                webView.evaluateJavascript("if (typeof window.__onNativeStep === 'function') window.__onNativeStep(" + count + ");", null);
+            });
+        }
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
         hideSystemUI();
         startNativeLocationTracking();
+        startNativeStepSensor();
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        // Giữ LocationListener tiếp tục nhận toạ độ khi chạy nền hoặc tắt màn hình
-        // để hỗ trợ tính năng phát hiện vật phẩm hoang dã và rung cảnh báo.
+        // Giữ LocationListener và StepSensor tiếp tục đếm khi tắt màn hình
     }
 
     @Override
@@ -354,6 +408,12 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
             try {
                 locationManager.removeUpdates(this);
             } catch (SecurityException ignored) {
+            }
+        }
+        if (sensorManager != null) {
+            try {
+                sensorManager.unregisterListener(this);
+            } catch (Exception ignored) {
             }
         }
     }

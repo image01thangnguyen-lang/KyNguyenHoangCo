@@ -121,6 +121,33 @@
 
           <!-- Thanh La Bàn Radar Chỉ Hướng Vật Phẩm Phát Hiện Được -->
           <div id="drop-radar-banner" class="drop-radar-banner" hidden></div>
+
+          <!-- Banner Trạng Thái Du Hành Viễn Chinh (Linh Điểu khi đi xe buýt/xe máy) -->
+          <div id="transit-hud-banner" class="transit-hud-banner" hidden>
+            <div class="transit-hud-card">
+              <span class="transit-hud-icon">🦅</span>
+              <div class="transit-hud-body">
+                <div class="transit-hud-title">CHẾ ĐỘ DU HÀNH VIỄN CHINH</div>
+                <div id="transit-hud-desc" class="transit-hud-desc">Linh Điểu đang bay gom tài nguyên dọc đường...</div>
+              </div>
+              <span id="transit-hud-speed" class="transit-hud-speed">35 km/h</span>
+            </div>
+          </div>
+
+          <!-- Banner Tiếp Tế Tại Tiền Đồn Trạm Dừng Xe Buýt -->
+          <div id="outpost-supply-banner" class="outpost-supply-banner" hidden>
+            <div class="outpost-supply-card">
+              <span class="outpost-supply-icon">🚏</span>
+              <div class="outpost-supply-body">
+                <div class="outpost-supply-title">DỪNG TẠI TIỀN ĐỒN TRẠM DỪNG</div>
+                <div id="outpost-supply-name" class="outpost-supply-name">Trạm Dừng Xe Buýt</div>
+              </div>
+              <button id="btn-claim-outpost-supply" class="btn btn--tiny btn--primary">Nhận Tiếp Tế</button>
+            </div>
+          </div>
+
+          <!-- Banner Cảnh Báo Lãnh Địa Quái Thú Sương Đỏ -->
+          <div id="territory-threat-banner" class="territory-threat-banner" hidden></div>
         </div>
 
         <!-- Backdrop khi mở Drawer -->

@@ -18,6 +18,7 @@ import {
   playerCombatPower,
   resolveNightDefense,
   upgradeStrength,
+  slotsUsed,
 } from '../src/index.js';
                                                  
 
@@ -26,6 +27,10 @@ describe('CƠ CHẾ PHẠT SINH TỒN & TƯƠNG TÁC SÂU', () => {
     const lightBag = { dry_branch: 5, sharp_stone: 5 }; // 5*1 + 5*1 = 10kg
     assert.equal(calculateCarriedWeight(lightBag), 10);
     assert.equal(isOverburdened(lightBag, 45), false);
+
+    const bagWithCoins = { dry_branch: 5, sharp_stone: 5, ancient_coin: 999 }; // 10kg + 0kg = 10kg
+    assert.equal(calculateCarriedWeight(bagWithCoins), 10);
+    assert.equal(slotsUsed(bagWithCoins), 2); // Chỉ chiếm 2 ô cho cành khô và đá nhọn, 0 ô cho tiền vàng
 
     const heavyBag = { log: 15, stone_block: 10 }; // 15*3 + 10*4 = 85kg
     assert.equal(calculateCarriedWeight(heavyBag), 85);

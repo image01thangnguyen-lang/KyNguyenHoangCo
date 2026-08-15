@@ -284,11 +284,11 @@ export function projectDailyDrain(
   };
 }
 
-/** Tính tổng trọng lượng (kg) của các vật phẩm trong túi đồ. */
+/** Tính tổng trọng lượng (kg) của các vật phẩm trong túi đồ (không tính tiền vàng). */
 export function calculateCarriedWeight(carried           )         {
   let total = 0;
   for (const [itemId, qty] of Object.entries(carried)) {
-    if (qty <= 0) continue;
+    if (qty <= 0 || itemId === 'ancient_coin') continue;
     const def = getItem(itemId);
     total += (def.weight ?? 1) * qty;
   }

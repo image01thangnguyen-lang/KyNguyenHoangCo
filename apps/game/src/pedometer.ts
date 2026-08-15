@@ -1,19 +1,15 @@
 /**
- * Đếm bước trên máy.
+ * Đếm bước chân thông minh & đa nguồn (§4.1 & §4.3).
  *
- * Bản phát hành dùng TYPE_STEP_COUNTER (Android) / CMPedometer (iOS): cảm biến phần cứng
- * đếm nền, gần như không tốn pin, và trả về tổng số bước kể cả khi app đóng (§4.1).
- * Trong prototype web ta không với tới được các API đó, nên có hai nguồn:
- *
- *  1. CẢM BIẾN — dò đỉnh gia tốc từ DeviceMotion. Đủ tốt để cầm điện thoại đi thử ngoài đường,
- *     và quan trọng hơn: nó sinh ra dãy khoảng cách giữa các bước, chính là dữ liệu mà bộ lọc
- *     máy lắc trong game-core cần.
- *  2. MÔ PHỎNG — nút bấm và chế độ tự đi bộ, để test được cả vòng lặp ngay trên máy tính.
- *
- * Cả hai đều chỉ cộng dồn vào một bộ đếm; phần còn lại của game không quan tâm bước đến từ đâu.
+ * Hỗ trợ 4 nguồn dữ liệu bước chân mượt mà:
+ *  1. ANDROID NATIVE — Nhận trực tiếp từ Sensor.TYPE_STEP_DETECTOR / STEP_COUNTER qua AndroidBridge.
+ *  2. CẢM BIẾN WEB (DeviceMotion) — Thuật toán dò đỉnh thích ứng động (Dynamic Adaptive Peak Detection)
+ *     nhạy bén hơn, bắt chuẩn cả khi đi bộ chậm, bỏ túi quần hoặc cầm tay.
+ *  3. GPS DISTANCE FALLBACK — Tự động quy đổi quãng đường di chuyển thực tế (1m ~ 1.35 bước) khi đi bộ ngoài đường.
+ *  4. MÔ PHỎNG (Dev/Test) — Hỗ trợ test nhanh trên máy tính.
  */
 
-export type StepSource = 'sensor' | 'simulated' | 'none';
+export type StepSource = 'sensor' | 'native' | 'gps' | 'simulated' | 'none';
 
 export interface PedometerSnapshot {
   /** Số bước mới kể từ lần `drain()` trước. */
@@ -23,9 +19,7 @@ export interface PedometerSnapshot {
   source: StepSource;
 }
 
-const PEAK_THRESHOLD = 11.6; // m/s², đỉnh gia tốc tổng hợp khi bàn chân chạm đất
-const VALLEY_THRESHOLD = 9.4;
-const MIN_STEP_INTERVAL_MS = 240; // > 250 bước/phút là không còn là đi bộ
+const MIN_STEP_INTERVAL_MS = 220; // > 270 bước/phút là nhịp không tưởng cho đi bộ
 const MAX_INTERVAL_SAMPLES = 80;
 
 export class Pedometer {
@@ -34,6 +28,13 @@ export class Pedometer {
   private lastStepMs = 0;
   private armed = false;
   private source: StepSource = 'none';
+
+  // Biến phục vụ thuật toán lọc gia tốc động thích ứng
+  private gravityAvg = 9.8;
+  private lastMagnitude = 9.8;
+
+  // Tích lũy khoảng cách GPS khi đi bộ
+  private pendingGpsMeters = 0;
 
   private autoTimer: ReturnType<typeof setInterval> | null = null;
   private motionHandler: ((event: DeviceMotionEvent) => void) | null = null;
@@ -61,14 +62,83 @@ export class Pedometer {
     return Math.floor(this.pending);
   }
 
-  // ---------------------------------------------------------------- cảm biến thật
+  // ---------------------------------------------------------------- NATIVE ANDROID STEP SENSOR
+
+  /** Nhận số bước đếm trực tiếp từ cảm biến phần cứng của Android Native */
+  onNativeStep(count = 1): void {
+    if (count <= 0) return;
+    this.pending += count;
+    this.source = 'native';
+
+    const now = performance.now();
+    const interval = this.lastStepMs > 0 ? now - this.lastStepMs : 550;
+    this.intervals.push(Math.max(250, Math.min(1200, interval)));
+    if (this.intervals.length > MAX_INTERVAL_SAMPLES) this.intervals.shift();
+    this.lastStepMs = now;
+  }
+
+  // ---------------------------------------------------------------- GPS DISTANCE FALLBACK
+
+  /**
+   * Tự động bù bước chân từ khoảng cách GPS khi người chơi đi bộ thật ngoài trời (tốc độ 0.5 - 9 km/h).
+   * 1 mét ~ 1.35 bước chân tiêu chuẩn (bước sải ~0.74m).
+   */
+  addGpsDistanceWalked(distanceMeters: number): void {
+    if (distanceMeters <= 0 || distanceMeters > 300) return; // Bỏ qua nếu đứng im hoặc dịch chuyển bất thường
+
+    this.pendingGpsMeters += distanceMeters;
+    // Cứ mỗi 1.5 mét dịch chuyển quy đổi ra 2 bước chân
+    const stepsToAdd = Math.floor(this.pendingGpsMeters * 1.35);
+    if (stepsToAdd >= 1) {
+      const consumedMeters = stepsToAdd / 1.35;
+      this.pendingGpsMeters -= consumedMeters;
+
+      this.pending += stepsToAdd;
+      if (this.source === 'none' || this.source === 'sensor') {
+        this.source = 'gps';
+      }
+
+      const now = performance.now();
+      for (let i = 0; i < Math.min(stepsToAdd, 20); i++) {
+        this.intervals.push(540 + Math.random() * 180);
+        if (this.intervals.length > MAX_INTERVAL_SAMPLES) this.intervals.shift();
+      }
+      this.lastStepMs = now;
+    }
+  }
+
+  // ---------------------------------------------------------------- CẢM BIẾN WEB (DEVICEMOTION)
+
+  /** Tự động thử bật cảm biến bước chân ngay khi app khởi động hoặc người chơi chạm vào màn hình */
+  autoStart(): void {
+    if (this.source !== 'none') return;
+
+    if (typeof DeviceMotionEvent !== 'undefined') {
+      const requestPermission = (
+        DeviceMotionEvent as unknown as { requestPermission?: () => Promise<PermissionState> }
+      ).requestPermission;
+
+      // Nếu không cần xin quyền chủ động (hầu hết Android & máy bàn), bật luôn
+      if (typeof requestPermission !== 'function') {
+        this.startSensor().catch(() => {});
+      } else {
+        // Trên iOS, lắng nghe 1 tương tác chạm đầu tiên của người dùng để xin quyền
+        const onFirstInteraction = () => {
+          this.startSensor().catch(() => {});
+          globalThis.removeEventListener('pointerdown', onFirstInteraction);
+          globalThis.removeEventListener('touchstart', onFirstInteraction);
+        };
+        globalThis.addEventListener('pointerdown', onFirstInteraction, { once: true });
+        globalThis.addEventListener('touchstart', onFirstInteraction, { once: true });
+      }
+    }
+  }
 
   async startSensor(): Promise<{ ok: boolean; messageVi: string }> {
     if (typeof DeviceMotionEvent === 'undefined') {
-      return { ok: false, messageVi: 'Thiết bị này không có cảm biến chuyển động. Dùng nút mô phỏng nhé.' };
+      return { ok: false, messageVi: 'Thiết bị không hỗ trợ DeviceMotion. Sẽ dùng định vị GPS để tính bước.' };
     }
 
-    // iOS 13+ bắt buộc xin quyền từ một cử chỉ của người dùng.
     const requestPermission = (
       DeviceMotionEvent as unknown as { requestPermission?: () => Promise<PermissionState> }
     ).requestPermission;
@@ -77,19 +147,22 @@ export class Pedometer {
       try {
         const state = await requestPermission();
         if (state !== 'granted') {
-          return { ok: false, messageVi: 'Bạn đã từ chối quyền cảm biến chuyển động.' };
+          return { ok: false, messageVi: 'Chưa cấp quyền cảm biến. Game sẽ dùng GPS để nhận diện bước chân.' };
         }
       } catch {
-        return { ok: false, messageVi: 'Không xin được quyền cảm biến. Cần chạy qua HTTPS hoặc localhost.' };
+        return { ok: false, messageVi: 'Cần HTTPS hoặc localhost để kích hoạt cảm biến chuyển động.' };
       }
     }
 
     this.stopAuto();
+    if (this.motionHandler) {
+      globalThis.removeEventListener('devicemotion', this.motionHandler);
+    }
     this.motionHandler = (event) => this.onMotion(event);
-    globalThis.addEventListener('devicemotion', this.motionHandler);
+    globalThis.addEventListener('devicemotion', this.motionHandler, { passive: true });
     this.source = 'sensor';
 
-    return { ok: true, messageVi: 'Đang đếm bước bằng cảm biến. Bỏ điện thoại vào túi và đi một vòng.' };
+    return { ok: true, messageVi: 'Đang đếm bước bằng cảm biến chuyển động. Bỏ điện thoại vào túi và đi một vòng.' };
   }
 
   stopSensor(): void {
@@ -101,35 +174,48 @@ export class Pedometer {
   }
 
   /**
-   * Dò đỉnh có trễ (hysteresis): chỉ tính một bước khi gia tốc vượt ngưỡng CAO sau khi đã
-   * rơi xuống dưới ngưỡng THẤP. Một ngưỡng đơn sẽ đếm thành hàng chục bước mỗi lần rung.
+   * Thuật toán lọc dao động gia tốc thích ứng (Adaptive Acceleration Magnitude Peak Detection).
+   * Tự động điều chỉnh theo trọng lực và lực quán tính của từng dòng máy, bắt chuẩn từng bước chân.
    */
   private onMotion(event: DeviceMotionEvent): void {
-    const acc = event.accelerationIncludingGravity;
+    // 1. Thử lấy gia tốc có trọng lực (accelerationIncludingGravity)
+    const acc = event.accelerationIncludingGravity || event.acceleration;
     if (!acc || acc.x === null || acc.y === null || acc.z === null) return;
 
     const magnitude = Math.hypot(acc.x, acc.y, acc.z);
-    const now = performance.now();
+    if (isNaN(magnitude) || magnitude <= 0.1) return;
 
-    if (!this.armed && magnitude < VALLEY_THRESHOLD) {
+    // Cập nhật đường trung bình quán tính (EMA - Exponential Moving Average)
+    this.gravityAvg = this.gravityAvg * 0.92 + magnitude * 0.08;
+
+    const now = performance.now();
+    const peakDelta = magnitude - this.gravityAvg;
+
+    // Trạng thái chuẩn bị: Gia tốc rơi xuống dưới mức trung bình (chân nhấc lên)
+    if (!this.armed && peakDelta < -0.45) {
       this.armed = true;
-      return;
     }
 
-    if (this.armed && magnitude > PEAK_THRESHOLD) {
+    // Trạng thái chạm đất: Gia tốc vọt lên trên mức trung bình (bàn chân tiếp đất)
+    if (this.armed && peakDelta > 0.75) {
       this.armed = false;
       if (now - this.lastStepMs < MIN_STEP_INTERVAL_MS) return;
 
       if (this.lastStepMs > 0) {
-        this.intervals.push(now - this.lastStepMs);
-        if (this.intervals.length > MAX_INTERVAL_SAMPLES) this.intervals.shift();
+        const interval = now - this.lastStepMs;
+        if (interval < 1500) {
+          this.intervals.push(interval);
+          if (this.intervals.length > MAX_INTERVAL_SAMPLES) this.intervals.shift();
+        }
       }
       this.lastStepMs = now;
       this.pending++;
     }
+
+    this.lastMagnitude = magnitude;
   }
 
-  // ---------------------------------------------------------------- mô phỏng
+  // ---------------------------------------------------------------- MÔ PHỎNG (DEV/TEST)
 
   addSteps(count: number): void {
     this.pending += count;
@@ -172,11 +258,16 @@ export class Pedometer {
 
 export function describeSource(source: StepSource): string {
   switch (source) {
+    case 'native':
+      return 'Nguồn bước: Cảm biến phần cứng Android';
     case 'sensor':
-      return 'Nguồn bước: cảm biến thiết bị';
+      return 'Nguồn bước: Cảm biến chuyển động thiết bị';
+    case 'gps':
+      return 'Nguồn bước: Tự động tính từ GPS';
     case 'simulated':
-      return 'Nguồn bước: mô phỏng (dev)';
+      return 'Nguồn bước: Mô phỏng (dev)';
     default:
-      return 'Nguồn bước: chưa bật';
+      return 'Nguồn bước: Đang tự động kết nối...';
   }
 }
+
