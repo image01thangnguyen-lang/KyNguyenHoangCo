@@ -658,7 +658,7 @@ function currentPosition()                                                      
   } else {
     const steps = app.profile?.player?.lifetime?.steps ?? 0;
     targetPos = steps > 0 ? simulatedWalk(FALLBACK_POSITION, steps) : FALLBACK_POSITION;
-    hasFix = !isNativeApk();
+    hasFix = false;
   }
 
   if (!smoothRenderPos) {
@@ -670,7 +670,7 @@ function currentPosition()                                                      
   }
 
   return {
-    position: isNativeApk() ? (hasFix ? targetPos : null) : targetPos,
+    position: targetPos,
     render: smoothRenderPos,
     hasFix,
   };
@@ -2145,36 +2145,15 @@ function wireGpsOverlay()       {
 
 function checkGpsRequirement()       {
   const overlay = document.getElementById('overlay-gps-required');
-  if (!isNativeApk()) {
-    if (overlay) overlay.hidden = true;
-    return;
-  }
+  if (overlay) overlay.hidden = true; // Luôn mở khóa game mượt mà, không chặn người chơi
 
-  // Tắt và xoá hoàn toàn bảng Dev Widget trên Android APK
-  const pedoPanel = document.getElementById('pedometer-panel');
-  if (pedoPanel) {
-    pedoPanel.style.display = 'none';
-    pedoPanel.remove();
-  }
-
-  if (!overlay) return;
-
-  const state = geo?.current();
-  const hasFix = state?.position !== null && geo?.hasFreshFix();
-  const hasPerm = (globalThis       ).AndroidBridge?.hasLocationPermission?.() ?? true;
-
-  if (!hasPerm || !hasFix) {
-    overlay.hidden = false;
-    const statusText = document.getElementById('gps-status-text');
-    if (statusText) {
-      if (!hasPerm) {
-        statusText.innerHTML = '🚫 <strong>Chưa cấp quyền Vị trí (GPS)</strong>. Kỷ Nguyên Hoang Cổ là game sinh tồn GPS thế giới thực — bạn bắt buộc phải cấp quyền vị trí để chơi.';
-      } else {
-        statusText.innerHTML = '🛰️ <strong>Đang kết nối tín hiệu vệ tinh GPS...</strong> Vui lòng ra nơi thoáng đãng hoặc bật Định vị (GPS) chính xác cao trong máy.';
-      }
+  // Tắt và xoá hoàn toàn bảng Dev Widget trên Native Mobile App
+  if (isNativeApk()) {
+    const pedoPanel = document.getElementById('pedometer-panel');
+    if (pedoPanel) {
+      pedoPanel.style.display = 'none';
+      pedoPanel.remove();
     }
-  } else {
-    overlay.hidden = true;
   }
 }
 
