@@ -22,6 +22,10 @@
 	<string>1</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>UILaunchScreen</key>
+	<dict/>
+	<key>UIRequiresFullScreen</key>
+	<true/>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Kỷ Nguyên Hoang Cổ cần quyền vị trí để định vị bạn trên bản đồ thế giới thực và tương tác với các tài nguyên, di tích quanh bạn.</string>
 	<key>NSMotionUsageDescription</key>

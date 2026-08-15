@@ -15,14 +15,14 @@ class ViewController: UIViewController, WKUIDelegate, WKNavigationDelegate, CLLo
         locationManager.delegate = self
         locationManager.requestWhenInUseAuthorization()
 
-        // Cấu hình WKWebView chạy offline mượt mà
+        // Cấu hình WKWebView chạy offline mượt mà tràn viền toàn màn hình
         let config = WKWebViewConfiguration()
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
         config.preferences.setValue(true, forKey: "allowFileAccessFromFileURLs")
 
-        webView = WKWebView(frame: view.bounds, configuration: config)
-        webView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        webView = WKWebView(frame: .zero, configuration: config)
+        webView.translatesAutoresizingMaskIntoConstraints = false
         webView.uiDelegate = self
         webView.navigationDelegate = self
         webView.scrollView.bounces = false
@@ -31,6 +31,14 @@ class ViewController: UIViewController, WKUIDelegate, WKNavigationDelegate, CLLo
         webView.backgroundColor = UIColor(red: 0.07, green: 0.06, blue: 0.05, alpha: 1.0)
 
         view.addSubview(webView)
+
+        // Kích hoạt tràn viền tuyệt đối 100% cạnh-sang-cạnh
+        NSLayoutConstraint.activate([
+            webView.topAnchor.constraint(equalTo: view.topAnchor),
+            webView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            webView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            webView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+        ])
 
         loadGameLocalWeb()
     }
