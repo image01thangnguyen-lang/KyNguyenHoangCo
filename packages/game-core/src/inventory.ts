@@ -7,8 +7,8 @@ export function emptyInventory(): Inventory {
   return {};
 }
 
-export function countOf(inv: Inventory, itemId: ItemId): number {
-  return inv[itemId] ?? 0;
+export function countOf(inv: Inventory | undefined | null, itemId: ItemId): number {
+  return inv?.[itemId] ?? 0;
 }
 
 export function slotsUsed(inv: Inventory): number {

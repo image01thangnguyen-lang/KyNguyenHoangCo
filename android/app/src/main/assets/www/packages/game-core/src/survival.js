@@ -295,9 +295,35 @@ export function calculateCarriedWeight(carried           )         {
   return round1(total);
 }
 
-/** Tải trọng tối đa của ba lô (chuẩn 45kg, +30kg nếu có Ba Lô Da Voi, +25kg nếu có linh thú thồ hàng xuất chiến). */
-export function maxWeightCapacity(pets        , carried            )         {
-  let capacity = 45;
+/**
+ * Chi phí nâng cấp Thể Lực / Sức Khỏe bằng Đồng Vàng Cổ (Cấp 1..10).
+ * Mỗi cấp tăng +5kg tải trọng ba lô.
+ */
+export const STRENGTH_UPGRADE_COSTS                         = {
+  1: 10,
+  2: 20,
+  3: 35,
+  4: 50,
+  5: 70,
+  6: 95,
+  7: 125,
+  8: 160,
+  9: 200,
+};
+
+export const MAX_STRENGTH_LEVEL = 10;
+
+export function getStrengthUpgradeInfo(currentLevel = 1)                                                         {
+  const isMax = currentLevel >= MAX_STRENGTH_LEVEL;
+  const cost = STRENGTH_UPGRADE_COSTS[currentLevel] ?? 200;
+  const nextCapacity = 45 + currentLevel * 5;
+  return { cost, nextCapacity, isMax };
+}
+
+/** Tải trọng tối đa của ba lô (chuẩn 45kg, +5kg mỗi cấp Thể Lực, +30kg nếu có Ba Lô Da Voi, +25kg nếu có linh thú thồ hàng). */
+export function maxWeightCapacity(pets        , carried            , strengthLevel = 1)         {
+  const bonusStrength = Math.max(0, strengthLevel - 1) * 5;
+  let capacity = 45 + bonusStrength;
   if (carried && (carried['giant_backpack'] ?? 0) > 0) {
     capacity += 30;
   }
@@ -306,6 +332,58 @@ export function maxWeightCapacity(pets        , carried            )         {
     capacity += 25;
   }
   return capacity;
+}
+
+/**
+ * Nâng cấp Sức Khỏe / Thể Lực bằng Đồng Vàng Cổ (ancient_coin).
+ */
+export function upgradeStrength(player             )                                                               {
+  const currentLvl = player.strengthLevel ?? 1;
+  if (currentLvl >= MAX_STRENGTH_LEVEL) {
+    return { player, success: false, messageVi: 'Thể lực của bạn đã đạt đến cảnh giới tối đa (Cấp 10 - Thể Lực Kim Cương)!' };
+  }
+
+  const { cost } = getStrengthUpgradeInfo(currentLvl);
+  const carriedCoin = player.carried['ancient_coin'] ?? 0;
+  const safeCoin = player.safeStorage['ancient_coin'] ?? 0;
+  const totalCoin = carriedCoin + safeCoin;
+
+  if (totalCoin < cost) {
+    return {
+      player,
+      success: false,
+      messageVi: `Không đủ Đồng Vàng Cổ! Cần ${cost} Đồng Vàng để nâng lên Cấp ${currentLvl + 1} (Bạn đang có: ${totalCoin} Vàng).`,
+    };
+  }
+
+  // Khấu trừ Đồng Vàng Cổ (ưu tiên trừ trong túi trước, thiếu thì trừ trong két)
+  const updatedCarried = { ...player.carried };
+  const updatedSafe = { ...player.safeStorage };
+
+  if (carriedCoin >= cost) {
+    updatedCarried['ancient_coin'] = carriedCoin - cost;
+    if (updatedCarried['ancient_coin'] === 0) delete updatedCarried['ancient_coin'];
+  } else {
+    const remaining = cost - carriedCoin;
+    delete updatedCarried['ancient_coin'];
+    updatedSafe['ancient_coin'] = safeCoin - remaining;
+    if (updatedSafe['ancient_coin'] === 0) delete updatedSafe['ancient_coin'];
+  }
+
+  const newLvl = currentLvl + 1;
+  const updatedPlayer              = {
+    ...player,
+    carried: updatedCarried,
+    safeStorage: updatedSafe,
+    strengthLevel: newLvl,
+  };
+
+  const newCap = maxWeightCapacity(updatedPlayer.pets, updatedPlayer.carried, newLvl);
+  return {
+    player: updatedPlayer,
+    success: true,
+    messageVi: `💪 Chúc mừng! Đã nâng Thể Lực lên Cấp ${newLvl}! Sức chứa ba lô tăng lên ${newCap}kg (+5kg).`,
+  };
 }
 
 /** Kiểm tra túi đồ có bị quá tải trọng lượng không. */

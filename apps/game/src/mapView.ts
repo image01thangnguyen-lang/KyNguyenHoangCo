@@ -50,6 +50,8 @@ export interface RenderInput {
   traps?: PlacedTrap[];
   /** Linh thú tiền sử đang đồng hành chạy theo người chơi. */
   activePetId?: string | null;
+  /** Cấp độ Thể Lực của nhân vật (1..10) để hiển thị hào quang và hiệu ứng sức mạnh. */
+  strengthLevel?: number;
 }
 
 export function itemEmoji(id: string): string {
@@ -557,7 +559,7 @@ export class MapView {
     const state: ViewportState = {
       isPannedOrZoomed: this.isPannedOrZoomed(),
       zoomFactor: this.zoomFactor,
-      spanMeters: 420 / this.zoomFactor,
+      spanMeters: 135 / this.zoomFactor,
     };
     this.onViewportChange?.(state);
     this.onPanChange?.(state.isPannedOrZoomed);
@@ -589,7 +591,7 @@ export class MapView {
     this.lastInput = input;
 
     const TILT_Y = 0.68; // Tỉ lệ phối cảnh nghiêng 2.5D Isometric (cos ~47 độ)
-    const baseSpan = input.spanMeters ?? 420;
+    const baseSpan = input.spanMeters ?? 135;
     const spanMeters = baseSpan / this.zoomFactor;
     const pxPerMeter = Math.min(w, h) / spanMeters;
     const palette = PALETTE[input.phase];
@@ -898,7 +900,7 @@ export class MapView {
     ctx.fillStyle = palette.ground;
     ctx.fillRect(0, 0, w, h);
 
-    const baseSpan = input.spanMeters ?? 420;
+    const baseSpan = input.spanMeters ?? 135;
     const spanMeters = baseSpan / this.zoomFactor;
     // Kích thước bước ô lưới địa hình
     const tileSizeMeters = Math.max(25, Math.min(200, spanMeters / 16));
@@ -3673,29 +3675,56 @@ export class MapView {
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // 2. Vầng hào quang nhận thức mềm mịn quanh người chơi dạng 2.5D
+    const strLvl = input.strengthLevel ?? 1;
+
+    // 2. Vầng hào quang sức mạnh thần thoại nâng cấp theo Cấp Thể Lực dạng 2.5D
     ctx.save();
     ctx.scale(1, 0.68);
-    const glow = ctx.createRadialGradient(x, y / 0.68, 4 * this.dpr, x, y / 0.68, 36 * this.dpr);
-    glow.addColorStop(0, isFemale ? 'rgba(45, 212, 191, 0.35)' : 'rgba(249, 115, 22, 0.35)');
-    glow.addColorStop(0.55, isFemale ? 'rgba(13, 148, 136, 0.15)' : 'rgba(234, 88, 12, 0.15)');
+    const glowRadius = (32 + strLvl * 2.5) * this.dpr;
+    const glow = ctx.createRadialGradient(x, y / 0.68, 4 * this.dpr, x, y / 0.68, glowRadius);
+    
+    let glowColorInner = isFemale ? 'rgba(45, 212, 191, 0.38)' : 'rgba(249, 115, 22, 0.38)';
+    let glowColorMid = isFemale ? 'rgba(13, 148, 136, 0.18)' : 'rgba(234, 88, 12, 0.18)';
+    if (strLvl >= 9) {
+      glowColorInner = 'rgba(103, 232, 249, 0.65)';
+      glowColorMid = 'rgba(245, 158, 11, 0.35)';
+    } else if (strLvl >= 7) {
+      glowColorInner = 'rgba(244, 63, 94, 0.55)';
+      glowColorMid = 'rgba(217, 70, 239, 0.25)';
+    } else if (strLvl >= 5) {
+      glowColorInner = 'rgba(251, 191, 36, 0.5)';
+      glowColorMid = 'rgba(217, 119, 6, 0.22)';
+    } else if (strLvl >= 3) {
+      glowColorInner = 'rgba(226, 232, 240, 0.45)';
+      glowColorMid = 'rgba(148, 163, 184, 0.2)';
+    }
+
+    glow.addColorStop(0, glowColorInner);
+    glow.addColorStop(0.55, glowColorMid);
     glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
     ctx.fillStyle = glow;
     ctx.beginPath();
-    ctx.arc(x, y / 0.68, 36 * this.dpr, 0, Math.PI * 2);
+    ctx.arc(x, y / 0.68, glowRadius, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
-    // 3. Đom đóm / 6 hạt bụi ánh sáng linh hồn xoay 3D quanh nhân vật
-    for (let s = 0; s < 6; s++) {
-      const sAngle = (this.tick / 22) + (s * Math.PI / 3);
-      const sRadius = (18 + Math.sin(this.tick / 10 + s) * 5) * this.dpr;
+    // 3. Đom đóm / Hạt bụi ánh sáng linh hồn xoay 3D (tăng số lượng theo cấp Thể Lực)
+    const particleCount = 4 + Math.min(8, strLvl);
+    for (let s = 0; s < particleCount; s++) {
+      const sAngle = (this.tick / (20 - Math.min(8, strLvl))) + (s * Math.PI * 2 / particleCount);
+      const sRadius = (16 + strLvl * 1.2 + Math.sin(this.tick / 10 + s) * 5) * this.dpr;
       const sx = x + Math.cos(sAngle) * sRadius;
       const sy = y + Math.sin(sAngle) * sRadius * 0.7;
       const sAlpha = 0.4 + 0.6 * Math.sin(this.tick / 7 + s * 1.5);
-      ctx.fillStyle = isFemale ? `rgba(94, 234, 212, ${sAlpha})` : `rgba(254, 215, 170, ${sAlpha})`;
+      
+      let pColor = isFemale ? `rgba(94, 234, 212, ${sAlpha})` : `rgba(254, 215, 170, ${sAlpha})`;
+      if (strLvl >= 9) pColor = `rgba(103, 232, 249, ${sAlpha})`;
+      else if (strLvl >= 7) pColor = `rgba(251, 113, 133, ${sAlpha})`;
+      else if (strLvl >= 5) pColor = `rgba(253, 224, 71, ${sAlpha})`;
+
+      ctx.fillStyle = pColor;
       ctx.beginPath();
-      ctx.arc(sx, sy, 1.8 * this.dpr, 0, Math.PI * 2);
+      ctx.arc(sx, sy, (1.8 + (strLvl >= 5 ? 0.6 : 0)) * this.dpr, 0, Math.PI * 2);
       ctx.fill();
     }
 
@@ -4160,7 +4189,7 @@ export function featureAtPoint(
   center: LatLon,
   point: { x: number; y: number },
   canvas: HTMLCanvasElement,
-  spanMeters = 420,
+  spanMeters = 135,
 ): MapFeature | null {
   const TILT_Y = 0.68;
   const rect = canvas.getBoundingClientRect();

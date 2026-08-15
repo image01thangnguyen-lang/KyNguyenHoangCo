@@ -121,6 +121,7 @@ export function createProfile(displayName        , nowMs        , gender        
     steps: createStepLedger(nowMs),
     lifetime: emptyLifetime(),
     knownRecipes: [],
+    strengthLevel: 1,
     createdAtMs: nowMs,
   };
 

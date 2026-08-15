@@ -175,7 +175,7 @@ export function openApp(input              )                {
   const mods = modifiersOf(finalWeather);
 
   // 4. Sinh tồn cho quãng vắng mặt
-  const maxW = maxWeightCapacity(profile.player.pets);
+  const maxW = maxWeightCapacity(profile.player.pets, profile.player.carried, profile.player.strengthLevel ?? 1);
   const isOver = isOverburdened(profile.player.carried, maxW);
 
   const tick = tickSurvival(profile.player.survival, nowMs, {
@@ -285,7 +285,7 @@ export function openApp(input              )                {
     player,
     lastActiveDay: today,
     lastPlayedMs: nowMs,
-    poiUsage: profile.poiUsage.day === today ? profile.poiUsage : { day: today, uses: {}, lastUsedAtMs: {} },
+    poiUsage: profile.poiUsage?.day === today ? profile.poiUsage : { day: today, uses: {}, lastUsedAtMs: {} },
   };
 
   // 8. Cốt truyện — xương sống của bản offline (§5.6)
@@ -487,7 +487,7 @@ export function gather(input             )                                      
   const usageKey = `${poiId}:${actionId}`;
   const today = dayKey(nowMs, offsetMinutes);
   const usage =
-    profile.poiUsage.day === today ? profile.poiUsage : { day: today, uses: {}, lastUsedAtMs: {} };
+    profile.poiUsage?.day === today ? profile.poiUsage : { day: today, uses: {}, lastUsedAtMs: {} };
 
   const result = performGatherAction({
     playerId: profile.player.id,
@@ -569,7 +569,7 @@ export function trade(profile             , offerIndex        , poiId        , n
 
   const today = dayKey(nowMs);
   const usageKey = `${poiId}:merchant_trade`;
-  const usage = profile.poiUsage.day === today ? profile.poiUsage : { day: today, uses: {}, lastUsedAtMs: {} };
+  const usage = profile.poiUsage?.day === today ? profile.poiUsage : { day: today, uses: {}, lastUsedAtMs: {} };
   if ((usage.uses[usageKey] ?? 0) >= 1) {
     return { profile, ok: false, messageVi: 'Mỗi tàn tích chỉ đổi được một lượt mỗi ngày.' };
   }

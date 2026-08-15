@@ -32,6 +32,8 @@ import {
   calculateCarriedWeight,
   maxWeightCapacity,
   isOverburdened,
+  getStrengthUpgradeInfo,
+  MAX_STRENGTH_LEVEL,
 } from '../../../packages/game-core/src/index.ts';
 import { actionIconSvg, itemIconSvg, zoneIconSvg, coinIconSvg } from './itemIcons.ts';
 import { audio } from './audio.ts';
@@ -75,7 +77,9 @@ export interface Handlers {
   onOpenAR?(): void;
   onOpenCoop?(): void;
   onClaimWeekendQuest?(questId: string): void;
+  onUpgradeStrength?(): void;
   onToggleSetting(key: 'parentalNightLock' | 'realWeatherSync' | 'narrationAudio' | 'haptics'): void;
+  onTogglePocketMode?(): void;
   onExport(): void;
   onImport(): void;
   onDeleteProfile(): void;
@@ -124,7 +128,26 @@ export function renderHud(view: GameView, profile: ProfileSave): void {
     emptyNotif.hidden = hasWarnings || hasBloodMoon;
   }
 
-  // Thanh hướng dẫn Tân Thủ 3 Ngày Đầu
+  // Cập nhật Avatar Nhân Vật & Khung Viền Thể Lực
+  const heroAvatar = document.getElementById('hero-avatar-emoji');
+  if (heroAvatar) {
+    heroAvatar.textContent = profile.gender === 'female' ? '🏹' : '🪓';
+  }
+
+  const strLvl = profile.player.strengthLevel ?? 1;
+  const strBadge = document.getElementById('hero-strength-badge');
+  if (strBadge) {
+    strBadge.textContent = `Lv.${strLvl}`;
+  }
+
+  const avatarFrame = document.getElementById('hero-avatar-frame');
+  if (avatarFrame) {
+    avatarFrame.className = 'hero-avatar-frame';
+    const tier = strLvl >= 9 ? 5 : strLvl >= 7 ? 4 : strLvl >= 5 ? 3 : strLvl >= 3 ? 2 : 1;
+    avatarFrame.classList.add(`hero-avatar-frame--tier-${tier}`);
+  }
+
+  // Thanh hướng dẫn Tân Thủ 3 Ngày Đầu (Thẻ Nhiệm Vụ Sinh Tồn Trực Quan)
   const tutBanner = document.getElementById('tutorial-hud-banner');
   if (tutBanner) {
     if (profile.story.tutorialDay > 0) {
@@ -133,12 +156,56 @@ export function renderHud(view: GameView, profile: ProfileSave): void {
       const tutBadge = el('tut-badge');
       const tutText = el('tut-text');
       tutBadge.textContent = `NGÀY ${tutDay}/3`;
+
       if (tutDay === 1) {
-        tutText.innerHTML = `🔥 <strong>Nhiệm vụ:</strong> Đi dạo nhặt 8 cành khô &amp; 4 đá nhọn để dựng <strong>Lửa Trại</strong> trước 20:00!`;
+        const sticks = countOf(profile.player.carried, 'dry_branch') + countOf(profile.player.safeStorage, 'dry_branch');
+        const stones = countOf(profile.player.carried, 'sharp_stone') + countOf(profile.player.safeStorage, 'sharp_stone');
+        const hasCamp = Boolean(profile.player.camp?.homeCell);
+        tutText.innerHTML = `
+          <div class="tut-step-list">
+            <div class="tut-step-row ${sticks >= 8 ? 'is-done' : ''}">
+              <span class="step-check">${sticks >= 8 ? '✅' : '○'}</span>
+              <span>Cành cây khô: <strong>${Math.min(8, sticks)}/8</strong></span>
+            </div>
+            <div class="tut-step-row ${stones >= 4 ? 'is-done' : ''}">
+              <span class="step-check">${stones >= 4 ? '✅' : '○'}</span>
+              <span>Đá nhọn: <strong>${Math.min(4, stones)}/4</strong></span>
+            </div>
+            <div class="tut-step-row ${hasCamp ? 'is-done' : ''}">
+              <span class="step-check">${hasCamp ? '✅' : '○'}</span>
+              <span>Dựng Căn Cứ / Lửa Trại: <strong>${hasCamp ? 'Hoàn thành' : 'Chưa dựng'}</strong></span>
+            </div>
+          </div>
+        `;
       } else if (tutDay === 2) {
-        tutText.innerHTML = `💧 <strong>Nhiệm vụ:</strong> Đun sôi nước uống và chế tạo <strong>Rìu Đá</strong> để đốn củi công viên!`;
+        const water = countOf(profile.player.carried, 'boiled_water') + countOf(profile.player.safeStorage, 'boiled_water');
+        const axe = countOf(profile.player.carried, 'stone_axe') + countOf(profile.player.safeStorage, 'stone_axe');
+        tutText.innerHTML = `
+          <div class="tut-step-list">
+            <div class="tut-step-row ${water >= 1 ? 'is-done' : ''}">
+              <span class="step-check">${water >= 1 ? '✅' : '○'}</span>
+              <span>Đun sôi Nước Sạch: <strong>${Math.min(1, water)}/1</strong></span>
+            </div>
+            <div class="tut-step-row ${axe >= 1 ? 'is-done' : ''}">
+              <span class="step-check">${axe >= 1 ? '✅' : '○'}</span>
+              <span>Chế tạo Rìu Đá: <strong>${Math.min(1, axe)}/1</strong></span>
+            </div>
+          </div>
+        `;
       } else {
-        tutText.innerHTML = `🛡️ <strong>Nhiệm vụ:</strong> Đặt <strong>Bẫy Thỏ</strong> và chuẩn bị thủ trại, quái thú sẽ tấn công lúc 20:00!`;
+        const trap = countOf(profile.player.carried, 'rabbit_trap') + countOf(profile.player.safeStorage, 'rabbit_trap');
+        tutText.innerHTML = `
+          <div class="tut-step-list">
+            <div class="tut-step-row ${trap >= 1 ? 'is-done' : ''}">
+              <span class="step-check">${trap >= 1 ? '✅' : '○'}</span>
+              <span>Chế tạo Bẫy Thỏ: <strong>${Math.min(1, trap)}/1</strong></span>
+            </div>
+            <div class="tut-step-row">
+              <span class="step-check">🛡️</span>
+              <span>Sẵn sàng thủ trại lúc 20:00</span>
+            </div>
+          </div>
+        `;
       }
     } else {
       tutBanner.hidden = true;
@@ -147,10 +214,12 @@ export function renderHud(view: GameView, profile: ProfileSave): void {
 }
 
 function setBar(name: 'satiety' | 'hydration' | 'hp', value: number): void {
-  const fill = el(`bar-${name}`);
-  fill.style.width = `${Math.max(0, Math.min(100, value))}%`;
-  el(`val-${name}`).textContent = String(Math.round(value));
-  fill.closest('.bar')?.classList.toggle('is-critical', value <= 20);
+  const fill = document.getElementById(`bar-${name}`);
+  const valEl = document.getElementById(`val-${name}`);
+  if (fill) fill.style.width = `${Math.max(0, Math.min(100, value))}%`;
+  if (valEl) valEl.textContent = String(Math.round(value));
+  fill?.closest('.crystal-gauge')?.classList.toggle('is-critical', value <= 20);
+  fill?.closest('.bar')?.classList.toggle('is-critical', value <= 20);
 }
 
 function weatherIcon(view: GameView): string {
@@ -223,16 +292,17 @@ export function renderZoneActions(view: GameView, profile: ProfileSave, handlers
   }
 
   const insidePoi = view.location?.insidePoi;
-  const isMerchantZone = zone === 'merchant' || insidePoi?.zone === 'merchant';
+  const isMerchantAvailable = Boolean(insidePoi) || zone === 'merchant';
 
-  if (isMerchantZone) {
+  if (isMerchantAvailable) {
     const poiName = insidePoi ? insidePoi.nameVi : 'Thương Nhân Hoang Cổ';
     const button = document.createElement('button');
     button.className = 'btn btn--action';
     button.style.borderColor = '#f59e0b';
+    button.style.background = 'linear-gradient(135deg, rgba(60, 35, 15, 0.95), rgba(25, 18, 12, 0.95))';
     button.innerHTML = `
       <span class="action-btn__icon">${actionIconSvg('merchant_trade')}</span>
-      <div class="action-btn__body">🏺 Tiệm ${poiName.slice(0, 16)}<small>Mua & bán với NPC</small></div>`;
+      <div class="action-btn__body">🏺 Tiệm ${poiName.slice(0, 16)}<small>Mua &amp; bán bảo bối với NPC</small></div>`;
     button.onclick = () => handlers.onTrade(-1, poiId);
     bar.append(button);
   }
@@ -1189,10 +1259,30 @@ export function renderBagPanel(profile: ProfileSave, handlers: Handlers): void {
       const used = slotsUsed(inventory);
       countBadge.innerHTML = `🔒 Két An Toàn: <strong>${used} / ${maxCap} ô</strong> (${totalTypes} loại)`;
     } else {
+      const strLvl = profile.player.strengthLevel ?? 1;
       const totalW = calculateCarriedWeight(profile.player.carried ?? {});
-      const maxW = maxWeightCapacity(profile.player.pets);
+      const maxW = maxWeightCapacity(profile.player.pets, profile.player.carried, strLvl);
       const isOver = totalW > maxW;
       countBadge.innerHTML = `🎒 Đang mang: <strong>${totalTypes} loại</strong> (${totalCount} món) · <span style="color:${isOver ? '#f87171' : '#fef08a'};font-weight:700;">⚖️ ${totalW.toFixed(1)} / ${maxW} kg</span>${isOver ? ' <span class="chip" style="color:#f87171;background:rgba(239,68,68,0.2);border-color:#ef4444;font-size:0.7rem;padding:1px 5px;margin-left:4px;">⚠️ QUÁ TẢI (Đói x2)</span>' : ''}`;
+    }
+  }
+
+  const btnUpgradeStrength = document.getElementById('btn-bag-upgrade-strength') as HTMLButtonElement | null;
+  if (btnUpgradeStrength) {
+    if (isSafeTab) {
+      btnUpgradeStrength.hidden = true;
+    } else {
+      btnUpgradeStrength.hidden = false;
+      const strLvl = profile.player.strengthLevel ?? 1;
+      const info = getStrengthUpgradeInfo(strLvl);
+      if (info.isMax) {
+        btnUpgradeStrength.textContent = `💪 Thể Lực Tối Đa (Cấp ${MAX_STRENGTH_LEVEL})`;
+        btnUpgradeStrength.disabled = true;
+      } else {
+        btnUpgradeStrength.innerHTML = `💪 Nâng Thể Lực (Cấp ${strLvl + 1}: +5kg) · 💰 ${info.cost} Vàng`;
+        btnUpgradeStrength.disabled = false;
+        btnUpgradeStrength.onclick = () => handlers.onUpgradeStrength?.();
+      }
     }
   }
 
@@ -1513,6 +1603,7 @@ export function renderSettings(profile: ProfileSave, handlers: Handlers, storage
   );
 
   box.append(
+    actionRow('🔋 Chế độ Bỏ Túi (OLED)', 'Màn hình tối đen tiết kiệm pin khi đi bộ ngoài đường, chạm bất kỳ đâu để đánh thức.', 'Bật ngay', () => handlers.onTogglePocketMode?.()),
     actionRow('Xuất file sao lưu', 'Đổi máy vẫn giữ được tiến trình. Không có server nên đây là mạng an toàn duy nhất.', 'Xuất', handlers.onExport),
     actionRow('Nhập file sao lưu', 'Ghi đè toàn bộ hồ sơ hiện có trên máy này.', 'Nhập', handlers.onImport),
     actionRow('Đổi hồ sơ', 'Quay lại màn hình chọn hồ sơ.', 'Đổi', handlers.onSwitchProfile),

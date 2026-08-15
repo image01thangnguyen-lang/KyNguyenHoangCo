@@ -83,6 +83,12 @@ import {
   buyItemFromNpc,
   sellItemToNpc,
   claimWeekendQuest,
+  upgradeStrength,
+  getArtisanRank,
+  getSafeCapacity,
+  MAX_STRENGTH_LEVEL,
+  getStrengthUpgradeInfo,
+  maxWeightCapacity,
 } from '../../../packages/game-core/src/index.js';
              
                
@@ -556,50 +562,54 @@ function getDynamicDropPool(zone        , campLevel        , activePetId        
  * Tích hợp sự kiện Rương báu 8.000 bước chân mỗi ngày!
  */
 function spawnSingleWorldDropNear(center        , zone        )       {
-  if (!center || worldDrops.length > 0) return;
+  try {
+    if (!center || worldDrops.length > 0) return;
 
-  const campLevel = app.profile?.player?.camp?.level ?? 1;
-  const activePet = app.profile?.player?.pets?.find((p) => p.isActive);
-  const todayKey = toLocalTime(now()).day;
-  const totalStepsToday = app.profile?.player?.steps?.totalSteps ?? 0;
-  const last8kChestDay = (app.profile?.player       )?.last8kChestDay;
+    const campLevel = app.profile?.player?.camp?.level ?? 1;
+    const activePet = app.profile?.player?.pets?.find((p) => p.isActive);
+    const todayKey = typeof toLocalTime === 'function' ? toLocalTime(now()).day : new Date().toISOString().slice(0, 10);
+    const totalStepsToday = app.profile?.player?.steps?.totalSteps ?? 0;
+    const last8kChestDay = (app.profile?.player       )?.last8kChestDay;
 
-  // Sinh toạ độ ngẫu nhiên xung quanh người chơi ở bán kính 18m - 46m
-  const dist = 18 + Math.random() * 28;
-  const angle = Math.random() * Math.PI * 2;
-  const dLat = (dist * Math.cos(angle)) * metersToLatDegrees(1);
-  const dLon = (dist * Math.sin(angle)) * metersToLonDegrees(1, center.lat);
+    // Sinh toạ độ ngẫu nhiên xung quanh người chơi ở bán kính 18m - 46m
+    const dist = 18 + Math.random() * 28;
+    const angle = Math.random() * Math.PI * 2;
+    const dLat = (dist * Math.cos(angle)) * metersToLatDegrees(1);
+    const dLon = (dist * Math.sin(angle)) * metersToLonDegrees(1, center.lat);
 
-  // Kiểm tra mốc 8.000 bước chân: Thả Rương báu tiền sử nếu chưa nhận hôm nay
-  if (totalStepsToday >= 8000 && last8kChestDay !== todayKey) {
+    // Kiểm tra mốc 8.000 bước chân: Thả Rương báu tiền sử nếu chưa nhận hôm nay
+    if (totalStepsToday >= 8000 && last8kChestDay !== todayKey) {
+      worldDrops = [{
+        id: `milestone_8k_${todayKey}`,
+        itemId: 'ancient_chest',
+        nameVi: '🎁 Rương báu 8.000 bước (tiền sử)',
+        qty: 1,
+        lat: center.lat + dLat,
+        lon: center.lon + dLon,
+        spawnedAtMs: now(),
+      }];
+      checkDropProximityAndAlert();
+      return;
+    }
+
+    const pool = getDynamicDropPool(zone, campLevel, activePet?.petId);
+    const item = pool[Math.floor(Math.random() * pool.length)] ?? { id: 'dry_branch', name: 'Cành khô' };
+    const qty = 2 + Math.floor(Math.random() * 3);
+
     worldDrops = [{
-      id: `milestone_8k_${todayKey}`,
-      itemId: 'ancient_chest',
-      nameVi: '🎁 Rương báu 8.000 bước (tiền sử)',
-      qty: 1,
+      id: `drop_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      itemId: item.id,
+      nameVi: item.name,
+      qty,
       lat: center.lat + dLat,
       lon: center.lon + dLon,
       spawnedAtMs: now(),
     }];
+
     checkDropProximityAndAlert();
-    return;
+  } catch (err) {
+    console.warn('spawnSingleWorldDropNear error:', err);
   }
-
-  const pool = getDynamicDropPool(zone, campLevel, activePet?.petId);
-  const item = pool[Math.floor(Math.random() * pool.length)] ?? { id: 'dry_branch', name: 'Cành khô' };
-  const qty = 2 + Math.floor(Math.random() * 3);
-
-  worldDrops = [{
-    id: `drop_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-    itemId: item.id,
-    nameVi: item.name,
-    qty,
-    lat: center.lat + dLat,
-    lon: center.lon + dLon,
-    spawnedAtMs: now(),
-  }];
-
-  checkDropProximityAndAlert();
 }
 
 function collectWorldDrop(drop           )       {
@@ -948,10 +958,10 @@ function enterProfile(slot        )       {
         return;
       }
 
-      const n = currentExplorePoi.nameVi;
-      if (n.includes('Highlands') || n.includes('Tiệm') || n.includes('WinMart') || n.includes('Phúc Long') || n.includes('Coffee')) {
-        el('overlay-poi-explore').hidden = true;
-        openMerchantStore(currentExplorePoi.nameVi);
+      const poiId = currentExplorePoi.id || currentExplorePoi.nameVi;
+      const cd = getPoiCooldownRemaining(poiId, 'forage');
+      if (!cd.ready) {
+        toast(`⏳ Tài nguyên tại ${currentExplorePoi.nameVi} đang phục hồi (${cd.messageVi}). Hãy quay lại sau!`, 'warn');
         return;
       }
 
@@ -962,11 +972,32 @@ function enterProfile(slot        )       {
       else if (currentExplorePoi.zone === 'water') { itemId = 'raw_water'; itemName = 'Nước suối ngọt'; }
 
       app.profile.player.carried = addItems(app.profile.player.carried, [{ itemId, qty: 2 }]);
-      toast(`🌿 Đã khám phá ${currentExplorePoi.nameVi} và thu hoạch được 2× ${itemName}!`, 'good');
+      recordPoiAction(poiId, 'forage');
+      el('overlay-poi-explore').hidden = true;
+      toast(`🌿 Đã khám phá ${currentExplorePoi.nameVi} và thu hoạch được 2× ${itemName}! (Hồi chiêu 30')`, 'good');
       audio.play('pickup');
       if (app.profile.settings.haptics) buzz(20);
       persist();
       render();
+    };
+  }
+
+  // Nút Mua & Bán Với Thương Nhân NPC
+  const btnShop = document.getElementById('btn-poi-act-shop');
+  if (btnShop) {
+    btnShop.onclick = () => {
+      if (!app.profile || !currentExplorePoi) return;
+      const { render: playerAt } = currentPosition();
+      const dist = Math.round(distanceMeters(playerAt, { lat: currentExplorePoi.lat, lon: currentExplorePoi.lon }));
+      const radius = Math.max(currentExplorePoi.radiusMeters || 0, 60);
+
+      if (dist > radius) {
+        toast(`📍 Bạn đang ở cách ${dist}m. Hãy đi bộ lại gần (≤${radius}m) để giao thương!`, 'warn');
+        return;
+      }
+
+      el('overlay-poi-explore').hidden = true;
+      openMerchantStore(currentExplorePoi.nameVi);
     };
   }
 
@@ -984,9 +1015,18 @@ function enterProfile(slot        )       {
         return;
       }
 
+      const poiId = currentExplorePoi.id || currentExplorePoi.nameVi;
+      const cd = getPoiCooldownRemaining(poiId, 'rest');
+      if (!cd.ready) {
+        toast(`⏳ Bạn vừa nghỉ chân tại đây (${cd.messageVi}). Hãy tiếp tục hành trình nhé!`, 'warn');
+        return;
+      }
+
       app.profile.player.survival.hp = Math.min(100, (app.profile.player.survival.hp ?? 100) + 25);
       app.profile.player.survival.hydration = Math.min(100, (app.profile.player.survival.hydration ?? 100) + 20);
-      toast(`🍵 Đã nghỉ chân tại ${currentExplorePoi.nameVi}! Hồi phục +25 HP và +20 Khát.`, 'good');
+      recordPoiAction(poiId, 'rest');
+      el('overlay-poi-explore').hidden = true;
+      toast(`🍵 Đã nghỉ chân tại ${currentExplorePoi.nameVi}! Hồi phục +25 HP và +20 Khát. (Hồi chiêu 45')`, 'good');
       audio.play('water');
       persist();
       render();
@@ -1007,7 +1047,16 @@ function enterProfile(slot        )       {
         return;
       }
 
+      const poiId = currentExplorePoi.id || currentExplorePoi.nameVi;
+      const cd = getPoiCooldownRemaining(poiId, 'monument');
+      if (!cd.ready) {
+        toast(`⏳ Bia đá tại ${currentExplorePoi.nameVi} đã được khắc hôm nay rồi (+5 Vàng/ngày)!`, 'warn');
+        return;
+      }
+
       app.profile.player.carried = addItems(app.profile.player.carried, [{ itemId: 'ancient_coin', qty: 5 }]);
+      recordPoiAction(poiId, 'monument');
+      el('overlay-poi-explore').hidden = true;
       toast(`📜 Đã khắc tên lưu niệm vào Bia Đá ${currentExplorePoi.nameVi}! Bạn nhận được 5× Đồng Vàng Cổ.`, 'good');
       audio.play('quest_complete');
       persist();
@@ -1020,6 +1069,48 @@ function enterProfile(slot        )       {
 
   sync();
   startLoops();
+}
+
+const POI_FORAGE_COOLDOWN_MS = 30 * 60 * 1000; // 30 phút
+const POI_REST_COOLDOWN_MS = 45 * 60 * 1000; // 45 phút
+
+function getPoiCooldownRemaining(poiId        , actionType                                )                                                             {
+  if (!app.profile) return { ready: true, remainingMs: 0, messageVi: '' };
+  const nowMs = now();
+  const todayKey = typeof toLocalTime === 'function' ? toLocalTime(nowMs).day : new Date().toISOString().slice(0, 10);
+  const usage = (app.profile       ).poiActionsUsage ?? {};
+
+  if (actionType === 'monument') {
+    const lastDay = usage[`${poiId}_monument_day`];
+    if (lastDay === todayKey) {
+      return { ready: false, remainingMs: 86400000, messageVi: 'Đã nhận hôm nay' };
+    }
+    return { ready: true, remainingMs: 0, messageVi: '' };
+  }
+
+  const lastAt = usage[`${poiId}_${actionType}_at`] ?? 0;
+  const cooldown = actionType === 'forage' ? POI_FORAGE_COOLDOWN_MS : POI_REST_COOLDOWN_MS;
+  const diff = nowMs - lastAt;
+  if (diff < cooldown) {
+    const remMin = Math.ceil((cooldown - diff) / 60000);
+    return { ready: false, remainingMs: cooldown - diff, messageVi: `${remMin}′` };
+  }
+  return { ready: true, remainingMs: 0, messageVi: '' };
+}
+
+function recordPoiAction(poiId        , actionType                                )       {
+  if (!app.profile) return;
+  const nowMs = now();
+  const todayKey = typeof toLocalTime === 'function' ? toLocalTime(nowMs).day : new Date().toISOString().slice(0, 10);
+  if (!(app.profile       ).poiActionsUsage) {
+    (app.profile       ).poiActionsUsage = {};
+  }
+  const usage = (app.profile       ).poiActionsUsage;
+  if (actionType === 'monument') {
+    usage[`${poiId}_monument_day`] = todayKey;
+  } else {
+    usage[`${poiId}_${actionType}_at`] = nowMs;
+  }
 }
 
 let currentExplorePoi                    = null;
@@ -1037,7 +1128,9 @@ function openPoiExploreSheet(feat            )       {
   const iconEl = el('poi-explore-icon');
   const distEl = el('poi-explore-dist');
   const loreEl = el('poi-explore-lore');
-  const btnForage = el('btn-poi-act-forage');
+  const btnForage = el                   ('btn-poi-act-forage');
+  const btnRest = el                   ('btn-poi-act-rest');
+  const btnMonument = el                   ('btn-poi-act-monument');
 
   nameEl.textContent = feat.nameVi;
   
@@ -1081,16 +1174,32 @@ function openPoiExploreSheet(feat            )       {
   tagEl.textContent = tag;
   loreEl.textContent = lore;
 
+  const poiId = feat.id || feat.nameVi;
+  const forageCd = getPoiCooldownRemaining(poiId, 'forage');
+  const restCd = getPoiCooldownRemaining(poiId, 'rest');
+  const monumentCd = getPoiCooldownRemaining(poiId, 'monument');
+
   if (inRange) {
-    distEl.innerHTML = `🟢 <strong>Đang ở trong phạm vi (${dist}m)</strong> — Có thể tương tác ngay!`;
+    distEl.innerHTML = `🟢 <strong>Đang ở trong phạm vi (${dist}m)</strong> — Có thể tương tác!`;
     distEl.style.color = '#4ade80';
-    btnForage.textContent = n.includes('Highlands') || n.includes('Tiệm') || n.includes('WinMart') || n.includes('Phúc Long')
-      ? '🛒 Mở Tiệm Thương Nhân Trao Đổi' 
-      : '🌿 Khám Phá & Thu Thập Tài Nguyên';
+
+    btnForage.disabled = !forageCd.ready;
+    btnForage.textContent = forageCd.ready ? '🌿 Khám Phá & Nhặt Đồ' : `⏳ Đang hồi (${forageCd.messageVi})`;
+
+    btnRest.disabled = !restCd.ready;
+    btnRest.textContent = restCd.ready ? '🍵 Nghỉ Chân (+25 HP)' : `⏳ Vừa nghỉ (${restCd.messageVi})`;
+
+    btnMonument.disabled = !monumentCd.ready;
+    btnMonument.textContent = monumentCd.ready ? '📜 Khắc Bia (+5 Vàng)' : `✅ Đã Khắc Tên Hôm Nay`;
   } else {
     distEl.innerHTML = `📍 Cách bạn <strong>${dist}m</strong> — Hãy đi lại gần (≤${radius}m) để kích hoạt!`;
     distEl.style.color = '#f59e0b';
-    btnForage.textContent = `🚶 Hãy đi lại gần (${dist}m) để tương tác`;
+    btnForage.disabled = true;
+    btnForage.textContent = `🚶 Hãy lại gần (${dist}m)`;
+    btnRest.disabled = true;
+    btnRest.textContent = `🍵 Nghỉ Chân`;
+    btnMonument.disabled = true;
+    btnMonument.textContent = `📜 Khắc Bia`;
   }
 
   el('overlay-poi-explore').hidden = false;
@@ -1422,6 +1531,7 @@ function drawMap()       {
     drops: worldDrops,
     traps: app.profile.player.traps,
     activePetId: app.profile.player.pets?.find((p     ) => p.isActive)?.petId ?? null,
+    strengthLevel: app.profile.player.strengthLevel ?? 1,
   });
 }
 
@@ -2054,10 +2164,31 @@ const handlers           = {
     }
   },
 
+  onUpgradeStrength() {
+    if (!app.profile) return;
+    const res = upgradeStrength(app.profile.player);
+    if (res.success) {
+      app.profile.player = res.player;
+      persist();
+      audio.play('quest_complete');
+      buzz([0, 100, 50, 200]);
+      toast(res.messageVi, 'good');
+      render();
+    } else {
+      audio.play('denied');
+      toast(res.messageVi, 'bad');
+    }
+  },
+
   onToggleSetting(key) {
     if (!app.profile) return;
     app.profile = updateSettings(app.profile, { [key]: !app.profile.settings[key] });
     afterAction();
+  },
+
+  onTogglePocketMode() {
+    switchTab('map');
+    togglePocketMode(true);
   },
 
   onExport() {
@@ -2238,11 +2369,11 @@ function wireStaticControls()       {
   // Bấm vào vùng backdrop ngoài Drawer để đóng về Bản đồ
   el('drawer-backdrop').onclick = () => switchTab('map');
 
-  // Cụm điều khiển Bản đồ: Chế độ Bỏ túi (🔋), Về ban đầu (🎯)
-
-  el('btn-pocket-mode').onclick = () => {
-    togglePocketMode(true);
-  };
+  // Cụm điều khiển Bản đồ: Về ban đầu (🎯)
+  const btnPocket = document.getElementById('btn-pocket-mode');
+  if (btnPocket) {
+    btnPocket.onclick = () => togglePocketMode(true);
+  }
 
   el('overlay-pocket-mode').onclick = () => {
     togglePocketMode(false);
@@ -2255,16 +2386,111 @@ function wireStaticControls()       {
   el('btn-back-profiles').onclick = handlers.onSwitchProfile;
 
   // Chuông thông báo
-  el('btn-notifications').onclick = () => {
+  el('btn-notifications').onclick = (e) => {
+    e.stopPropagation();
     const pop = el('popover-notifications');
     pop.hidden = !pop.hidden;
+    audio.play('click');
   };
 
-  el('btn-close-notifs').onclick = () => {
+  el('btn-close-notifs').onclick = (e) => {
+    e.stopPropagation();
     el('popover-notifications').hidden = true;
+    audio.play('click');
   };
 
-  // Mở Cẩm Nang Sinh Tồn từ HUD bars hoặc từ nút trong Nhật Ký
+  // Đóng popover thông báo khi chạm bên ngoài
+  document.addEventListener('click', (e) => {
+    const pop = document.getElementById('popover-notifications');
+    const btn = document.getElementById('btn-notifications');
+    if (pop && !pop.hidden && !pop.contains(e.target        ) && btn && !btn.contains(e.target        )) {
+      pop.hidden = true;
+    }
+  });
+
+  function getHeroTitle(strengthLevel = 1, gender         = 'male')         {
+    const isF = gender === 'female';
+    if (strengthLevel >= 10) return isF ? '👑 Hậu Duệ Tiên Dung Thần Thoại' : '👑 Hậu Duệ Lạc Long Thần Thoại';
+    if (strengthLevel >= 9) return isF ? '🔥 Nữ Bá Chủ Hồng Hoang' : '🔥 Bá Chủ Thời Tiền Sử';
+    if (strengthLevel >= 8) return isF ? '⚡ Nữ Chiến Thần Đại Ngàn' : '⚡ Chiến Thần Hồng Hoang';
+    if (strengthLevel >= 7) return isF ? '🗡️ Nữ Tướng Lạc Việt' : '🗡️ Lạc Tướng Quật Cường';
+    if (strengthLevel >= 5) return isF ? '🛡️ Nữ Hộ Vệ Đông Sơn' : '🛡️ Dũng Sĩ Hùng Vương';
+    if (strengthLevel >= 3) return isF ? '🏹 Nữ Thợ Săn Thảo Nguyên' : '🪓 Thợ Săn Dày Dạn';
+    return isF ? '🌿 Thiếu Nữ Bộ Tộc Sơ Khai' : '🌿 Dũng Sĩ Bộ Tộc Sơ Khai';
+  }
+
+  // Mở Hồ Sơ Nhân Vật & Thể Lực Tiền Sử
+  const openHeroProfile = () => {
+    if (!app.profile) return;
+    const overlay = el('overlay-hero-profile');
+    if (!overlay) return;
+
+    const player = app.profile.player;
+    const strLvl = player.strengthLevel ?? 1;
+    const isFemale = app.profile.gender === 'female';
+    const nameEl = el('hero-profile-name');
+    const titleEl = el('hero-profile-title');
+    const bigAvatar = el('hero-profile-big-avatar');
+    const strLevelEl = el('hero-profile-str-level');
+    const capEl = el('hero-profile-capacity');
+    const btnUpgrade = el                   ('btn-hero-upgrade-strength');
+    const artisanEl = el('hero-profile-artisan');
+    const vaultEl = el('hero-profile-vault');
+    const petEl = el('hero-profile-pet');
+    const stepsEl = el('hero-profile-steps');
+
+    nameEl.textContent = player.displayName || (isFemale ? 'Nữ Thợ Săn' : 'Dũng Sĩ Tiền Sử');
+    titleEl.textContent = getHeroTitle(strLvl, app.profile.gender);
+    bigAvatar.textContent = isFemale ? '🏹' : '🪓';
+
+    const tier = strLvl >= 9 ? 5 : strLvl >= 7 ? 4 : strLvl >= 5 ? 3 : strLvl >= 3 ? 2 : 1;
+    bigAvatar.className = `hero-avatar-frame hero-avatar-frame--tier-${tier}`;
+
+    const maxW = maxWeightCapacity(player.pets, player.carried, strLvl);
+    strLevelEl.textContent = `💪 Thể Lực Cấp ${strLvl} / ${MAX_STRENGTH_LEVEL}`;
+    capEl.innerHTML = `Sức chứa ba lô: <strong>${maxW}kg</strong> (Cơ bản ${45 + (strLvl - 1) * 5}kg)`;
+
+    const info = getStrengthUpgradeInfo(strLvl);
+    if (info.isMax) {
+      btnUpgrade.textContent = 'Đạt Max Cấp 10';
+      btnUpgrade.disabled = true;
+    } else {
+      btnUpgrade.innerHTML = `Nâng Cấp ${strLvl + 1} (💰 ${info.cost} Vàng)`;
+      btnUpgrade.disabled = false;
+      btnUpgrade.onclick = () => {
+        handlers.onUpgradeStrength?.();
+        openHeroProfile();
+      };
+    }
+
+    const artisanRank = getArtisanRank(player.artisanLevel ?? 1);
+    artisanEl.textContent = `${artisanRank.titleVi} (Cấp ${player.artisanLevel ?? 1}/4)`;
+
+    const vaultLvl = player.safeVaultLevel ?? 1;
+    const vaultCap = getSafeCapacity(player.camp.level, vaultLvl);
+    vaultEl.textContent = `Cấp ${vaultLvl}/6 (${vaultCap} ô)`;
+
+    const activePet = player.pets?.find((p     ) => p.isActive);
+    petEl.textContent = activePet ? `🐾 ${activePet.nameVi || activePet.petId} (Cấp ${activePet.level})` : 'Chưa xuất chiến';
+
+    stepsEl.textContent = `${player.lifetime.steps.toLocaleString('vi-VN')} bước (${player.lifetime.daysPlayed} ngày)`;
+
+    overlay.hidden = false;
+    audio.play('click');
+  };
+
+  const hudBars = document.getElementById('hud-survival-bars');
+  if (hudBars) hudBars.onclick = openHeroProfile;
+
+  const btnCloseHeroProfile = document.getElementById('btn-hero-profile-close');
+  if (btnCloseHeroProfile) {
+    btnCloseHeroProfile.onclick = () => {
+      el('overlay-hero-profile').hidden = true;
+      audio.play('click');
+    };
+  }
+
+  // Mở Cẩm Nang Sinh Tồn từ nút trong Nhật Ký
   const openSurvivalGuide = () => {
     const overlay = el('overlay-survival-guide');
     if (overlay) overlay.hidden = false;
@@ -2276,9 +2502,6 @@ function wireStaticControls()       {
     if (overlay) overlay.hidden = true;
     audio.play('click');
   };
-
-  const hudBars = document.getElementById('hud-survival-bars');
-  if (hudBars) hudBars.onclick = openSurvivalGuide;
 
   const btnOpenGuide = document.getElementById('btn-open-survival-guide');
   if (btnOpenGuide) btnOpenGuide.onclick = openSurvivalGuide;

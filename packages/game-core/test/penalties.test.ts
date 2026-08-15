@@ -17,6 +17,7 @@ import {
   hasBloodScent,
   playerCombatPower,
   resolveNightDefense,
+  upgradeStrength,
 } from '../src/index.ts';
 import type { CampState } from '../src/index.ts';
 
@@ -222,5 +223,35 @@ describe('CƠ CHẾ PHẠT SINH TỒN & TƯƠNG TÁC SÂU', () => {
   it('10. BẢO BỐI NPC: Túi Hương Ngải Cứu triệt tiêu Mùi Máu', () => {
     const bloodyBagWithPouch = { raw_meat: 20, raw_fish: 10, herb_scent_pouch: 1 };
     assert.equal(hasBloodScent(bloodyBagWithPouch), false);
+  });
+
+  it('11. NÂNG CẤP THỂ LỰC: Dùng Đồng Vàng Cổ tăng tải trọng ba lô (+5kg mỗi cấp)', () => {
+    const player: any = {
+      carried: { ancient_coin: 30 },
+      safeStorage: {},
+      strengthLevel: 1,
+      pets: [],
+    };
+
+    assert.equal(maxWeightCapacity([], {}, 1), 45); // Mặc định 45kg
+
+    // Nâng lên Cấp 2 (tốn 10 Vàng)
+    const res1 = upgradeStrength(player);
+    assert.equal(res1.success, true);
+    assert.equal(res1.player.strengthLevel, 2);
+    assert.equal(res1.player.carried.ancient_coin, 20); // 30 - 10 = 20
+    assert.equal(maxWeightCapacity([], {}, res1.player.strengthLevel), 50); // 45 + 5 = 50kg
+
+    // Nâng lên Cấp 3 (tốn 20 Vàng)
+    const res2 = upgradeStrength(res1.player);
+    assert.equal(res2.success, true);
+    assert.equal(res2.player.strengthLevel, 3);
+    assert.equal(res2.player.carried.ancient_coin, undefined); // 20 - 20 = 0
+    assert.equal(maxWeightCapacity([], {}, res2.player.strengthLevel), 55); // 45 + 10 = 55kg
+
+    // Nâng tiếp khi hết vàng => thất bại
+    const res3 = upgradeStrength(res2.player);
+    assert.equal(res3.success, false);
+    assert.ok(res3.messageVi.includes('Không đủ Đồng Vàng Cổ'));
   });
 });

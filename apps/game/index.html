@@ -12,7 +12,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Hoang Cổ" />
-    <link rel="apple-touch-icon" href="./icon.svg" />
+    <link rel="icon" type="image/png" href="./favicon.png" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
     <title>Kỷ Nguyên Hoang Cổ</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -37,37 +38,50 @@
 
     <!-- Màn hình chơi chính -->
     <section id="screen-game" class="screen" hidden>
-      <header class="hud">
-        <div class="hud__row hud__row--top">
-          <button id="btn-back-profiles" class="chip chip--icon" title="Đổi hồ sơ">☰</button>
-          <div class="hud__clock">
-            <span id="hud-time">--:--</span>
-            <span id="hud-phase" class="hud__phase">—</span>
+      <header class="hud hud--commercial">
+        <div class="hud-top-container">
+          <!-- Cụm 1: Avatar Nhân Vật & 3 Thanh Sinh Tồn Pha Lê (Góc Trái) -->
+          <div class="hud-hero-orb" id="hud-survival-bars" title="Chạm để xem Hồ Sơ Nhân Vật &amp; Cẩm Nang">
+            <div id="hero-avatar-frame" class="hero-avatar-frame">
+              <span id="hero-avatar-emoji">🏹</span>
+              <span id="hero-strength-badge" class="hero-strength-badge">Lv.1</span>
+            </div>
+            <div class="crystal-gauges">
+              <div class="crystal-gauge crystal-gauge--hp" title="Thể lực / Máu (HP: 0-100)">
+                <span class="gauge-icon">❤️</span>
+                <div class="gauge-bar"><div id="bar-hp" class="gauge-fill"></div></div>
+                <span id="val-hp" class="gauge-val">0</span>
+              </div>
+              <div class="crystal-gauge crystal-gauge--satiety" title="Độ no / Đói (Satiety: 0-100)">
+                <span class="gauge-icon">🍗</span>
+                <div class="gauge-bar"><div id="bar-satiety" class="gauge-fill"></div></div>
+                <span id="val-satiety" class="gauge-val">0</span>
+              </div>
+              <div class="crystal-gauge crystal-gauge--hydration" title="Độ khát (Hydration: 0-100)">
+                <span class="gauge-icon">💧</span>
+                <div class="gauge-bar"><div id="bar-hydration" class="gauge-fill"></div></div>
+                <span id="val-hydration" class="gauge-val">0</span>
+              </div>
+            </div>
           </div>
-          <div id="hud-weather" class="chip">—</div>
-          <div id="hud-steps" class="chip chip--steps">0 bước</div>
-          <button id="btn-notifications" class="chip chip--icon chip--bell" title="Thông báo">
-            🔔<span id="notif-badge" class="notif-badge" hidden></span>
-          </button>
-        </div>
 
-        <div class="bars" id="hud-survival-bars" style="cursor: pointer;" title="Chạm để xem Cẩm Nang &amp; Chi tiết chỉ số sinh tồn">
-          <div class="bar bar--satiety" title="Độ no / Đói (Satiety: 0-100)">
-            <span class="bar__icon">🍗</span>
-            <div class="bar__track"><div id="bar-satiety" class="bar__fill"></div></div>
-            <span id="val-satiety" class="bar__value">0</span>
+          <!-- Cụm 2: Môi Trường & Thời Gian Kính Mờ (Góc Phải) -->
+          <div class="hud-env-capsule">
+            <div class="hud-clock-group">
+              <span id="hud-time">--:--</span>
+              <span id="hud-phase" class="hud-phase-tag">—</span>
+            </div>
+            <div class="hud-chips-row">
+              <span id="hud-weather" class="chip-env">—</span>
+              <span id="hud-steps" class="chip-env chip-env--steps">0 bước</span>
+            </div>
+            <div class="hud-action-icons">
+              <button id="btn-notifications" class="btn-hud-icon" title="Thông báo">
+                🔔<span id="notif-badge" class="notif-badge" hidden></span>
+              </button>
+              <button id="btn-back-profiles" class="btn-hud-icon" title="Đổi hồ sơ">☰</button>
+            </div>
           </div>
-          <div class="bar bar--hydration" title="Độ khát (Hydration: 0-100)">
-            <span class="bar__icon">💧</span>
-            <div class="bar__track"><div id="bar-hydration" class="bar__fill"></div></div>
-            <span id="val-hydration" class="bar__value">0</span>
-          </div>
-          <div class="bar bar--hp" title="Thể lực / Máu (HP: 0-100)">
-            <span class="bar__icon">❤️</span>
-            <div class="bar__track"><div id="bar-hp" class="bar__fill"></div></div>
-            <span id="val-hp" class="bar__value">0</span>
-          </div>
-          <div id="hud-guide-btn" style="font-size:0.65rem; color:#fef08a; background:rgba(0,0,0,0.55); padding:1.5px 6px; border-radius:8px; border:1px dashed rgba(254,240,138,0.35); text-align:center; margin-top:2px;">📖 Xem chỉ số</div>
         </div>
 
         <!-- Hộp thông báo popover dạng gom gọn -->
@@ -87,10 +101,17 @@
         <div id="tab-map" class="tab tab--map">
           <canvas id="map-canvas" class="map"></canvas>
           
-          <!-- Thanh hướng dẫn Tân Thủ 3 Ngày Đầu (Onboarding Mission Tracker) -->
+          <!-- Thanh hướng dẫn Tân Thủ 3 Ngày Đầu (Ancient Bamboo Scroll Quest Card) -->
           <div id="tutorial-hud-banner" class="tutorial-hud-banner" hidden>
-            <div class="tutorial-hud-banner__badge" id="tut-badge">TÂN THỦ</div>
-            <div class="tutorial-hud-banner__text" id="tut-text"></div>
+            <div class="tut-scroll-card">
+              <div class="tut-scroll-top">
+                <span class="tut-badge-ribbon" id="tut-badge">NGÀY 1/3</span>
+                <span class="tut-scroll-header">NHIỆM VỤ SINH TỒN</span>
+              </div>
+              <div class="tut-scroll-body">
+                <div class="tutorial-hud-banner__text" id="tut-text"></div>
+              </div>
+            </div>
           </div>
 
           <!-- Thông tin vùng mỏng gọn ở góc trên bên phải dưới HUD -->
@@ -198,8 +219,9 @@
               <button id="btn-bag-tab-carried" class="inv-tab-btn is-active">🎒 Túi Đang Mang</button>
               <button id="btn-bag-tab-safe" class="inv-tab-btn">🔒 Két An Toàn</button>
             </div>
-            <div class="bag-summary-bar">
+            <div class="bag-summary-bar" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
               <span id="bag-item-count" class="chip">0 vật phẩm</span>
+              <button id="btn-bag-upgrade-strength" class="btn btn--tiny" style="background:linear-gradient(135deg,#d97706,#b45309);border-color:#f59e0b;color:#fff;font-weight:700;">💪 Nâng Thể Lực (+5kg)</button>
               <button id="btn-bag-quick-safe" class="btn btn--tiny btn--primary" style="margin-left:auto;">⚡ Cất nhanh đồ quý</button>
             </div>
             <div id="inv-bag" class="inventory"></div>
@@ -221,12 +243,11 @@
         </div>
       </main>
 
-      <!-- Cụm điều khiển Đặt lại góc nhìn bản đồ & Chế độ bỏ túi -->
+      <!-- Cụm điều khiển Đặt lại góc nhìn bản đồ -->
       <div id="map-controls" class="map-controls">
-        <button id="btn-pocket-mode" class="map-ctrl-btn map-ctrl-btn--pocket" title="Chế độ bỏ túi tiết kiệm pin (OLED)" aria-label="Chế độ bỏ túi">🔋</button>
-        <button id="btn-recenter" class="map-ctrl-btn map-ctrl-btn--recenter" hidden title="Về kích thước ban đầu &amp; tâm nhân vật" aria-label="Về ban đầu">
+        <button id="btn-recenter" class="map-ctrl-btn map-ctrl-btn--recenter" hidden title="Về kích thước ban đầu &amp; tâm nhân vật" aria-label="Về gần">
           <span class="map-ctrl-btn__icon">🎯</span>
-          <span class="map-ctrl-btn__label">Về ban đầu</span>
+          <span class="map-ctrl-btn__label">Về gần</span>
         </button>
       </div>
 
@@ -383,10 +404,13 @@
         </div>
 
         <div class="poi-explore__actions">
-          <button id="btn-poi-act-forage" class="btn btn--primary" style="width:100%;font-weight:800;">🌿 Khám Phá &amp; Tìm Kiếm Tài Nguyên</button>
+          <div style="display:flex;gap:8px;width:100%;">
+            <button id="btn-poi-act-forage" class="btn btn--primary" style="flex:1;font-weight:800;">🌿 Khám Phá &amp; Nhặt Đồ</button>
+            <button id="btn-poi-act-shop" class="btn btn--primary" style="flex:1;background:linear-gradient(135deg,#d97706,#b45309);border-color:#f59e0b;font-weight:800;">🏺 Mua &amp; Bán NPC</button>
+          </div>
           <div style="display:flex;gap:8px;width:100%;margin-top:4px;">
-            <button id="btn-poi-act-rest" class="btn btn--ghost" style="flex:1;">🍵 Nghỉ Chân Uống Nước</button>
-            <button id="btn-poi-act-monument" class="btn btn--ghost" style="flex:1;">📜 Khắc Bia Đá</button>
+            <button id="btn-poi-act-rest" class="btn btn--ghost" style="flex:1;">🍵 Nghỉ Chân (+25 HP)</button>
+            <button id="btn-poi-act-monument" class="btn btn--ghost" style="flex:1;">📜 Khắc Bia (+5 Vàng)</button>
           </div>
         </div>
       </div>
@@ -667,6 +691,60 @@
         </div>
 
         <button id="btn-trade-submit" class="btn btn--primary" style="width:100%;margin-top:12px;font-size:1rem;padding:10px;">Xác nhận</button>
+      </div>
+    </div>
+
+    <!-- Lớp phủ: Hồ Sơ Nhân Vật & Thể Lực Tiền Sử (Hero Profile Card) -->
+    <div id="overlay-hero-profile" class="overlay" hidden>
+      <div class="card card--hero-profile">
+        <div class="panel-head">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:1.6rem;">👑</span>
+            <div>
+              <h2 style="margin:0;font-size:1.2rem;color:#fef08a;" id="hero-profile-name">Nhân Vật</h2>
+              <div id="hero-profile-title" style="font-size:0.82rem;color:#fbbf24;font-weight:700;">Dũng Sĩ Đại Ngàn</div>
+            </div>
+          </div>
+          <button id="btn-hero-profile-close" class="drawer-close" title="Đóng">✕</button>
+        </div>
+
+        <div class="hero-profile-body">
+          <!-- Khối Nâng Cấp Thể Lực & Sức Khỏe -->
+          <div class="hero-strength-card">
+            <div class="hero-strength-card__top">
+              <div id="hero-profile-big-avatar" class="hero-avatar-frame hero-avatar-frame--tier-1" style="width:58px;height:58px;font-size:30px;">🏹</div>
+              <div class="hero-strength-card__info">
+                <div class="hero-strength-title" id="hero-profile-str-level">💪 Thể Lực Cấp 1 / 10</div>
+                <div class="hero-strength-sub" id="hero-profile-capacity">Sức chứa ba lô: <strong>45kg</strong></div>
+                <div class="hero-strength-hint">✨ Mỗi cấp tăng thêm +5kg tải trọng mang theo</div>
+              </div>
+            </div>
+            <button id="btn-hero-upgrade-strength" class="btn btn--primary btn-hero-upgrade">Nâng cấp</button>
+          </div>
+
+          <div class="hero-stats-grid">
+            <div class="hero-stat-box">
+              <span class="hero-stat-label">🔨 Thợ thủ công:</span>
+              <strong id="hero-profile-artisan" class="hero-stat-val">Cấp 1</strong>
+            </div>
+            <div class="hero-stat-box">
+              <span class="hero-stat-label">🔒 Két an toàn:</span>
+              <strong id="hero-profile-vault" class="hero-stat-val">Cấp 1 (20 ô)</strong>
+            </div>
+            <div class="hero-stat-box">
+              <span class="hero-stat-label">🐾 Thú cưng xuất chiến:</span>
+              <strong id="hero-profile-pet" class="hero-stat-val hero-stat-val--green">Chưa xuất chiến</strong>
+            </div>
+            <div class="hero-stat-box">
+              <span class="hero-stat-label">🚶 Tổng bước chân:</span>
+              <strong id="hero-profile-steps" class="hero-stat-val hero-stat-val--blue">0 bước</strong>
+            </div>
+          </div>
+
+          <div class="hero-profile-tip">
+            💡 <strong>Mẹo sinh tồn:</strong> Nâng Thể Lực và rèn giáp, chế tạo Ba Lô Da Voi tại Trại để mang được nhiều tài nguyên hoang dã nhất có thể!
+          </div>
+        </div>
       </div>
     </div>
 

@@ -228,6 +228,8 @@ export interface PlayerState {
   safeVaultLevel?: number;
   /** Cấp độ nâng cấp Rọ Bắt Cá bằng Đồng Vàng Cổ (1..5) */
   fishTrapLevel?: number;
+  /** Cấp độ Thể Lực / Sức Khỏe nâng bằng Đồng Vàng Cổ (1..10), mỗi cấp tăng +5kg tải trọng */
+  strengthLevel?: number;
   createdAtMs: number;
 }
 
