@@ -1157,17 +1157,32 @@ function sync()       {
 
   if (result.beats.length > 0 && app.profile.settings.narrationAudio) {
     audio.play('beat_notify');
-    app.narrationQueue.push(...result.beats);
     
-    const hasChapterOpeningBeat = result.beats.some((b) => b.triggerSteps === 0);
-    const curChap = CHAPTERS.find((c) => c.index === app.profile?.story.chapterIndex);
-    if (hasChapterOpeningBeat && curChap) {
-      showChapterIntro(curChap, () => showNextBeat());
-    } else {
-      showNextBeat();
+    // Lọc trùng tuyệt đối: Chỉ thêm những câu thoại chưa có trong hàng đợi và chưa từng phát
+    const newBeats              = [];
+    for (const b of result.beats) {
+      if (!app.narrationQueue.some((q) => q.id === b.id) && !app.profile.story.playedBeatIds.includes(b.id)) {
+        newBeats.push(b);
+      }
+      // Đánh dấu ngay vào profile và lưu để các lần sync() định kỳ 5s sau không bao giờ trả về câu thoại này lần nữa
+      app.profile = playBeat(app.profile, b.id);
+    }
+    persist();
+
+    if (newBeats.length > 0) {
+      app.narrationQueue.push(...newBeats);
+      
+      const hasChapterOpeningBeat = newBeats.some((b) => b.triggerSteps === 0);
+      const curChap = CHAPTERS.find((c) => c.index === app.profile?.story.chapterIndex);
+      if (hasChapterOpeningBeat && curChap) {
+        showChapterIntro(curChap, () => showNextBeat());
+      } else {
+        showNextBeat();
+      }
     }
   } else {
     for (const beat of result.beats) app.profile = playBeat(app.profile, beat.id);
+    persist();
   }
 
   if (app.view.demo.gated) el('overlay-demo').hidden = false;
@@ -1313,6 +1328,7 @@ function showPrologue(onProceed            )       {
 // ---------------------------------------------------------------- lời dẫn của Lạc Lạc phong cách Visual Novel
 
 let typeWriterInterval      = null;
+let currentActiveBeatText                = null;
 
 function showNextBeat()       {
   if (app.narrationOpen || !app.profile) return;
@@ -1321,6 +1337,7 @@ function showNextBeat()       {
   if (!beat) return;
 
   app.narrationOpen = true;
+  currentActiveBeatText = beat.textVi;
 
   // Cập nhật biểu cảm và trạng thái của Lạc Lạc
   const avatarEmoji = el('narration-avatar-emoji');
@@ -2120,9 +2137,17 @@ function wireStaticControls()       {
   if (btnOkGuide) btnOkGuide.onclick = closeSurvivalGuide;
 
   el('narration-next').onclick = () => {
+    // Nếu chữ đang chạy hiệu ứng gõ máy: Bấm 1 cái hiển thị trọn vẹn toàn bộ câu ngay lập tức
+    if (typeWriterInterval && currentActiveBeatText) {
+      clearInterval(typeWriterInterval);
+      typeWriterInterval = null;
+      el('narration-text').textContent = currentActiveBeatText;
+      return;
+    }
     speech.stop();
     el('overlay-narration').hidden = true;
     app.narrationOpen = false;
+    currentActiveBeatText = null;
     if (app.narrationQueue.length > 0) showNextBeat();
     else render();
   };
