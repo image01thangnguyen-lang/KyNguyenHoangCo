@@ -148,6 +148,8 @@ export interface CampState {
   upgradeCompleteAtMs: number | null;
   /** Vị trí trại — chỉ lưu ô lưới, không lưu toạ độ chính xác (§6.3). */
   homeCell: string | null;
+  /** Danh sách các luống đất trồng trọt quanh doanh trại */
+  farmPlots?: any[];
 }
 
 /** Số liệu tích luỹ cả đời hồ sơ — dùng để chấm nhiệm vụ và kích hoạt beat cốt truyện. */
@@ -194,6 +196,10 @@ export interface PlayerState {
   knownRecipes: string[];
   /** Danh sách các bẫy thú đang đặt trên thế giới tại toạ độ thực */
   traps?: PlacedTrap[];
+  /** Quả trứng đang ấp trong ba lô */
+  incubatingEgg?: any | null;
+  /** Danh sách linh thú / thú cưng tiền sử đồng hành */
+  pets?: any[];
   createdAtMs: number;
 }
 

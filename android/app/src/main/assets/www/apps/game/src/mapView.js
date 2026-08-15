@@ -48,6 +48,8 @@ import {
                       
                                                       
                        
+                                                              
+                              
  
 
 export function itemEmoji(id        )         {
@@ -153,6 +155,161 @@ const PALETTE = {
   },
 }         ;
 
+const NATURAL_RIVERS                                                            = [
+  {
+    name: 'Sông Hồng',
+    widthMeters: 160,
+    points: [
+      { lat: 21.22, lon: 105.48 },
+      { lat: 21.18, lon: 105.56 },
+      { lat: 21.14, lon: 105.65 },
+      { lat: 21.1, lon: 105.76 },
+      { lat: 21.09, lon: 105.82 },
+      { lat: 21.06, lon: 105.85 },
+      { lat: 21.04, lon: 105.865 },
+      { lat: 21.01, lon: 105.88 },
+      { lat: 20.97, lon: 105.905 },
+      { lat: 20.92, lon: 105.92 },
+      { lat: 20.85, lon: 105.935 },
+    ],
+  },
+  {
+    name: 'Sông Đuống',
+    widthMeters: 90,
+    points: [
+      { lat: 21.085, lon: 105.855 },
+      { lat: 21.075, lon: 105.89 },
+      { lat: 21.055, lon: 105.925 },
+      { lat: 21.025, lon: 105.975 },
+    ],
+  },
+  {
+    name: 'Sông Tô Lịch',
+    widthMeters: 38,
+    points: [
+      { lat: 21.045, lon: 105.805 },
+      { lat: 21.032, lon: 105.802 },
+      { lat: 21.015, lon: 105.809 },
+      { lat: 21.002, lon: 105.818 },
+      { lat: 20.985, lon: 105.818 },
+      { lat: 20.965, lon: 105.845 },
+    ],
+  },
+  {
+    name: 'Sông Đáy',
+    widthMeters: 75,
+    points: [
+      { lat: 21.12, lon: 105.68 },
+      { lat: 21.05, lon: 105.69 },
+      { lat: 20.98, lon: 105.68 },
+      { lat: 20.91, lon: 105.7 },
+      { lat: 20.78, lon: 105.76 },
+      { lat: 20.65, lon: 105.81 },
+    ],
+  },
+];
+
+const REAL_ROADS                                                            = [
+  {
+    name: 'Cổ Đạo Lê Đức Thọ',
+    widthMeters: 28,
+    points: [
+      { lat: 21.0425, lon: 105.7705 },
+      { lat: 21.0315, lon: 105.7725 },
+      { lat: 21.0205, lon: 105.7665 },
+      { lat: 21.0145, lon: 105.7645 },
+    ],
+  },
+  {
+    name: 'Lối Mòn Hàm Nghi',
+    widthMeters: 22,
+    points: [
+      { lat: 21.0315, lon: 105.7725 },
+      { lat: 21.0335, lon: 105.7685 },
+      { lat: 21.0395, lon: 105.7615 },
+    ],
+  },
+  {
+    name: 'Lối Mòn Nguyễn Hoàng',
+    widthMeters: 24,
+    points: [
+      { lat: 21.0315, lon: 105.7725 },
+      { lat: 21.0298, lon: 105.7762 },
+      { lat: 21.0285, lon: 105.7785 },
+    ],
+  },
+  {
+    name: 'Cổ Lộ Hồ Tùng Mậu — Cầu Giấy',
+    widthMeters: 32,
+    points: [
+      { lat: 21.0455, lon: 105.7625 },
+      { lat: 21.0368, lon: 105.7718 },
+      { lat: 21.0365, lon: 105.7815 },
+      { lat: 21.0335, lon: 105.7925 },
+      { lat: 21.0315, lon: 105.8085 },
+    ],
+  },
+  {
+    name: 'Thiên Lý Đạo Phạm Hùng (Vành Đai 3)',
+    widthMeters: 36,
+    points: [
+      { lat: 21.0485, lon: 105.7785 },
+      { lat: 21.0285, lon: 105.7785 },
+      { lat: 21.0168, lon: 105.7838 },
+      { lat: 21.0055, lon: 105.7925 },
+      { lat: 20.9925, lon: 105.8035 },
+    ],
+  },
+  {
+    name: 'Đại Quan Đạo Thăng Long — Trần Duy Hưng',
+    widthMeters: 35,
+    points: [
+      { lat: 21.0025, lon: 105.7655 },
+      { lat: 21.0055, lon: 105.7925 },
+      { lat: 21.0105, lon: 105.8045 },
+    ],
+  },
+  {
+    name: 'Cổ Đạo Kim Mã — Tràng Thi',
+    widthMeters: 26,
+    points: [
+      { lat: 21.0315, lon: 105.8085 },
+      { lat: 21.0325, lon: 105.8285 },
+      { lat: 21.0293, lon: 105.8355 },
+      { lat: 21.0287, lon: 105.8524 },
+    ],
+  },
+  {
+    name: 'Thiên Lý Cổ Lộ Giải Phóng',
+    widthMeters: 30,
+    points: [
+      { lat: 21.0245, lon: 105.8415 },
+      { lat: 21.0128, lon: 105.8434 },
+      { lat: 21.0028, lon: 105.8398 },
+      { lat: 20.9735, lon: 105.8612 },
+    ],
+  },
+];
+
+// Mảng ngẫu nhiên tĩnh để vẽ hạt mưa & bụi ánh sáng mà không cần sinh RNG 60 lần/giây
+const STATIC_RAIN_DROPS = Array.from({ length: 90 }, (_, i) => {
+  const r1 = Math.abs(Math.sin(i * 12.9898 + 78.233));
+  const r2 = Math.abs(Math.cos(i * 37.719 + 11.13));
+  return { u: r1 % 1, v: r2 % 1, lenFactor: 8 + ((r1 * 10) % 10) };
+});
+
+const STATIC_POLLEN = Array.from({ length: 14 }, (_, p) => {
+  const r1 = Math.abs(Math.sin(p * 43.123 + 17.5));
+  const r2 = Math.abs(Math.cos(p * 29.876 + 5.12));
+  return { u: r1 % 1, v: r2 % 1, speed: 0.8 + ((r1 * 0.6) % 0.6), size: 1.2 + ((r2 * 1.4) % 1.4) };
+});
+
+const STATIC_EMBERS = Array.from({ length: 16 }, (_, e) => {
+  const r1 = Math.abs(Math.sin(e * 31.415 + 9.2));
+  const r2 = Math.abs(Math.cos(e * 19.283 + 3.7));
+  return { u: r1 % 1, v: r2 % 1, speed: 1.5 + ((r1 * 1.5) % 1.5), size: 1.2 + ((r2 * 1.8) % 1.8), isAmber: r1 > 0.5 };
+});
+
                                 
                             
                      
@@ -187,6 +344,8 @@ export class MapView {
   onDropClick                            ;
   /** Callback khi chạm vào bẫy thú trên bản đồ để thu hoạch. */
   onTrapClick                             ;
+
+          viewportDirty = false;
 
   constructor(canvas                   ) {
     this.canvas = canvas;
@@ -230,8 +389,7 @@ export class MapView {
 
         this.panX += dx * this.dpr;
         this.panY += dy * this.dpr;
-
-        this.notifyViewportChange();
+        this.viewportDirty = true;
       }
     });
 
@@ -380,7 +538,7 @@ export class MapView {
 
   resize()       {
     const rect = this.canvas.getBoundingClientRect();
-    this.dpr = Math.min(globalThis.devicePixelRatio || 1, 2);
+    this.dpr = Math.min(globalThis.devicePixelRatio || 1, 1.75);
     this.canvas.width = Math.max(1, Math.round(rect.width * this.dpr));
     this.canvas.height = Math.max(1, Math.round(rect.height * this.dpr));
   }
@@ -390,6 +548,11 @@ export class MapView {
     const w = this.canvas.width;
     const h = this.canvas.height;
     if (w < 2 || h < 2) return;
+
+    if (this.viewportDirty) {
+      this.viewportDirty = false;
+      this.notifyViewportChange();
+    }
 
     this.tick++;
     this.lastInput = input;
@@ -680,28 +843,39 @@ export class MapView {
     const latStep = metersToLatDegrees(tileSizeMeters);
     const lonStep = metersToLonDegrees(tileSizeMeters, input.center.lat);
 
-    const radiusTiles = Math.min(22, Math.ceil((spanMeters * 1.6) / tileSizeMeters));
-    const baseLatIdx = Math.floor(input.center.lat / latStep);
-    const baseLonIdx = Math.floor(input.center.lon / lonStep);
     const isDetailed = spanMeters < 1600;
 
-    // 2. Duyệt qua các vùng địa hình thế giới
-    for (let di = -radiusTiles; di <= radiusTiles; di++) {
-      for (let dj = -radiusTiles; dj <= radiusTiles; dj++) {
-        const latIdx = baseLatIdx + di;
-        const lonIdx = baseLonIdx + dj;
+    // Tính toán chính xác toạ độ vùng nhìn thấy thực tế trên màn hình (Viewport Culling Bounding Box)
+    const margin = 100 * this.dpr;
+    const halfSpanLat = ((h / 2 + margin) / pxPerMeter) * metersToLatDegrees(1);
+    const halfSpanLon = ((w / 2 + margin) / pxPerMeter) * metersToLonDegrees(1, input.center.lat);
+    const centerPanLat = input.center.lat + (this.panY / pxPerMeter) * metersToLatDegrees(1);
+    const centerPanLon = input.center.lon - (this.panX / pxPerMeter) * metersToLonDegrees(1, input.center.lat);
+
+    const minLatIdx = Math.floor((centerPanLat - halfSpanLat) / latStep);
+    const maxLatIdx = Math.ceil((centerPanLat + halfSpanLat) / latStep);
+    const minLonIdx = Math.floor((centerPanLon - halfSpanLon) / lonStep);
+    const maxLonIdx = Math.ceil((centerPanLon + halfSpanLon) / lonStep);
+
+    // 2. Duyệt chính xác các ô địa hình trong tầm mắt
+    for (let latIdx = minLatIdx; latIdx <= maxLatIdx; latIdx++) {
+      for (let lonIdx = minLonIdx; lonIdx <= maxLonIdx; lonIdx++) {
         const cellLat = (latIdx + 0.5) * latStep;
         const cellLon = (lonIdx + 0.5) * lonStep;
 
         const [gx, gy] = project({ lat: cellLat, lon: cellLon });
-        // Bỏ qua nếu ô nằm ngoài màn hình
-        if (gx < -90 || gx > w + 90 || gy < -90 || gy > h + 90) continue;
+        if (gx < -margin || gx > w + margin || gy < -margin || gy > h + margin) continue;
 
-        const seed = hashSeed('terrain_v4_organic', latIdx, lonIdx);
-        const rng = createRng(seed);
+        // Băm số nguyên siêu tốc (0 object/string allocations)
+        const seed = (((latIdx * 73856093) ^ (lonIdx * 19349663) ^ 0x85ebca6b) >>> 0);
+        let s = seed;
+        const rng = () => {
+          s = (s * 1664525 + 1013904223) >>> 0;
+          return s / 4294967296;
+        };
 
         // Phân loại địa hình ngẫu nhiên theo toạ độ
-        const biomeType = Math.abs(seed) % 5;
+        const biomeType = seed % 5;
 
         if (biomeType === 0) {
           // 🏜️ VÙNG ĐẤT NUNG & RÃNH NỨT KHÔ CẰN (Hoàn toàn không có cỏ)
@@ -1179,69 +1353,11 @@ export class MapView {
     const riverColor = phase === 'night' ? '#0e2b36' : phase === 'evening' ? '#155e75' : '#0891b2';
     const sandColor = phase === 'night' ? '#292524' : phase === 'evening' ? '#b45309' : '#eab308';
 
-    const rivers                                                            = [
-      {
-        // Sông Hồng uốn lượn qua Hà Nội từ Ba Vì -> Đan Phượng -> Tây Hồ -> Long Biên -> Bát Tràng -> Thường Tín
-        name: 'Sông Hồng',
-        widthMeters: 160,
-        points: [
-          { lat: 21.22, lon: 105.48 },
-          { lat: 21.18, lon: 105.56 },
-          { lat: 21.14, lon: 105.65 },
-          { lat: 21.10, lon: 105.76 },
-          { lat: 21.09, lon: 105.82 },
-          { lat: 21.06, lon: 105.85 },
-          { lat: 21.04, lon: 105.865 },
-          { lat: 21.01, lon: 105.88 },
-          { lat: 20.97, lon: 105.905 },
-          { lat: 20.92, lon: 105.92 },
-          { lat: 20.85, lon: 105.935 },
-        ],
-      },
-      {
-        // Sông Đuống tách từ Đông Anh chảy sang Gia Lâm
-        name: 'Sông Đuống',
-        widthMeters: 90,
-        points: [
-          { lat: 21.085, lon: 105.855 },
-          { lat: 21.075, lon: 105.89 },
-          { lat: 21.055, lon: 105.925 },
-          { lat: 21.025, lon: 105.975 },
-        ],
-      },
-      {
-        // Sông Tô Lịch uốn quanh nội thành
-        name: 'Sông Tô Lịch',
-        widthMeters: 38,
-        points: [
-          { lat: 21.045, lon: 105.805 },
-          { lat: 21.032, lon: 105.802 },
-          { lat: 21.015, lon: 105.809 },
-          { lat: 21.002, lon: 105.818 },
-          { lat: 20.985, lon: 105.818 },
-          { lat: 20.965, lon: 105.845 },
-        ],
-      },
-      {
-        // Sông Đáy chảy qua phía Tây (Đan Phượng, Hoài Đức, Quốc Oai, Chương Mỹ, Mỹ Đức)
-        name: 'Sông Đáy',
-        widthMeters: 75,
-        points: [
-          { lat: 21.12, lon: 105.68 },
-          { lat: 21.05, lon: 105.69 },
-          { lat: 20.98, lon: 105.68 },
-          { lat: 20.91, lon: 105.70 },
-          { lat: 20.78, lon: 105.76 },
-          { lat: 20.65, lon: 105.81 },
-        ],
-      },
-    ];
-
     ctx.save();
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
-    for (const river of rivers) {
+    for (const river of NATURAL_RIVERS) {
       const projected = river.points.map((p) => project(p));
       const riverWidthPx = Math.max(12 * this.dpr, river.widthMeters * pxPerMeter);
 
@@ -3095,88 +3211,6 @@ export class MapView {
     phase       ,
   )       {
     const { ctx } = this;
-    const roads                                                            = [
-      {
-        name: 'Cổ Đạo Lê Đức Thọ',
-        widthMeters: 28,
-        points: [
-          { lat: 21.0425, lon: 105.7705 },
-          { lat: 21.0315, lon: 105.7725 },
-          { lat: 21.0205, lon: 105.7665 },
-          { lat: 21.0145, lon: 105.7645 },
-        ],
-      },
-      {
-        name: 'Lối Mòn Hàm Nghi',
-        widthMeters: 22,
-        points: [
-          { lat: 21.0315, lon: 105.7725 },
-          { lat: 21.0335, lon: 105.7685 },
-          { lat: 21.0395, lon: 105.7615 },
-        ],
-      },
-      {
-        name: 'Lối Mòn Nguyễn Hoàng',
-        widthMeters: 24,
-        points: [
-          { lat: 21.0315, lon: 105.7725 },
-          { lat: 21.0298, lon: 105.7762 },
-          { lat: 21.0285, lon: 105.7785 },
-        ],
-      },
-      {
-        name: 'Cổ Lộ Hồ Tùng Mậu — Cầu Giấy',
-        widthMeters: 32,
-        points: [
-          { lat: 21.0455, lon: 105.7625 },
-          { lat: 21.0368, lon: 105.7718 },
-          { lat: 21.0365, lon: 105.7815 },
-          { lat: 21.0335, lon: 105.7925 },
-          { lat: 21.0315, lon: 105.8085 },
-        ],
-      },
-      {
-        name: 'Thiên Lý Đạo Phạm Hùng (Vành Đai 3)',
-        widthMeters: 36,
-        points: [
-          { lat: 21.0485, lon: 105.7785 },
-          { lat: 21.0285, lon: 105.7785 },
-          { lat: 21.0168, lon: 105.7838 },
-          { lat: 21.0055, lon: 105.7925 },
-          { lat: 20.9925, lon: 105.8035 },
-        ],
-      },
-      {
-        name: 'Đại Quan Đạo Thăng Long — Trần Duy Hưng',
-        widthMeters: 35,
-        points: [
-          { lat: 21.0025, lon: 105.7655 },
-          { lat: 21.0055, lon: 105.7925 },
-          { lat: 21.0105, lon: 105.8045 },
-        ],
-      },
-      {
-        name: 'Cổ Đạo Kim Mã — Tràng Thi',
-        widthMeters: 26,
-        points: [
-          { lat: 21.0315, lon: 105.8085 },
-          { lat: 21.0325, lon: 105.8285 },
-          { lat: 21.0293, lon: 105.8355 },
-          { lat: 21.0287, lon: 105.8524 },
-        ],
-      },
-      {
-        name: 'Thiên Lý Cổ Lộ Giải Phóng',
-        widthMeters: 30,
-        points: [
-          { lat: 21.0245, lon: 105.8415 },
-          { lat: 21.0128, lon: 105.8434 },
-          { lat: 21.0028, lon: 105.8398 },
-          { lat: 20.9735, lon: 105.8612 },
-        ],
-      },
-    ];
-
     ctx.save();
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -3187,7 +3221,7 @@ export class MapView {
     const dirtCenterGroove = phase === 'night' ? '#171412' : phase === 'evening' ? '#381a08' : '#573312';
     const pebbleColor = phase === 'night' ? '#44403c' : phase === 'evening' ? '#a8a29e' : '#d6d3d1';
 
-    for (const road of roads) {
+    for (const road of REAL_ROADS) {
       const pts = road.points.map((p) => project(p));
       const rw = Math.max(10 * this.dpr, road.widthMeters * pxPerMeter);
 
@@ -3754,6 +3788,62 @@ export class MapView {
       ctx.fillRect(x + 3 * this.dpr, py - 8.5 * this.dpr, 2.4 * this.dpr, 1.5 * this.dpr);
     }
 
+    // 5. Vẽ Linh Thú tiền sử đồng hành chạy theo nhịp bước chân
+    if (input.activePetId) {
+      const petOffsetAngle = (this.tick / 18) + Math.PI * 0.75;
+      const petDist = 18 * this.dpr;
+      const petX = x + Math.cos(petOffsetAngle) * petDist;
+      const petY = y + Math.sin(petOffsetAngle) * (petDist * 0.6) + Math.sin(this.tick / 6) * 1.5 * this.dpr;
+
+      // Bóng đổ của thú cưng
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.beginPath();
+      ctx.ellipse(petX, petY + 4 * this.dpr, 5 * this.dpr, 2.5 * this.dpr, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (input.activePetId === 'saber_cub') {
+        // Hổ con răng kiếm: thân vàng cam, vằn nâu, răng nanh nhỏ trắng
+        ctx.fillStyle = '#f59e0b';
+        ctx.beginPath();
+        ctx.arc(petX, petY, 4.5 * this.dpr, 0, Math.PI * 2);
+        ctx.fill();
+        // Tai nhỏ
+        ctx.fillStyle = '#b45309';
+        ctx.beginPath();
+        ctx.arc(petX - 3 * this.dpr, petY - 4 * this.dpr, 1.8 * this.dpr, 0, Math.PI * 2);
+        ctx.arc(petX + 3 * this.dpr, petY - 4 * this.dpr, 1.8 * this.dpr, 0, Math.PI * 2);
+        ctx.fill();
+        // Răng kiếm mini
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(petX - 1.5 * this.dpr, petY + 1 * this.dpr, 0.8 * this.dpr, 2 * this.dpr);
+        ctx.fillRect(petX + 0.7 * this.dpr, petY + 1 * this.dpr, 0.8 * this.dpr, 2 * this.dpr);
+      } else if (input.activePetId === 'baby_mammoth') {
+        // Voi ma mút con: thân nâu hạt dẻ, vòi uốn lượn, ngà trắng
+        ctx.fillStyle = '#78350f';
+        ctx.beginPath();
+        ctx.arc(petX, petY, 5 * this.dpr, 0, Math.PI * 2);
+        ctx.fill();
+        // Vòi nhỏ
+        ctx.strokeStyle = '#78350f';
+        ctx.lineWidth = 2 * this.dpr;
+        ctx.beginPath();
+        ctx.moveTo(petX, petY + 1 * this.dpr);
+        ctx.quadraticCurveTo(petX - 3 * this.dpr, petY + 4 * this.dpr, petX - 1 * this.dpr, petY + 6 * this.dpr);
+        ctx.stroke();
+      } else {
+        // Chim ưng cổ đại: linh điểu bay lượn trên vai
+        const wingFlap = Math.sin(this.tick / 4) * 4 * this.dpr;
+        ctx.fillStyle = '#38bdf8';
+        ctx.beginPath();
+        ctx.moveTo(petX, petY - 6 * this.dpr);
+        ctx.lineTo(petX - 6 * this.dpr, petY - 6 * this.dpr + wingFlap);
+        ctx.lineTo(petX, petY - 3 * this.dpr);
+        ctx.lineTo(petX + 6 * this.dpr, petY - 6 * this.dpr + wingFlap);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+
     if (!input.hasFix) {
       // Nhãn vị trí ước lượng tinh tế
       ctx.fillStyle = '#d4c5a9';
@@ -3770,16 +3860,16 @@ export class MapView {
 
           drawRain(w        , h        , intensity        )       {
     const { ctx } = this;
-    const drops = Math.round(90 * intensity);
+    const drops = Math.min(STATIC_RAIN_DROPS.length, Math.round(STATIC_RAIN_DROPS.length * intensity));
 
     ctx.save();
     ctx.strokeStyle = 'rgba(180, 200, 215, 0.34)';
     ctx.lineWidth = 1 * this.dpr;
     for (let i = 0; i < drops; i++) {
-      const rng = createRng(hashSeed('rain', i));
-      const x = (rng() * w + this.tick * 1.6) % w;
-      const y = (rng() * h + this.tick * 9) % h;
-      const len = (8 + rng() * 10) * this.dpr;
+      const p = STATIC_RAIN_DROPS[i] ;
+      const x = (p.u * w + this.tick * 1.6) % w;
+      const y = (p.v * h + this.tick * 9) % h;
+      const len = p.lenFactor * this.dpr;
       ctx.beginPath();
       ctx.moveTo(x, y);
       ctx.lineTo(x - len * 0.28, y + len);
@@ -3804,72 +3894,34 @@ export class MapView {
     ctx.save();
 
     if (input.phase === 'day') {
-      // 1. Ban ngày: Luồng ánh nắng xiên tự nhiên (God Rays / Sunbeams)
-      ctx.save();
-      const beamCount = 4;
-      for (let b = 0; b < beamCount; b++) {
-        const beamAngle = 0.55; // Góc xiên mặt trời ~30 độ
-        const beamX = ((b * (w / 3) + this.tick * 0.4) % (w * 1.5)) - w * 0.25;
-        const beamWidth = (45 + b * 20) * this.dpr;
-        const beamAlpha = 0.035 + 0.02 * Math.sin(this.tick / 25 + b * 1.8);
-
-        const beamGrad = ctx.createLinearGradient(beamX, 0, beamX + Math.sin(beamAngle) * h, h);
-        beamGrad.addColorStop(0, `rgba(254, 240, 138, ${beamAlpha * 1.5})`);
-        beamGrad.addColorStop(0.6, `rgba(253, 224, 71, ${beamAlpha})`);
-        beamGrad.addColorStop(1, 'rgba(254, 240, 138, 0)');
-
-        ctx.fillStyle = beamGrad;
-        ctx.beginPath();
-        ctx.moveTo(beamX - beamWidth / 2, 0);
-        ctx.lineTo(beamX + beamWidth / 2, 0);
-        ctx.lineTo(beamX + Math.sin(beamAngle) * h + beamWidth * 0.8, h);
-        ctx.lineTo(beamX + Math.sin(beamAngle) * h - beamWidth * 0.8, h);
-        ctx.closePath();
-        ctx.fill();
-      }
-      ctx.restore();
-
-      // 2. Hạt bụi phấn hoa vàng lấp lánh trôi nhẹ trong gió
-      for (let p = 0; p < 14; p++) {
-        const rng = createRng(hashSeed('pollen', p));
-        const px = (rng() * w + this.tick * (0.8 + rng() * 0.6)) % w;
-        const py = (rng() * h + Math.sin(this.tick / 20 + p) * 20 * this.dpr) % h;
+      // 1. Hạt bụi phấn hoa vàng lấp lánh trôi nhẹ trong gió
+      for (let p = 0; p < STATIC_POLLEN.length; p++) {
+        const item = STATIC_POLLEN[p] ;
+        const px = (item.u * w + this.tick * item.speed) % w;
+        const py = (item.v * h + Math.sin(this.tick / 20 + p) * 20 * this.dpr) % h;
         const pAlpha = 0.3 + 0.35 * Math.sin(this.tick / 15 + p * 2);
         ctx.fillStyle = `rgba(254, 240, 138, ${pAlpha})`;
         ctx.beginPath();
-        ctx.arc(px, py, (1.2 + rng() * 1.4) * this.dpr, 0, Math.PI * 2);
+        ctx.arc(px, py, item.size * this.dpr, 0, Math.PI * 2);
         ctx.fill();
       }
-
-      // Viền tối rất nhẹ góc màn hình để tăng độ sâu 3D
-      const vignette = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.55, w / 2, h / 2, Math.max(w, h) * 0.85);
-      vignette.addColorStop(0, 'rgba(0,0,0,0)');
-      vignette.addColorStop(1, 'rgba(0,0,0,0.14)');
-      ctx.fillStyle = vignette;
-      ctx.fillRect(0, 0, w, h);
     } else if (input.phase === 'evening') {
       // 1. Hoàng hôn / Chiều tà: Ánh hổ phách ấm nồng
       ctx.fillStyle = 'rgba(249, 115, 22, 0.16)';
       ctx.fillRect(0, 0, w, h);
 
       // Tàn lửa ấm áp bay lơ lửng trong gió chiều
-      for (let e = 0; e < 16; e++) {
-        const rng = createRng(hashSeed('ember', e));
-        const ex = (rng() * w + this.tick * 1.2) % w;
-        const ey = (rng() * h - this.tick * (1.5 + rng() * 1.5)) % h;
+      for (let e = 0; e < STATIC_EMBERS.length; e++) {
+        const item = STATIC_EMBERS[e] ;
+        const ex = (item.u * w + this.tick * 1.2) % w;
+        const ey = (item.v * h - this.tick * item.speed) % h;
         const actualY = ey < 0 ? h + ey : ey;
         const eAlpha = 0.4 + 0.45 * Math.sin(this.tick / 10 + e);
-        ctx.fillStyle = rng() > 0.5 ? `rgba(245, 158, 11, ${eAlpha})` : `rgba(239, 68, 68, ${eAlpha})`;
+        ctx.fillStyle = item.isAmber ? `rgba(245, 158, 11, ${eAlpha})` : `rgba(239, 68, 68, ${eAlpha})`;
         ctx.beginPath();
-        ctx.arc(ex, actualY, (1.2 + rng() * 1.8) * this.dpr, 0, Math.PI * 2);
+        ctx.arc(ex, actualY, item.size * this.dpr, 0, Math.PI * 2);
         ctx.fill();
       }
-
-      const vignette = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.35, w / 2, h / 2, Math.max(w, h) * 0.8);
-      vignette.addColorStop(0, 'rgba(0,0,0,0)');
-      vignette.addColorStop(1, 'rgba(45, 18, 6, 0.55)');
-      ctx.fillStyle = vignette;
-      ctx.fillRect(0, 0, w, h);
     } else {
       // 1. Ban đêm: Màn đêm phủ dày với quầng sáng đuốc nhân vật và lửa trại
       const playerX = w / 2 + this.panX;

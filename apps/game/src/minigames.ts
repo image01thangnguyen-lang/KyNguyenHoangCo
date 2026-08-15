@@ -13,6 +13,8 @@
  * giữa min và max, không quyết định thành/bại.
  */
 
+import { audio } from './audio.ts';
+
 const overlay = () => document.getElementById('overlay-action') as HTMLElement;
 const card = () => document.getElementById('action-card') as HTMLElement;
 
@@ -49,6 +51,9 @@ export function timingRound(host: HTMLElement, speed = 1): Promise<number> {
       settled = true;
       cancelAnimationFrame(raf);
       bar.onclick = null;
+      if (score > 0.4) {
+        audio.play('splash');
+      }
       resolve(score);
     };
 
@@ -122,6 +127,7 @@ function tapRhythm(host: HTMLElement, durationSeconds: number, onTick: (text: st
       scored += 1 - offset / hitWindowMs;
       stage.classList.add('is-hit');
       setTimeout(() => stage.classList.remove('is-hit'), 140);
+      audio.play('chop');
       navigator.vibrate?.(12);
     };
   });

@@ -21,6 +21,8 @@
     { "id": "gold_ore",         "nameVi": "Quặng vàng",        "kind": "material", "stack": 100, "weight": 4, "safe": true },
     { "id": "blueprint",        "nameVi": "Bản vẽ chế tạo",    "kind": "material", "stack": 20,  "weight": 1, "safe": true },
     { "id": "upgrade_core",     "nameVi": "Lõi nâng cấp trại", "kind": "material", "stack": 20,  "weight": 1, "safe": true },
+    { "id": "egg_forest",       "nameVi": "Trứng Rừng Cổ Đại", "kind": "material", "stack": 5,   "weight": 3, "safe": true },
+    { "id": "egg_mountain",     "nameVi": "Trứng Thạch Cốt Sơn", "kind": "material", "stack": 5, "weight": 4, "safe": true },
 
     { "id": "wild_berry",       "nameVi": "Quả dại",           "kind": "food", "stack": 50, "weight": 1, "satiety": 10 },
     { "id": "raw_fish",         "nameVi": "Cá tươi",           "kind": "food", "stack": 30, "weight": 2, "satiety": 8,  "raw": true },

@@ -12,8 +12,14 @@ import {
   findItem,
   getCampTier,
   getItem,
+  getCropDef,
+  getPetDef,
+  createInitialFarmPlots,
+  getActiveLunarEvent,
+  CHAPTERS,
 } from '../../../packages/game-core/src/index.ts';
 import { actionIconSvg, itemIconSvg, zoneIconSvg } from './itemIcons.ts';
+import { audio } from './audio.ts';
 import type {
   GameView,
   GatherActionDef,
@@ -40,6 +46,13 @@ export interface Handlers {
   onNightDefense(): void;
   onBloodMoon(): void;
   onPlaceTrap(trapItemId: 'rabbit_trap' | 'deer_trap' | 'beast_trap'): void;
+  onStartIncubate(eggItemId: string): void;
+  onFeedPet(petId: string, foodItemId: string): void;
+  onPlantCrop(plotIndex: number, cropId: string): void;
+  onWaterPlot(plotIndex: number): void;
+  onHarvestPlot(plotIndex: number): void;
+  onOpenAR?(): void;
+  onOpenCoop?(): void;
   onToggleSetting(key: 'parentalNightLock' | 'realWeatherSync' | 'narrationAudio' | 'haptics'): void;
   onExport(): void;
   onImport(): void;
@@ -87,6 +100,27 @@ export function renderHud(view: GameView, profile: ProfileSave): void {
   const emptyNotif = document.getElementById('notif-empty');
   if (emptyNotif) {
     emptyNotif.hidden = hasWarnings || hasBloodMoon;
+  }
+
+  // Thanh hướng dẫn Tân Thủ 3 Ngày Đầu
+  const tutBanner = document.getElementById('tutorial-hud-banner');
+  if (tutBanner) {
+    if (profile.story.tutorialDay > 0) {
+      tutBanner.hidden = false;
+      const tutDay = profile.story.tutorialDay;
+      const tutBadge = el('tut-badge');
+      const tutText = el('tut-text');
+      tutBadge.textContent = `NGÀY ${tutDay}/3`;
+      if (tutDay === 1) {
+        tutText.innerHTML = `🔥 <strong>Nhiệm vụ:</strong> Đi dạo nhặt 8 cành khô &amp; 4 đá nhọn để dựng <strong>Lửa Trại</strong> trước 20:00!`;
+      } else if (tutDay === 2) {
+        tutText.innerHTML = `💧 <strong>Nhiệm vụ:</strong> Đun sôi nước uống và chế tạo <strong>Rìu Đá</strong> để đốn củi công viên!`;
+      } else {
+        tutText.innerHTML = `🛡️ <strong>Nhiệm vụ:</strong> Đặt <strong>Bẫy Thỏ</strong> và chuẩn bị thủ trại, quái thú sẽ tấn công lúc 20:00!`;
+      }
+    } else {
+      tutBanner.hidden = true;
+    }
   }
 }
 
@@ -340,12 +374,70 @@ export function renderCamp(view: GameView, profile: ProfileSave, handlers: Handl
   const camp = profile.player.camp;
   const tier = getCampTier(camp.level);
 
+  // Kiểm tra sự kiện Lịch Âm Hoang Cổ
+  const lunarEvent = getActiveLunarEvent(view.nowMs);
+  let lunarHtml = '';
+  if (lunarEvent) {
+    lunarHtml = `
+      <div class="lunar-banner">
+        <div class="lunar-banner__title">🎉 ${lunarEvent.nameVi} (Ngày ${lunarEvent.lunarDate.day}/${lunarEvent.lunarDate.month} Âm Lịch)</div>
+        <div class="lunar-banner__desc">${lunarEvent.descVi}</div>
+      </div>
+    `;
+  }
+
   el('camp-summary').innerHTML = `
+    ${lunarHtml}
     <h2>${tier.nameVi}</h2>
     <p>${tier.eraVi} · Sức phòng thủ nền ${tier.baseDefense} · Kho ${view.storageUsed}/${tier.storageSlots} ô</p>
     <p>${view.tonight.verdictVi}</p>
+    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+      <button id="btn-camp-ar" class="btn btn--tiny btn--primary" style="flex:1;min-width:140px;">📸 Chụp Ảnh AR</button>
+      <button id="btn-camp-coop" class="btn btn--tiny" style="flex:1;min-width:140px;background:#78350f;color:#fef08a;border-color:#f59e0b;">⚔️ Đấu Boss Co-op</button>
+    </div>
   `;
 
+  const btnAr = document.getElementById('btn-camp-ar');
+  if (btnAr && handlers.onOpenAR) btnAr.onclick = handlers.onOpenAR;
+
+  const btnCoop = document.getElementById('btn-camp-coop');
+  if (btnCoop && handlers.onOpenCoop) btnCoop.onclick = handlers.onOpenCoop;
+
+  // Bảng thống kê sinh tồn & kỷ lục cá nhân
+  const statsBox = el('camp-stats');
+  const days = profile.player.lifetime.daysPlayed;
+  const steps = profile.player.lifetime.steps;
+  const defWins = profile.player.lifetime.nightDefenseWins;
+  const bmWins = profile.player.lifetime.bloodMoonWins;
+
+  statsBox.innerHTML = `
+    <div class="stats-panel" style="background:rgba(0,0,0,0.35);border:1px solid rgba(217,119,6,0.25);border-radius:8px;padding:10px 12px;margin-bottom:12px;">
+      <div style="font-weight:700;color:var(--gold);font-size:0.92rem;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+        <span>🏆 BẢNG KỶ LỤC &amp; THÀNH TÍCH SINH TỒN</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:0.85rem;">
+        <div style="background:rgba(255,255,255,0.04);padding:6px 8px;border-radius:6px;">
+          <span style="color:var(--ink-muted);font-size:0.75rem;display:block;">SỐ NGÀY SINH TỒN</span>
+          <strong style="color:#fde047;font-size:1.05rem;">${days} ngày</strong>
+        </div>
+        <div style="background:rgba(255,255,255,0.04);padding:6px 8px;border-radius:6px;">
+          <span style="color:var(--ink-muted);font-size:0.75rem;display:block;">TỔNG BƯỚC CHÂN</span>
+          <strong style="color:#38bdf8;font-size:1.05rem;">${steps.toLocaleString('vi-VN')}</strong>
+        </div>
+        <div style="background:rgba(255,255,255,0.04);padding:6px 8px;border-radius:6px;">
+          <span style="color:var(--ink-muted);font-size:0.75rem;display:block;">THẮNG THỦ ĐÊM</span>
+          <strong style="color:#4ade80;font-size:1.05rem;">${defWins} đêm</strong>
+        </div>
+        <div style="background:rgba(255,255,255,0.04);padding:6px 8px;border-radius:6px;">
+          <span style="color:var(--ink-muted);font-size:0.75rem;display:block;">DIỆT BOSS TRĂNG MÁU</span>
+          <strong style="color:#f87171;font-size:1.05rem;">${bmWins} boss</strong>
+        </div>
+      </div>
+    </div>
+  `;
+
+  renderPets(profile, handlers);
+  renderFarming(view, profile, handlers);
   renderUpgrade(view, profile, handlers);
   renderDefense(profile);
   renderInventory('inv-carried', profile.player.carried, handlers, true);
@@ -459,6 +551,143 @@ function renderDefense(profile: ProfileSave): void {
     ${stations}`;
 }
 
+function renderPets(profile: ProfileSave, handlers: Handlers): void {
+  const box = el('camp-pets');
+  box.replaceChildren();
+
+  const title = document.createElement('h3');
+  title.className = 'section-title';
+  title.style.cssText = 'display:flex;align-items:center;gap:6px;margin:12px 0 6px 0;color:var(--gold);';
+  title.innerHTML = `<span>🐾 Linh Thú Đồng Hành</span>`;
+  box.append(title);
+
+  // 1. Hiển thị trứng đang ấp
+  const inc = profile.player.incubatingEgg;
+  if (inc && !inc.hatched) {
+    const eggCard = document.createElement('div');
+    eggCard.style.cssText = 'background:rgba(217,119,6,0.12);border:1px solid rgba(217,119,6,0.35);border-radius:8px;padding:10px;margin-bottom:8px;';
+    const percent = Math.min(100, Math.round((inc.currentSteps / inc.requiredSteps) * 100));
+    eggCard.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <strong style="color:var(--gold);font-size:0.9rem;">🥚 Đang ấp Trứng Thú Cổ</strong>
+        <span style="font-size:0.8rem;color:var(--ink-muted);">${inc.currentSteps.toLocaleString('vi-VN')}/${inc.requiredSteps.toLocaleString('vi-VN')} bước (${percent}%)</span>
+      </div>
+      <div class="bar__track" style="height:6px;margin:6px 0;"><div class="bar__fill" style="width:${percent}%;background:var(--gold);"></div></div>
+      <p class="fineprint" style="margin:0;">Đi bộ ngoài đời thực để truyền hơi ấm giúp trứng sớm nở thành Linh Thú!</p>
+    `;
+    box.append(eggCard);
+  } else {
+    // Nếu có trứng trong túi mà chưa ấp
+    const eggItem = Object.keys(profile.player.carried).find((k) => k.startsWith('egg_') && (profile.player.carried[k] ?? 0) > 0);
+    if (eggItem) {
+      const startCard = document.createElement('div');
+      startCard.style.cssText = 'background:rgba(255,255,255,0.04);border:1px dashed rgba(217,119,6,0.4);border-radius:8px;padding:8px 10px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;';
+      startCard.innerHTML = `
+        <div>
+          <strong style="font-size:0.88rem;color:var(--gold);">🥚 Có ${getItem(eggItem).nameVi}</strong>
+          <p class="fineprint" style="margin:0;">Đặt vào túi ấp để nở bằng bước chân.</p>
+        </div>
+      `;
+      const btn = document.createElement('button');
+      btn.className = 'btn btn--tiny';
+      btn.textContent = 'Ấp trứng ngay';
+      btn.onclick = () => handlers.onStartIncubate(eggItem);
+      startCard.append(btn);
+      box.append(startCard);
+    }
+  }
+
+  // 2. Danh sách thú cưng
+  const pets = profile.player.pets ?? [];
+  if (pets.length > 0) {
+    for (const pet of pets) {
+      const def = getPetDef(pet.petId);
+      const card = document.createElement('div');
+      card.style.cssText = 'background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:8px 10px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;';
+      card.innerHTML = `
+        <div style="flex:1;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <strong style="color:var(--bone);font-size:0.92rem;">${pet.nameVi}</strong>
+            <span style="background:rgba(74,222,128,0.2);color:#4ade80;font-size:0.75rem;padding:1px 6px;border-radius:4px;">Cấp ${pet.level}</span>
+          </div>
+          <div style="color:var(--gold-faint);font-size:0.8rem;margin:2px 0;">✨ ${def.buffVi}</div>
+          <div style="font-size:0.75rem;color:var(--ink-muted);">Độ thân thiết: ${pet.friendship}/100</div>
+        </div>
+      `;
+
+      const feedBtn = document.createElement('button');
+      feedBtn.className = 'btn btn--tiny';
+      feedBtn.textContent = '🍖 Cho ăn';
+      feedBtn.onclick = () => handlers.onFeedPet(pet.petId, def.favoriteFood);
+      card.append(feedBtn);
+      box.append(card);
+    }
+  } else if (!inc) {
+    const hint = document.createElement('p');
+    hint.className = 'fineprint';
+    hint.textContent = 'Khám phá các bí cảnh di tích lớn (Hoàng Thành, Ba Vì, Cổ Loa...) để tìm Trứng Thú Cổ!';
+    box.append(hint);
+  }
+}
+
+function renderFarming(view: GameView, profile: ProfileSave, handlers: Handlers): void {
+  const box = el('camp-farming');
+  box.replaceChildren();
+
+  const title = document.createElement('h3');
+  title.className = 'section-title';
+  title.style.cssText = 'display:flex;align-items:center;gap:6px;margin:12px 0 6px 0;color:var(--gold);';
+  title.innerHTML = `<span>🌾 Nông Trại Quanh Trại</span>`;
+  box.append(title);
+
+  const plots = profile.player.camp.farmPlots ?? createInitialFarmPlots(profile.player.camp.level);
+  const grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;';
+
+  plots.forEach((plot) => {
+    const plotCard = document.createElement('div');
+    plotCard.style.cssText = 'background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:8px;text-align:center;';
+
+    if (plot.cropId) {
+      const crop = getCropDef(plot.cropId);
+      const isReady = plot.readyToHarvest;
+      plotCard.innerHTML = `
+        <strong style="color:var(--bone);font-size:0.88rem;display:block;">${crop.nameVi}</strong>
+        <div style="font-size:0.78rem;color:var(--ink-muted);margin:4px 0;">Độ ẩm: ${'💧'.repeat(plot.waterLevel || 1)}</div>
+      `;
+
+      if (isReady) {
+        const harvestBtn = document.createElement('button');
+        harvestBtn.className = 'btn btn--tiny';
+        harvestBtn.style.cssText = 'background:#15803d;color:#fff;width:100%;margin-top:4px;';
+        harvestBtn.textContent = '🌾 Thu hoạch';
+        harvestBtn.onclick = () => handlers.onHarvestPlot(plot.index);
+        plotCard.append(harvestBtn);
+      } else {
+        const waterBtn = document.createElement('button');
+        waterBtn.className = 'btn btn--tiny';
+        waterBtn.style.cssText = 'width:100%;margin-top:4px;';
+        waterBtn.textContent = '💧 Tưới nước';
+        waterBtn.onclick = () => handlers.onWaterPlot(plot.index);
+        plotCard.append(waterBtn);
+      }
+    } else {
+      plotCard.innerHTML = `
+        <span style="color:var(--ink-faint);font-size:0.82rem;display:block;margin-bottom:4px;">Luống trống #${plot.index + 1}</span>
+      `;
+      const plantBtn = document.createElement('button');
+      plantBtn.className = 'btn btn--tiny';
+      plantBtn.textContent = '🌱 Gieo hạt';
+      plantBtn.onclick = () => handlers.onPlantCrop(plot.index, 'wild_berry_crop');
+      plotCard.append(plantBtn);
+    }
+
+    grid.append(plotCard);
+  });
+
+  box.append(grid);
+}
+
 function renderInventory(
   containerId: string,
   inventory: Record<string, number>,
@@ -565,14 +794,31 @@ export function renderBagPanel(profile: ProfileSave, handlers: Handlers): void {
 
 // ---------------------------------------------------------------- nhật ký
 
-export function renderLog(view: GameView, profile: ProfileSave, chapterTitle: string, chapterSummary: string, playedBeats: { id: string; textVi: string }[]): void {
+// ---------------------------------------------------------------- nhật ký
+
+export function renderLog(
+  view: GameView,
+  profile: ProfileSave,
+  chapterTitle: string,
+  chapterSummary: string,
+  playedBeats: { id: string; textVi: string }[],
+): void {
   const board = el('quest-board');
   board.replaceChildren();
+
+  const isTutorial = profile.story.tutorialDay > 0;
+  const header = document.createElement('div');
+  header.className = 'quest-section-header';
+  header.style.marginBottom = '8px';
+  header.innerHTML = `<span style="font-weight:700;color:var(--gold);font-size:0.95rem;">${isTutorial ? `Mục tiêu Ngày ${profile.story.tutorialDay} / 3 (Hướng dẫn)` : `Nhiệm vụ ${chapterTitle}`}</span>`;
+  board.append(header);
 
   if (view.quests.length === 0) {
     const done = document.createElement('p');
     done.className = 'fineprint';
-    done.textContent = 'Ba ngày đầu đã qua. Từ giờ bạn tự quyết định mình sống thế nào.';
+    done.textContent = profile.story.endlessUnlocked
+      ? 'Bạn đã hoàn tất toàn bộ 8 Chương Sử Thi và cứu vãn Đứt Gãy Không Gian! Trại của bạn đang ở Chế Độ Vô Tận.'
+      : 'Tất cả mục tiêu trong chương hiện tại đã hoàn tất! Sẵn sàng cho Đêm Trăng Máu thứ Bảy.';
     board.append(done);
   }
 
@@ -580,18 +826,116 @@ export function renderLog(view: GameView, profile: ProfileSave, chapterTitle: st
     const row = document.createElement('div');
     row.className = `row${quest.done ? ' is-done' : ''}`;
     const progress = quest.need > 1 ? ` (${Math.min(quest.have, quest.need)}/${quest.need})` : '';
-    row.innerHTML = `<div class="row__body"><div class="row__title">${quest.titleVi}${progress}</div><div class="row__sub">${quest.descVi}</div></div>`;
+    
+    // Phần thưởng
+    const rewardsHtml = quest.reward && quest.reward.length > 0
+      ? `<div style="display:flex;gap:6px;margin-top:6px;font-size:0.8rem;color:var(--gold-faint);">
+          <span>🎁 Thưởng:</span>
+          ${quest.reward.map((r) => `<span>${itemIconSvg(r.itemId, 'mini-svg')} ${r.qty}</span>`).join(' ')}
+        </div>`
+      : '';
+
+    // Mẹo Quy Luật từ Lạc Lạc
+    const ruleTipHtml = (quest as any).ruleTipVi
+      ? `<div style="background:rgba(224,122,60,0.12);border-left:2.5px solid var(--ember);padding:6px 10px;border-radius:4px;margin-top:6px;font-size:0.82rem;color:#fef08a;line-height:1.4;">
+          💡 <strong>Quy luật:</strong> ${(quest as any).ruleTipVi.replace(/^Quy luật:\s*/, '')}
+        </div>`
+      : '';
+
+    // Nút điều hướng nhanh
+    let shortcutBtnHtml = '';
+    const shortcut = (quest as any).shortcutTab;
+    if (!quest.done && shortcut) {
+      const tabNameVi = shortcut === 'craft' ? 'Bàn Chế Tạo' : shortcut === 'camp' ? 'Doanh Trại' : shortcut === 'bag' ? 'Túi Đồ' : 'Bản Đồ';
+      shortcutBtnHtml = `
+        <button type="button" class="btn btn--tiny btn-quest-shortcut" data-target-tab="${shortcut}" style="background:#78350f;color:#fef08a;border-color:#f59e0b;font-size:0.75rem;padding:3px 8px;margin-top:6px;">
+          Đi tới ${tabNameVi} ➜
+        </button>
+      `;
+    }
+
+    const statusBadge = quest.done
+      ? `<span style="background:rgba(74,222,128,0.18);color:#4ade80;padding:2px 8px;border-radius:999px;font-size:0.75rem;font-weight:700;border:1px solid rgba(74,222,128,0.4);">✓ ĐÃ XONG</span>`
+      : `<span style="background:rgba(251,191,36,0.15);color:#fbbf24;padding:2px 8px;border-radius:999px;font-size:0.75rem;font-weight:700;border:1px solid rgba(251,191,36,0.3);">ĐANG TIẾN HÀNH</span>`;
+
+    row.innerHTML = `
+      <div class="row__body" style="width:100%;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
+          <div class="row__title" style="font-size:0.95rem;">${quest.titleVi}${progress}</div>
+          ${statusBadge}
+        </div>
+        <div class="row__sub" style="font-size:0.85rem;color:var(--ink-muted);line-height:1.35;">${quest.descVi}</div>
+        ${ruleTipHtml}
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;margin-top:2px;">
+          ${rewardsHtml}
+          ${shortcutBtnHtml}
+        </div>
+      </div>`;
+
+    const sBtn = row.querySelector<HTMLButtonElement>('.btn-quest-shortcut');
+    if (sBtn) {
+      sBtn.onclick = () => {
+        const target = sBtn.dataset.targetTab;
+        if (target) {
+          const tabBtn = document.querySelector<HTMLButtonElement>(`.tabbar__btn[data-tab="${target}"]`);
+          if (tabBtn) tabBtn.click();
+        }
+      };
+    }
+
     board.append(row);
   }
 
-  el('chapter-info').innerHTML = `<h3>${chapterTitle}</h3><p>${chapterSummary}</p>`;
+  // Thêm mục Cẩm Nang Quy Luật Sinh Tồn
+  const handbookSection = document.createElement('div');
+  handbookSection.style.cssText = 'background:rgba(0,0,0,0.35);border:1px solid rgba(217,119,6,0.3);border-radius:8px;padding:12px;margin-top:14px;';
+  handbookSection.innerHTML = `
+    <div style="font-weight:700;color:var(--gold);font-size:0.92rem;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+      <span>📖 CẨM NANG &amp; QUY LUẬT SINH TỒN HOANG CỔ</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;font-size:0.82rem;color:var(--bone);line-height:1.45;">
+      <div>👣 <strong>Bước chân tự động nhặt:</strong> Cứ ~100 bước đi bộ nhặt 1 cành khô/đá nhọn/quả dại. Trần 15.000 bước/ngày.</div>
+      <div>🔥 <strong>Lửa trại &amp; Thủ đêm:</strong> Dựng lửa trại trước 20:00. 20:00 dã thú tấn công, điểm thủ trại càng cao càng an toàn.</div>
+      <div>💧 <strong>Đun nước uống:</strong> Nước thô có 40% gây đau bụng. Luôn đun sôi trên Lửa Trại trước khi uống!</div>
+      <div>🏕️ <strong>Két an toàn:</strong> Cất đồ quý vào Két An Toàn tại trại — không bao giờ bị mất kể cả khi thua đêm.</div>
+      <div>🪓 <strong>Rìu &amp; Công viên:</strong> Mang Rìu Đá tới gần Công viên / Rừng trên bản đồ để đốn gỗ lớn xây trại.</div>
+      <div>🌕 <strong>Trăng Máu thứ Bảy:</strong> Đêm thứ Bảy xuất hiện Boss Trăng Máu — hạ boss để mở chương sử thi tiếp theo.</div>
+    </div>
+  `;
+  board.append(handbookSection);
+
+  const currentChap = CHAPTERS.find((c) => c.index === profile.story.chapterIndex);
+  const epigraphHtml = currentChap?.epigraphVi
+    ? `<div style="background:rgba(217,119,6,0.12);border-left:3px solid var(--ember);padding:8px 12px;margin:8px 0 10px;border-radius:4px;font-style:italic;color:#fef08a;font-size:0.85rem;line-height:1.45;">
+        "${currentChap.epigraphVi}"
+      </div>`
+    : '';
+
+  const stepsInChapter = Math.max(0, profile.player.lifetime.steps - profile.story.chapterStartSteps);
+  el('chapter-info').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:1.4rem;">${currentChap?.caveArtIcon || '📜'}</span>
+        <h3 style="margin:0;color:var(--amber);font-size:1.1rem;">${chapterTitle}</h3>
+      </div>
+      <span style="font-size:0.82rem;color:var(--gold-faint);background:rgba(217,119,6,0.15);padding:2px 8px;border-radius:6px;">🚶 ${stepsInChapter.toLocaleString('vi-VN')} bước</span>
+    </div>
+    ${epigraphHtml}
+    <p style="margin:0;font-size:0.88rem;color:var(--ink-muted);line-height:1.4;">${chapterSummary}</p>`;
 
   const history = el('beat-history');
   history.replaceChildren();
   for (const beat of playedBeats) {
     const div = document.createElement('div');
     div.className = 'beat';
-    div.textContent = beat.textVi;
+    const mood = (beat as any).mood || 'calm';
+    const moodIcon = mood === 'worried' ? '😨' : mood === 'determined' ? '🔥' : mood === 'proud' ? '👑' : mood === 'surprised' ? '⚡' : '👧';
+    div.innerHTML = `
+      <div style="display:flex;gap:8px;align-items:baseline;">
+        <span style="font-size:1.05rem;">${moodIcon}</span>
+        <div style="flex:1;">${beat.textVi}</div>
+      </div>
+    `;
     history.append(div);
   }
 
@@ -610,6 +954,24 @@ export function renderSettings(profile: ProfileSave, handlers: Handlers, storage
   box.replaceChildren();
 
   box.append(
+    toggleRow(
+      'Hiệu ứng âm thanh (SFX)',
+      'Tiếng nhặt đồ, đốn gỗ, câu cá, chế tạo, sập bẫy và chiến đấu.',
+      audio.isSoundEnabled(),
+      () => {
+        audio.setSoundEnabled(!audio.isSoundEnabled());
+        renderSettings(profile, handlers, storageOk);
+      },
+    ),
+    toggleRow(
+      'Nhạc nền hoang cổ (BGM)',
+      'Giai điệu ngũ cung & âm thanh thiên nhiên theo ngày/đêm.',
+      audio.isMusicEnabled(),
+      () => {
+        audio.setMusicEnabled(!audio.isMusicEnabled());
+        renderSettings(profile, handlers, storageOk);
+      },
+    ),
     toggleRow(
       'Khoá ban đêm của phụ huynh',
       'Sau 21h không tương tác POI ngoài trời. Chơi ở trại vẫn bình thường.',

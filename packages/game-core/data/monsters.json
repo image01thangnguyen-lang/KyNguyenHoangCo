@@ -65,9 +65,14 @@
     },
 
     "bosses": [
-      { "id": "boss_saber_lord", "nameVi": "Hổ Răng Kiếm Chúa", "attack": 40, "phases": 3, "weakTo": "bow" },
-      { "id": "boss_mammoth",    "nameVi": "Ma Mút Cổ Đại",     "attack": 34, "phases": 3, "weakTo": "iron_spear" },
-      { "id": "boss_shadow",     "nameVi": "Chúa Tể Bóng Đêm",  "attack": 46, "phases": 4, "weakTo": "torch" }
+      { "id": "boss_night_wolf",    "nameVi": "Cự Lang Hắc Ám",        "attack": 32, "phases": 3, "weakTo": "stone_spear" },
+      { "id": "boss_cave_beast",    "nameVi": "Địa Ma Thú",             "attack": 36, "phases": 3, "weakTo": "torch" },
+      { "id": "boss_saber_lord",    "nameVi": "Hổ Răng Kiếm Chúa",     "attack": 40, "phases": 3, "weakTo": "bow" },
+      { "id": "boss_swamp_terror",  "nameVi": "Cá Sấu Cổ Đầm Lầy",     "attack": 42, "phases": 3, "weakTo": "stone_spear" },
+      { "id": "boss_mammoth",       "nameVi": "Ma Mút Cổ Đại",         "attack": 44, "phases": 3, "weakTo": "iron_spear" },
+      { "id": "boss_sky_pterosaur", "nameVi": "Dực Long Vết Nứt",      "attack": 48, "phases": 4, "weakTo": "bow" },
+      { "id": "boss_gatekeeper",    "nameVi": "Kẻ Giữ Cửa Thần Thú",    "attack": 52, "phases": 4, "weakTo": "iron_sword" },
+      { "id": "boss_shadow",        "nameVi": "Chúa Tể Bóng Đêm",      "attack": 58, "phases": 4, "weakTo": "torch" }
     ],
 
     "rewards": {

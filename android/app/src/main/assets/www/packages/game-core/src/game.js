@@ -883,7 +883,9 @@ function snapshotOf(profile             )                {
     performedActionIds: profile.player.lifetime.performedActionIds,
     nightDefenseWins: profile.player.lifetime.nightDefenseWins,
     lifetimeSteps: profile.player.lifetime.steps,
+    chapterSteps: Math.max(0, profile.player.lifetime.steps - profile.story.chapterStartSteps),
     campLevel: profile.player.camp.level,
+    bloodMoonsCompleted: profile.story.bloodMoonsCompleted,
   };
 }
 

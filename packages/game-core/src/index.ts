@@ -25,4 +25,8 @@ export * from './stepFilter.ts';
 export * from './safety.ts';
 export * from './save.ts';
 export * from './traps.ts';
+export * from './pets.ts';
+export * from './farming.ts';
+export * from './lunar.ts';
+export * from './coop.ts';
 export * from './game.ts';

@@ -8,6 +8,7 @@
 
 import {
   CAMP_TIERS,
+  CHAPTERS,
   GAME_VERSION,
   ZONES,
   activeProfile,
@@ -60,6 +61,18 @@ import {
   upgradeCamp,
   wakeUp,
   weatherFor,
+  startIncubation,
+  tickEggIncubation,
+  feedPet,
+  plantInPlot,
+  waterPlot,
+  harvestPlot,
+  tickFarmPlots,
+  createCoopRoom,
+  joinCoopRoom,
+  startCoopBattle,
+  processCoopRound,
+  resolveCoopRewards,
 } from '../../../packages/game-core/src/index.ts';
 import type {
   DifficultyId,
@@ -69,10 +82,12 @@ import type {
   ProfileSave,
   SaveFile,
   StoryBeat,
+  CoopRoom,
 } from '../../../packages/game-core/src/index.ts';
 
 import { MapView, featureAtPoint } from './mapView.ts';
 import type { WorldDrop } from './mapView.ts';
+import { startARCamera, stopARCamera, setARModel, captureARPhoto } from './arCamera.ts';
 import { Pedometer, describeSource } from './pedometer.ts';
 import { avatarSvg } from './itemIcons.ts';
 import {
@@ -100,6 +115,8 @@ import {
 import type { Handlers } from './panels.ts';
 import { openBloodMoon, openNightDefense } from './fights.ts';
 import { openMinigame } from './minigames.ts';
+import { audio } from './audio.ts';
+import { speech } from './speech.ts';
 
 // Toạ độ dự phòng khi chưa có tín hiệu GPS — Hồ Gươm, để gói POI mẫu có tác dụng.
 const FALLBACK_POSITION: LatLon = { lat: 21.0287, lon: 105.8524 };
@@ -115,6 +132,8 @@ const ALL_PACK_FEATURES: MapFeature[] = PACK.pois.map((poi) => ({
   lon: poi.lon,
   radiusMeters: poi.radiusMeters,
 }));
+
+let cachedCombinedFeatures: MapFeature[] = ALL_PACK_FEATURES;
 
 interface App {
   save: SaveFile;
@@ -236,6 +255,7 @@ function collectWorldDrop(drop: WorldDrop): void {
   worldDrops = [];
 
   buzz(18);
+  audio.play('pickup');
   toast(`✨ Đã nhặt: +${drop.qty} ${drop.nameVi}!`, 'good');
 
   afterAction();
@@ -354,6 +374,9 @@ function createNewProfile(slot: number): void {
     app.save = putProfile(app.save, slot, createProfile(name, now(), selectedGender));
     persist();
     enterProfile(slot);
+    showPrologue(() => {
+      sync();
+    });
   };
 
   el('btn-create-cancel').onclick = () => {
@@ -388,6 +411,7 @@ function enterProfile(slot: number): void {
       if (result.ok) {
         app.profile.player = result.player;
         persist();
+        audio.play('trap_snap');
         toast(result.messageVi, 'good');
         sync();
       } else {
@@ -477,6 +501,12 @@ function sync(): void {
   app.profile = result.profile;
   app.view = result.view;
 
+  // Cập nhật danh sách điểm di tích/tài nguyên kết hợp chỉ khi dữ liệu vùng thay đổi
+  const featureMap = new Map<string, MapFeature>();
+  for (const f of ALL_PACK_FEATURES) featureMap.set(f.id, f);
+  for (const f of app.view.mapFeatures) featureMap.set(f.id, f);
+  cachedCombinedFeatures = Array.from(featureMap.values());
+
   if (steps.newSteps > 0) {
     const { render: at } = currentPosition();
     spawnSingleWorldDropNear(at, app.view.location?.zone ?? 'wilderness');
@@ -485,18 +515,63 @@ function sync(): void {
   for (const message of result.eventsVi) {
     if (message.includes('Đồng hồ máy')) continue; // Đã gom vào icon Chuông 🔔
     toast(message);
+    if (message.includes('Xong nhiệm vụ')) {
+      audio.play('quest_complete');
+    }
   }
   if (result.knockedOut) buzz([140, 70, 140]);
-  if (result.pickups > 0 && app.profile.settings.haptics) buzz(14);
+  if (result.pickups > 0) {
+    audio.play('pickup');
+    if (app.profile.settings.haptics) buzz(14);
+  }
 
   if (result.beats.length > 0 && app.profile.settings.narrationAudio) {
+    audio.play('beat_notify');
     app.narrationQueue.push(...result.beats);
-    showNextBeat();
+    
+    const hasChapterOpeningBeat = result.beats.some((b) => b.triggerSteps === 0);
+    const curChap = CHAPTERS.find((c) => c.index === app.profile?.story.chapterIndex);
+    if (hasChapterOpeningBeat && curChap) {
+      showChapterIntro(curChap, () => showNextBeat());
+    } else {
+      showNextBeat();
+    }
   } else {
     for (const beat of result.beats) app.profile = playBeat(app.profile, beat.id);
   }
 
   if (app.view.demo.gated) el('overlay-demo').hidden = false;
+
+  // Cập nhật tiến độ ấp trứng linh thú
+  if (app.profile.player.incubatingEgg && !app.profile.player.incubatingEgg.hatched) {
+    const incRes = tickEggIncubation(app.profile.player.incubatingEgg, app.profile.player.lifetime.steps);
+    app.profile.player.incubatingEgg = incRes.incubating;
+    if (incRes.newlyHatchedPet) {
+      if (!app.profile.player.pets) app.profile.player.pets = [];
+      app.profile.player.pets.push(incRes.newlyHatchedPet);
+      audio.play('quest_complete');
+      toast(`🎉 Chúc mừng! Quả trứng cổ đại đã nở thành ${incRes.newlyHatchedPet.nameVi}!`, 'good');
+    }
+  }
+
+  // Cập nhật tiến độ trồng trọt nông trại
+  const isRaining = app.view.weather.kind === 'rain';
+  app.profile.player.camp.farmPlots = tickFarmPlots(
+    app.profile.player.camp.farmPlots ?? [],
+    app.profile.player.camp.level,
+    now(),
+    isRaining,
+  );
+
+  // Cập nhật nhạc nền Ambient theo thời gian & sự kiện
+  const ambientMood = app.view.bloodMoon.active
+    ? 'bloodmoon'
+    : app.view.phase === 'night'
+      ? 'night'
+      : app.view.phase === 'evening'
+        ? 'evening'
+        : 'day';
+  audio.setAmbientMood(ambientMood);
 
   persist();
   render();
@@ -536,20 +611,9 @@ function drawMap(): void {
     app.profile.player.traps = tickTraps(app.profile.player.traps ?? [], now());
   }
 
-  // Kết hợp toàn bộ các di tích/thắng cảnh thực tế từ gói bản đồ (Hồ Tây, Lăng Bác, Cầu Long Biên,
-  // Sân Mỹ Đình, Chùa Một Cột, Cổ Loa, Ba Vì...) cùng với các điểm tài nguyên thủ tục quanh người chơi
-  const featureMap = new Map<string, MapFeature>();
-  for (const f of ALL_PACK_FEATURES) {
-    featureMap.set(f.id, f);
-  }
-  for (const f of app.view.mapFeatures) {
-    featureMap.set(f.id, f);
-  }
-  const allVisibleFeatures = Array.from(featureMap.values());
-
   mapView.render({
     center: at,
-    features: allVisibleFeatures,
+    features: cachedCombinedFeatures,
     phase: app.view.phase,
     weather,
     gender: app.profile.player.gender ?? 'male',
@@ -558,10 +622,66 @@ function drawMap(): void {
     activePoiId: app.view.location?.insidePoi?.id ?? null,
     drops: worldDrops,
     traps: app.profile.player.traps,
+    activePetId: app.profile.player.pets?.find((p: any) => p.isActive)?.petId ?? null,
   });
 }
 
-// ---------------------------------------------------------------- lời dẫn của Lạc Lạc
+function toRoman(num: number): string {
+  const map: [number, string][] = [
+    [12, 'XII'],
+    [11, 'XI'],
+    [10, 'X'],
+    [9, 'IX'],
+    [8, 'VIII'],
+    [7, 'VII'],
+    [6, 'VI'],
+    [5, 'V'],
+    [4, 'IV'],
+    [3, 'III'],
+    [2, 'II'],
+    [1, 'I'],
+  ];
+  return map.find(([val]) => val === num)?.[1] ?? String(num);
+}
+
+function showChapterIntro(chapterObj: any, onStart: () => void): void {
+  const overlay = el('overlay-chapter-intro');
+  el('chapter-intro-icon').textContent = chapterObj.caveArtIcon || '📜';
+  el('chapter-intro-num').textContent = `CHƯƠNG ${toRoman(chapterObj.index)}`;
+  el('chapter-intro-title').textContent = chapterObj.titleVi.replace(/^Chương \d+\s*—\s*/, '');
+  el('chapter-intro-epigraph').textContent = `"${chapterObj.epigraphVi || 'Hành trình sinh tồn vĩ đại nơi đất mẹ tiền sử.'}"`;
+  el('chapter-intro-summary').textContent = chapterObj.summaryVi;
+
+  overlay.hidden = false;
+  audio.play('quest_complete');
+
+  el('btn-chapter-intro-start').onclick = () => {
+    overlay.hidden = true;
+    onStart();
+  };
+}
+
+function showPrologue(onProceed: () => void): void {
+  const overlay = el('overlay-prologue');
+  overlay.hidden = false;
+  audio.play('roar');
+
+  el('btn-prologue-proceed').onclick = () => {
+    overlay.hidden = true;
+    if (app.profile) {
+      app.profile.player.carried['torch'] = (app.profile.player.carried['torch'] ?? 0) + 1;
+      app.profile.player.carried['wild_berry'] = (app.profile.player.carried['wild_berry'] ?? 0) + 2;
+      app.profile.player.carried['boiled_water'] = (app.profile.player.carried['boiled_water'] ?? 0) + 1;
+      persist();
+      toast('🎁 Nhận Túi Đồ Sinh Tồn Tân Thủ (1 Đuốc, 2 Quả Dại, 1 Nước Sôi)!', 'good');
+    }
+    onProceed();
+  };
+}
+
+// ---------------------------------------------------------------- lời dẫn của Lạc Lạc phong cách Visual Novel
+
+let typeWriterInterval: any = null;
 
 function showNextBeat(): void {
   if (app.narrationOpen || !app.profile) return;
@@ -570,8 +690,70 @@ function showNextBeat(): void {
   if (!beat) return;
 
   app.narrationOpen = true;
-  el('narration-text').textContent = beat.textVi;
+
+  // Cập nhật biểu cảm và trạng thái của Lạc Lạc
+  const avatarEmoji = el('narration-avatar-emoji');
+  const avatarBox = el('narration-avatar');
+  const moodBadge = el('narration-mood');
+  const waveBox = el('narration-wave');
+
+  const mood = (beat as any).mood || 'calm';
+  if (mood === 'worried') {
+    avatarEmoji.textContent = '😨';
+    avatarBox.style.borderColor = '#ef4444';
+    moodBadge.textContent = '⚠️ Lo lắng';
+    moodBadge.className = 'chip chip--tiny chip--bad';
+  } else if (mood === 'determined') {
+    avatarEmoji.textContent = '😤';
+    avatarBox.style.borderColor = '#f59e0b';
+    moodBadge.textContent = '🔥 Quyết tâm';
+    moodBadge.className = 'chip chip--tiny chip--warn';
+  } else if (mood === 'surprised') {
+    avatarEmoji.textContent = '😲';
+    avatarBox.style.borderColor = '#c084fc';
+    moodBadge.textContent = '⚡ Bất ngờ';
+    moodBadge.className = 'chip chip--tiny';
+  } else if (mood === 'proud') {
+    avatarEmoji.textContent = '👑';
+    avatarBox.style.borderColor = '#4ade80';
+    moodBadge.textContent = '🏆 Tự hào';
+    moodBadge.className = 'chip chip--tiny chip--good';
+  } else {
+    avatarEmoji.textContent = '👧';
+    avatarBox.style.borderColor = '#38bdf8';
+    moodBadge.textContent = '📶 Tỉnh táo';
+    moodBadge.className = 'chip chip--tiny';
+  }
+
+  const textEl = el('narration-text');
+  textEl.textContent = '';
   el('overlay-narration').hidden = false;
+
+  if (typeWriterInterval) clearInterval(typeWriterInterval);
+
+  let charIndex = 0;
+  const fullText = beat.textVi;
+  if (waveBox) waveBox.style.opacity = '1';
+
+  typeWriterInterval = setInterval(() => {
+    if (charIndex < fullText.length) {
+      textEl.textContent += fullText[charIndex];
+      charIndex++;
+    } else {
+      clearInterval(typeWriterInterval);
+      typeWriterInterval = null;
+    }
+  }, 16);
+
+  const btnReplay = el('btn-replay-voice');
+  if (btnReplay) {
+    btnReplay.onclick = () => {
+      speech.speak(beat.textVi);
+      if (waveBox) waveBox.style.opacity = '1';
+    };
+  }
+
+  speech.speak(beat.textVi);
 
   app.profile = playBeat(app.profile, beat.id);
   persist();
@@ -585,6 +767,7 @@ const handlers: Handlers = {
     const result = craft(app.profile, recipeId, now(), true);
     app.profile = result.profile;
     toast(result.messageVi, result.ok ? 'good' : 'bad');
+    if (result.ok) audio.play('craft');
     afterAction();
   },
 
@@ -593,6 +776,7 @@ const handlers: Handlers = {
     const result = collectCrafts(app.profile, now());
     app.profile = result.profile;
     for (const message of result.messagesVi) toast(message, 'good');
+    if (result.messagesVi.length > 0) audio.play('pickup');
     afterAction();
   },
 
@@ -601,6 +785,7 @@ const handlers: Handlers = {
     const result = upgradeCamp(app.profile, now());
     app.profile = result.profile;
     toast(result.messageVi, result.ok ? 'good' : 'bad');
+    if (result.ok) audio.play('quest_complete');
     afterAction();
   },
 
@@ -609,6 +794,15 @@ const handlers: Handlers = {
     const result = consume(app.profile, itemId, now());
     app.profile = result.profile;
     toast(result.messageVi, result.ok ? 'good' : 'bad');
+    if (result.ok) {
+      if (itemId === 'boiled_water' || itemId === 'raw_water') {
+        audio.play('drink');
+      } else if (itemId === 'healing_salve' || itemId === 'medicinal_herb') {
+        audio.play('heal');
+      } else {
+        audio.play('eat');
+      }
+    }
     afterAction();
   },
 
@@ -617,6 +811,7 @@ const handlers: Handlers = {
     const result = storeInSafe(app.profile, [{ itemId, qty }]);
     app.profile = result.profile;
     toast(result.messageVi, result.ok ? 'good' : 'bad');
+    if (result.ok) audio.play('click');
     afterAction();
   },
 
@@ -637,7 +832,10 @@ const handlers: Handlers = {
 
       app.profile = result.profile;
       toast(result.messageVi, result.ok ? 'good' : 'bad');
-      if (result.ok && app.profile.settings.haptics) buzz(20);
+      if (result.ok) {
+        audio.play('pickup');
+        if (app.profile.settings.haptics) buzz(20);
+      }
       afterAction();
     };
 
@@ -684,6 +882,7 @@ const handlers: Handlers = {
     const result = trade(app.profile, affordable.index, poiId, now());
     app.profile = result.profile;
     toast(result.messageVi, result.ok ? 'good' : 'bad');
+    if (result.ok) audio.play('craft');
     afterAction();
   },
 
@@ -700,12 +899,14 @@ const handlers: Handlers = {
   onNightDefense() {
     if (!app.profile || !app.view) return;
 
+    audio.play('roar');
     openNightDefense(app.view, {
       resolve(performance) {
         const result = runNightDefense(app.profile!, now(), performance, performance > 0);
         app.profile = result.profile;
         persist();
         render();
+        if (result.result.survived) audio.play('quest_complete');
         return {
           logVi: result.result.logVi,
           survived: result.result.survived,
@@ -719,6 +920,7 @@ const handlers: Handlers = {
   onBloodMoon() {
     if (!app.profile) return;
 
+    audio.play('roar');
     openBloodMoon(app.profile, {
       begin(difficulty: DifficultyId) {
         const result = beginBloodMoon(app.profile!, now(), difficulty);
@@ -730,6 +932,7 @@ const handlers: Handlers = {
         const result = strikeBoss(app.profile!, now(), performance, 25);
         app.profile = result.profile;
         persist();
+        audio.play('strike');
         return { fight: result.fight, messageVi: result.messageVi, defeated: result.defeated };
       },
       tick() {
@@ -741,6 +944,7 @@ const handlers: Handlers = {
         app.profile = result.profile;
         persist();
         render();
+        if (result.settlement?.victory) audio.play('quest_complete');
         return {
           summaryVi: result.messageVi,
           victory: result.settlement?.victory ?? false,
@@ -758,6 +962,7 @@ const handlers: Handlers = {
     if (result.ok) {
       app.profile.player = result.player;
       persist();
+      audio.play('trap_snap');
       toast(result.messageVi, 'good');
       sync();
       // Chuyển sang tab bản đồ để xem ngay vị trí bẫy vừa đặt
@@ -767,6 +972,140 @@ const handlers: Handlers = {
     } else {
       toast(result.messageVi, 'bad');
     }
+  },
+
+  onStartIncubate(eggItemId) {
+    if (!app.profile) return;
+    const currentQty = app.profile.player.carried[eggItemId] ?? 0;
+    if (currentQty <= 0) {
+      toast('Không có trứng trong túi đồ.', 'bad');
+      return;
+    }
+    app.profile.player.carried[eggItemId] = currentQty - 1;
+    app.profile.player.incubatingEgg = startIncubation(eggItemId, app.profile.player.lifetime.steps);
+    persist();
+    audio.play('pickup');
+    toast(`🥚 Đã đặt quả trứng vào túi ấp! Hãy đi bộ để trứng nở.`, 'good');
+    afterAction();
+  },
+
+  onFeedPet(petId, foodItemId) {
+    if (!app.profile || !app.profile.player.pets) return;
+    const pet = app.profile.player.pets.find((p) => p.petId === petId);
+    if (!pet) return;
+
+    const currentQty = app.profile.player.carried[foodItemId] ?? 0;
+    if (currentQty <= 0) {
+      const food = getItem(foodItemId);
+      toast(`Bạn cần có ${food.nameVi} trong túi để cho thú cưng ăn.`, 'bad');
+      return;
+    }
+
+    app.profile.player.carried[foodItemId] = currentQty - 1;
+    const fed = feedPet(pet, foodItemId);
+    app.profile.player.pets = app.profile.player.pets.map((p) => (p.petId === petId ? fed.pet : p));
+    persist();
+    audio.play('eat');
+    toast(fed.messageVi, 'good');
+    afterAction();
+  },
+
+  onPlantCrop(plotIndex, cropId) {
+    if (!app.profile) return;
+    const seedQty = app.profile.player.carried['seed'] ?? 0;
+    if (seedQty <= 0) {
+      toast('Cần có Hạt giống trong túi đồ để gieo trồng.', 'bad');
+      return;
+    }
+    app.profile.player.carried['seed'] = seedQty - 1;
+    const plots = app.profile.player.camp.farmPlots ?? createInitialFarmPlots(app.profile.player.camp.level);
+    const result = plantInPlot(plots, plotIndex, cropId, now());
+    if (result.ok) {
+      app.profile.player.camp.farmPlots = result.plots;
+      persist();
+      audio.play('craft');
+      toast(result.messageVi, 'good');
+      afterAction();
+    } else {
+      toast(result.messageVi, 'bad');
+    }
+  },
+
+  onWaterPlot(plotIndex) {
+    if (!app.profile) return;
+    const plots = app.profile.player.camp.farmPlots ?? createInitialFarmPlots(app.profile.player.camp.level);
+    const result = waterPlot(plots, plotIndex, now());
+    if (result.ok) {
+      app.profile.player.camp.farmPlots = result.plots;
+      persist();
+      audio.play('drink');
+      toast(result.messageVi, 'good');
+      afterAction();
+    } else {
+      toast(result.messageVi, 'bad');
+    }
+  },
+
+  onHarvestPlot(plotIndex) {
+    if (!app.profile) return;
+    const plots = app.profile.player.camp.farmPlots ?? createInitialFarmPlots(app.profile.player.camp.level);
+    const result = harvestPlot(plots, plotIndex);
+    if (result.ok) {
+      app.profile.player.camp.farmPlots = result.plots;
+      for (const [id, count] of Object.entries(result.rewards)) {
+        app.profile.player.carried[id] = (app.profile.player.carried[id] ?? 0) + count;
+      }
+      persist();
+      audio.play('pickup');
+      toast(result.messageVi, 'good');
+      afterAction();
+    } else {
+      toast(result.messageVi, 'bad');
+    }
+  },
+
+  onOpenAR() {
+    const video = el<HTMLVideoElement>('ar-video');
+    const canvas = el<HTMLCanvasElement>('ar-canvas');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    el('overlay-ar-camera').hidden = false;
+    const locName = app.view?.location?.insidePoi?.nameVi || 'Cổ Đạo Hà Nội';
+    void startARCamera(video, canvas, locName).then((res) => {
+      if (!res.ok) toast(res.messageVi, 'bad');
+      else toast('📸 Di chuyển camera để tương tác cùng linh thú tiền sử!', 'good');
+    });
+
+    el('btn-ar-close').onclick = () => {
+      stopARCamera();
+      el('overlay-ar-camera').hidden = true;
+    };
+
+    el('btn-ar-capture').onclick = () => {
+      const dataUrl = captureARPhoto();
+      if (dataUrl) {
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = `ky-nguyen-hoang-co-ar-${Date.now()}.png`;
+        a.click();
+        audio.play('pickup');
+        toast('📸 Đã lưu bức ảnh AR kỷ niệm về máy!', 'good');
+      }
+    };
+
+    for (const btn of document.querySelectorAll<HTMLButtonElement>('.ar-model-btn')) {
+      btn.onclick = () => {
+        for (const b of document.querySelectorAll<HTMLButtonElement>('.ar-model-btn')) b.classList.remove('is-active');
+        btn.classList.add('is-active');
+        setARModel(btn.dataset.model as any);
+      };
+    }
+  },
+
+  onOpenCoop() {
+    if (!app.profile) return;
+    openCoopModal();
   },
 
   onToggleSetting(key) {
@@ -801,6 +1140,77 @@ const handlers: Handlers = {
   },
 };
 
+function openCoopModal(): void {
+  if (!app.profile) return;
+  const overlay = el('overlay-coop-battle');
+  overlay.hidden = false;
+
+  let currentRoom: CoopRoom = createCoopRoom('HANOI_LOCAL', 'peer_main', app.profile, 'normal', now());
+  currentRoom = startCoopBattle(currentRoom);
+
+  const updateCoopUI = () => {
+    if (!currentRoom.boss) return;
+    el('coop-boss-name').textContent = currentRoom.boss.nameVi;
+    const hpRatio = Math.max(0, currentRoom.boss.hp / currentRoom.boss.maxHp);
+    el('coop-boss-hp-fill').style.width = `${Math.round(hpRatio * 100)}%`;
+    el('coop-boss-hp-txt').textContent = `${currentRoom.boss.hp} / ${currentRoom.boss.maxHp} HP`;
+    el('coop-team-def').textContent = `${currentRoom.sharedDefense} DEF`;
+
+    const statusBadge = el('coop-status-badge');
+    statusBadge.textContent = currentRoom.status === 'victory' ? '🎉 CHIẾN THẮNG VANG DỘI!' : currentRoom.status === 'defeat' ? '💀 TOÀN ĐỘI BỊ ĐÁNH BẠI' : `Hiệp ${currentRoom.round} — Đang giao tranh`;
+    statusBadge.className = `chip ${currentRoom.status === 'victory' ? 'chip--good' : currentRoom.status === 'defeat' ? 'chip--bad' : 'chip--warn'}`;
+
+    const membersGrid = el('coop-members-list');
+    membersGrid.replaceChildren();
+    for (const m of currentRoom.members) {
+      const card = document.createElement('div');
+      card.className = `coop-member-card ${m.hp <= 0 ? 'is-down' : ''}`;
+      card.innerHTML = `
+        <strong>${m.nameVi}</strong>
+        <div>HP: ${m.hp}/${m.maxHp} · Sát thương: ${m.damageContribution}</div>
+      `;
+      membersGrid.append(card);
+    }
+
+    const logBox = el('coop-battle-logs');
+    logBox.innerHTML = currentRoom.battleLogVi.map((l) => `<div>${l}</div>`).join('');
+    logBox.scrollTop = logBox.scrollHeight;
+  };
+
+  updateCoopUI();
+
+  for (const btn of document.querySelectorAll<HTMLButtonElement>('.btn-coop-action')) {
+    btn.onclick = () => {
+      if (currentRoom.status !== 'fighting') return;
+      const act = btn.dataset.action as any;
+      audio.play(act === 'attack' ? 'strike' : act === 'heal_team' ? 'eat' : 'craft');
+      currentRoom = processCoopRound(currentRoom, [{ peerId: 'peer_main', action: act }]);
+      updateCoopUI();
+
+      if (currentRoom.status === 'victory') {
+        audio.play('quest_complete');
+        const rewards = resolveCoopRewards(currentRoom);
+        for (const rew of rewards) {
+          if (rew.peerId === 'peer_main') {
+            for (const item of rew.items) {
+              app.profile!.player.carried[item.itemId] = (app.profile!.player.carried[item.itemId] ?? 0) + item.qty;
+            }
+            toast(`🎉 Thắng Boss Co-op! Nhận rương báu: ${describeInventory(rew.items.reduce((acc: any, i) => { acc[i.itemId] = i.qty; return acc; }, {}))}`, 'good');
+          }
+        }
+        afterAction();
+      } else if (currentRoom.status === 'defeat') {
+        audio.play('roar');
+      }
+    };
+  }
+
+  el('btn-coop-close').onclick = () => {
+    overlay.hidden = true;
+    afterAction();
+  };
+}
+
 function afterAction(): void {
   persist();
   if (!app.profile) return;
@@ -814,6 +1224,9 @@ function afterAction(): void {
 
 function wireStaticControls(): void {
   function switchTab(targetTab: string): void {
+    if (app.activeTab !== targetTab) {
+      audio.play('click');
+    }
     app.activeTab = targetTab;
     const isMap = targetTab === 'map';
     const backdrop = el('drawer-backdrop');
@@ -882,6 +1295,7 @@ function wireStaticControls(): void {
   };
 
   el('narration-next').onclick = () => {
+    speech.stop();
     el('overlay-narration').hidden = true;
     app.narrationOpen = false;
     if (app.narrationQueue.length > 0) showNextBeat();
@@ -1062,6 +1476,42 @@ Object.assign(globalThis as Record<string, unknown>, {
     pedometer,
     enterProfile,
     jumpTime,
+    audio,
+    addSteps(count: number) {
+      if (!app.profile) return;
+      app.stepAccumulator += count;
+      sync();
+      render();
+    },
+    jumpToChapter(targetChapterIndex: number) {
+      if (!app.profile) return;
+      app.profile.story.chapterIndex = Math.max(1, Math.min(8, targetChapterIndex));
+      app.profile.story.tutorialDay = 0;
+      app.profile.story.chapterStartSteps = app.profile.player.lifetime.steps;
+      if (targetChapterIndex >= 8) {
+        app.profile.story.endlessUnlocked = true;
+      }
+      persist();
+      sync();
+      render();
+      toast(`📖 Đã chuyển tới Chương ${app.profile.story.chapterIndex}!`, 'good');
+    },
+    giveItem(itemId: string, qty = 1) {
+      if (!app.profile) return;
+      app.profile.player.carried[itemId] = (app.profile.player.carried[itemId] ?? 0) + qty;
+      persist();
+      sync();
+      render();
+      toast(`🎁 Đã thêm ${qty}x ${itemId} vào túi!`, 'good');
+    },
+    giveEgg(eggId = 'egg_forest') {
+      if (!app.profile) return;
+      app.profile.player.carried[eggId] = (app.profile.player.carried[eggId] ?? 0) + 1;
+      persist();
+      sync();
+      render();
+      toast(`🥚 Đã nhận được ${eggId}!`, 'good');
+    },
     createProfileInSlot(slot: number, name: string, gender: Gender = 'male') {
       app.save = putProfile(app.save, slot, createProfile(name, now(), gender));
       persist();

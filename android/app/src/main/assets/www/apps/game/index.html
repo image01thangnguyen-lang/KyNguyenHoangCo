@@ -81,6 +81,12 @@
         <div id="tab-map" class="tab tab--map">
           <canvas id="map-canvas" class="map"></canvas>
           
+          <!-- Thanh hướng dẫn Tân Thủ 3 Ngày Đầu (Onboarding Mission Tracker) -->
+          <div id="tutorial-hud-banner" class="tutorial-hud-banner" hidden>
+            <div class="tutorial-hud-banner__badge" id="tut-badge">TÂN THỦ</div>
+            <div class="tutorial-hud-banner__text" id="tut-text"></div>
+          </div>
+
           <!-- Thông tin vùng mỏng gọn ở góc trên bên phải dưới HUD -->
           <div id="map-zone" class="map__zone"></div>
           <div id="safety-banner" class="safety-banner" hidden></div>
@@ -133,6 +139,9 @@
           </div>
           <div class="drawer-content">
             <div id="camp-summary" class="camp-summary"></div>
+            <div id="camp-stats" class="camp-stats"></div>
+            <div id="camp-pets" class="camp-pets"></div>
+            <div id="camp-farming" class="camp-farming"></div>
             <div id="camp-upgrade" class="camp-upgrade"></div>
             <div id="camp-defense" class="camp-defense"></div>
             <h3 class="section-title">Đồ đang mang</h3>
@@ -252,12 +261,73 @@
       </div>
     </section>
 
-    <!-- Lớp phủ: lời dẫn của Lạc Lạc -->
+    <!-- Lớp phủ: lời dẫn Lạc Lạc phong cách Visual Novel Điện Ảnh -->
     <div id="overlay-narration" class="overlay overlay--narration" hidden>
-      <div class="narration">
-        <div class="narration__who">LẠC LẠC</div>
-        <p id="narration-text" class="narration__text"></p>
-        <button id="narration-next" class="btn">Tiếp</button>
+      <div class="narration-vn">
+        <div class="narration-vn__top">
+          <div class="narration-avatar-wrap">
+            <div id="narration-avatar" class="narration-avatar">
+              <span id="narration-avatar-emoji">👧</span>
+            </div>
+            <div class="narration-speaker-info">
+              <strong class="narration__who">LẠC LẠC</strong>
+              <span id="narration-mood" class="chip chip--tiny">Tín hiệu đồng bộ</span>
+            </div>
+          </div>
+          <div class="narration-wave" id="narration-wave">
+            <span></span><span></span><span></span><span></span><span></span>
+          </div>
+        </div>
+        <div class="narration-vn__body">
+          <p id="narration-text" class="narration__text"></p>
+        </div>
+        <div class="narration-vn__actions">
+          <button id="btn-replay-voice" class="btn btn--tiny btn--ghost" title="Nghe lại giọng Lạc Lạc">🔊 Nghe lại</button>
+          <button id="narration-next" class="btn btn--primary">Tiếp tục ▶</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lớp phủ: Cinematic Chapter Title Card (Mở Màn Chương Mới) -->
+    <div id="overlay-chapter-intro" class="overlay overlay--chapter" hidden>
+      <div class="card card--chapter-intro">
+        <div id="chapter-intro-icon" class="chapter-intro__glyph">📜</div>
+        <div id="chapter-intro-num" class="chapter-intro__num">CHƯƠNG I</div>
+        <h2 id="chapter-intro-title" class="chapter-intro__title">Ba Ngày Đầu</h2>
+        <div class="chapter-intro__divider"><span>✦ ✧ ✦</span></div>
+        <blockquote id="chapter-intro-epigraph" class="chapter-intro__epigraph">
+          "Khi ánh sáng cuối cùng của thế giới cũ tắt lịm, ngọn lửa đầu tiên được thắp lên bằng hai bàn tay trần."
+        </blockquote>
+        <p id="chapter-intro-summary" class="chapter-intro__summary"></p>
+        <div class="card-actions" style="margin-top: 20px;">
+          <button id="btn-chapter-intro-start" class="btn btn--primary btn--large">Tiến Vào Chương Sử Thi 📜</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lớp phủ: Mở Đầu Tân Thủ Nhập Vai (Prologue Awakening) -->
+    <div id="overlay-prologue" class="overlay overlay--prologue" hidden>
+      <div class="card card--prologue">
+        <div class="prologue-scene">
+          <div class="prologue-anim-vortex">🌀</div>
+          <div class="prologue-step-badge">KHỞI NGUYÊN HOANG CỔ</div>
+          <h2 id="prologue-heading">Thức Tỉnh Giữa Đứt Gãy</h2>
+          <p id="prologue-desc" class="prologue-text">
+            Bạn mở mắt. Cơn bão không gian đã xé toạc thực tại. 
+            Mặt đất dưới chân bạn vẫn là Hà Nội, nhưng là mười nghìn năm trước — một vùng hoang dã bạt ngàn với những bóng quái thú tiền sử rình rập.
+          </p>
+          <div id="prologue-tips" class="prologue-tips-box">
+            <strong>3 QUY TẮC SINH TỒN CỐT TỬ:</strong>
+            <ul>
+              <li>👣 <strong>Mỗi bước chân là một món quà:</strong> Đi bộ ngoài đời thực để nhặt cành cây, đá nhọn và thảo dược.</li>
+              <li>🔥 <strong>Đốt lửa trước khi trời tối:</strong> 20:00 đêm buông xuống, bóng tối và dã thú sẽ tấn công nếu không có lửa trại!</li>
+              <li>💧 <strong>Đun sôi nước uống:</strong> Đừng uống nước thô bừa bãi kẻo đau bụng mất sức.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="card-actions" style="margin-top: 18px;">
+          <button id="btn-prologue-proceed" class="btn btn--primary btn--large">Bắt Đầu Hành Trình Sinh Tồn 🏕️</button>
+        </div>
       </div>
     </div>
 
@@ -340,6 +410,67 @@
         <p id="demo-message"></p>
         <button id="btn-unlock" class="btn btn--primary">Mở khoá trọn đời (mô phỏng)</button>
         <p class="fineprint">Bản prototype: nút này chỉ đặt cờ trong save, không gọi thanh toán.</p>
+      </div>
+    </div>
+
+    <!-- Lớp phủ: Chụp ảnh thực tế AR với Thú Cưng & Quái Vật -->
+    <div id="overlay-ar-camera" class="overlay overlay--fullscreen" hidden>
+      <div class="ar-container">
+        <video id="ar-video" autoplay playsinline muted></video>
+        <canvas id="ar-canvas"></canvas>
+        <div class="ar-top-bar">
+          <div class="ar-title">📸 Chụp Ảnh AR Tiền Sử</div>
+          <button id="btn-ar-close" class="btn btn--tiny btn--ghost">✕ Đóng</button>
+        </div>
+        <div class="ar-controls">
+          <div class="ar-model-picker">
+            <button class="ar-model-btn is-active" data-model="saber_cub">🐯 Hổ Răng Kiếm</button>
+            <button class="ar-model-btn" data-model="baby_mammoth">🦣 Ma Mút Con</button>
+            <button class="ar-model-btn" data-model="ancient_hawk">🦅 Linh Điểu</button>
+            <button class="ar-model-btn" data-model="boss_shadow">👹 Boss Trăng Đỏ</button>
+          </div>
+          <div class="ar-actions">
+            <button id="btn-ar-capture" class="btn btn--primary ar-capture-btn">📸 Chụp Ảnh Kỷ Niệm</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lớp phủ: Đấu Boss Trăng Máu Co-op Cục Bộ (Local Co-op) -->
+    <div id="overlay-coop-battle" class="overlay" hidden>
+      <div class="card card--coop">
+        <div class="panel-head">
+          <h2 id="coop-room-title">⚔️ Đấu Boss Co-op Cục Bộ</h2>
+          <button id="btn-coop-close" class="drawer-close" title="Đóng">✕</button>
+        </div>
+        <div id="coop-status-badge" class="chip chip--warn">Đang chuẩn bị trận địa</div>
+        
+        <div class="coop-boss-section">
+          <div class="coop-boss-name" id="coop-boss-name">Cự Thú Huyết Nguyệt Đột Biến</div>
+          <div class="gauge gauge--hp">
+            <div class="gauge__track"><div id="coop-boss-hp-fill" class="gauge__fill" style="width: 100%;"></div></div>
+            <span id="coop-boss-hp-txt" class="gauge__text">1000 / 1000 HP</span>
+          </div>
+        </div>
+
+        <div class="coop-team-section">
+          <label>Đội hình chiến binh &amp; Thủ trại chung: <strong id="coop-team-def">70 DEF</strong></label>
+          <div id="coop-members-list" class="coop-members-grid"></div>
+        </div>
+
+        <div class="coop-actions-section">
+          <label>Chọn kỹ năng hiệp này:</label>
+          <div class="coop-skills-grid">
+            <button class="btn btn--primary btn-coop-action" data-action="attack">⚔️ Tấn Công Vũ Khí</button>
+            <button class="btn btn-coop-action" data-action="reinforce">🛡️ Dựng Rào Chắn (+20 DEF)</button>
+            <button class="btn btn-coop-action" data-action="heal_team">✨ Thảo Dược Hồi Đội (+30 HP)</button>
+            <button class="btn btn-coop-action" data-action="arrow_volley">🏹 Mưa Tên Cổ Sinh</button>
+          </div>
+        </div>
+
+        <div class="coop-logs-section">
+          <div id="coop-battle-logs" class="coop-logs-container"></div>
+        </div>
       </div>
     </div>
 

@@ -25,4 +25,8 @@ export * from './stepFilter.js';
 export * from './safety.js';
 export * from './save.js';
 export * from './traps.js';
+export * from './pets.js';
+export * from './farming.js';
+export * from './lunar.js';
+export * from './coop.js';
 export * from './game.js';

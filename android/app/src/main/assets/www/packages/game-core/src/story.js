@@ -15,15 +15,19 @@ import { STORY } from './balance.js';
                        
                  
                    
+                                                                   
  
 
                           
                 
              
                   
+                      
+                       
                                 
                     
                      
+                   
  
 
 export const CHAPTERS = STORY.chapters             ;
@@ -99,6 +103,7 @@ export function advanceAfterBloodMoon(state            , lifetimeSteps        )
       bloodMoonsCompleted: completed,
       chapterIndex: next.index,
       chapterStartSteps: lifetimeSteps,
+      tutorialDay: 0,
       endlessUnlocked: state.endlessUnlocked || isFinal,
     },
     unlockedChapter: next,
@@ -110,7 +115,7 @@ export function completeStory(state            )             {
   return { ...state, endlessUnlocked: true };
 }
 
-// ------------------------------------------------------------------ tutorial 3 ngày
+// ------------------------------------------------------------------ tutorial & chapter quests
 
                             
                                                     
@@ -118,12 +123,16 @@ export function completeStory(state            )             {
                                         
                                         
                                                
-                                   
+                                  
+                                         
+                                              
 
                         
              
                   
                  
+                     
+                                                 
                             
                       
                         
@@ -146,7 +155,9 @@ export const TUTORIAL_DAYS = STORY.tutorial.days                            ;
                                
                            
                         
+                        
                     
+                               
  
 
 export function questProgress(
@@ -176,7 +187,16 @@ export function questProgress(
       return { done, have: snap.nightDefenseWins, need: 1 };
     }
     case 'steps': {
-      return { done: snap.lifetimeSteps >= o.qty, have: snap.lifetimeSteps, need: o.qty };
+      const have = snap.chapterSteps !== undefined ? snap.chapterSteps : snap.lifetimeSteps;
+      return { done: have >= o.qty, have, need: o.qty };
+    }
+    case 'camp_level': {
+      const have = snap.campLevel ?? 1;
+      return { done: have >= o.level, have, need: o.level };
+    }
+    case 'blood_moon_win': {
+      const have = snap.bloodMoonsCompleted ?? 0;
+      return { done: have >= o.count, have, need: o.count };
     }
   }
 }
@@ -194,9 +214,20 @@ export function currentDay(state            )                     {
  
 
 export function questBoard(state            , snap               )              {
-  const day = currentDay(state);
-  if (!day) return [];
-  return day.quests.map((q) => {
+  // 1. Giai đoạn Tutorial 3 ngày đầu (Chương 1)
+  if (state.tutorialDay > 0) {
+    const day = currentDay(state);
+    if (!day) return [];
+    return day.quests.map((q) => {
+      const p = questProgress(q, snap);
+      return { ...q, ...p, claimed: state.completedQuestIds.includes(q.id) };
+    });
+  }
+
+  // 2. Giai đoạn Nhiệm vụ Cốt Truyện Theo Chương (Chương 2..8)
+  const currChapter = chapter(state.chapterIndex);
+  if (!currChapter || !currChapter.quests || currChapter.quests.length === 0) return [];
+  return currChapter.quests.map((q) => {
     const p = questProgress(q, snap);
     return { ...q, ...p, claimed: state.completedQuestIds.includes(q.id) };
   });
@@ -211,7 +242,7 @@ export function questBoard(state            , snap               )              
  
 
 /**
- * Chấm toàn bộ nhiệm vụ của ngày hiện tại và trả thưởng cho những nhiệm vụ vừa xong.
+ * Chấm toàn bộ nhiệm vụ của ngày hoặc chương hiện tại và trả thưởng cho những nhiệm vụ vừa xong.
  * Xong hết nhiệm vụ trong ngày thì sang ngày tutorial kế tiếp; hết ngày 3 thì tutorial đóng lại.
  */
 export function settleQuests(state            , snap               )                  {
@@ -225,30 +256,47 @@ export function settleQuests(state            , snap               )            
   const completedQuestIds = [...state.completedQuestIds, ...newlyCompleted.map((q) => q.id)];
   const rewards = newlyCompleted.flatMap((q) => q.reward);
 
-  const day = currentDay(state);
-  const allDone = day ? day.quests.every((q) => completedQuestIds.includes(q.id)) : false;
+  // Xử lý chuyển ngày tutorial
+  if (state.tutorialDay > 0) {
+    const day = currentDay(state);
+    const allDone = day ? day.quests.every((q) => completedQuestIds.includes(q.id)) : false;
 
-  if (!allDone) {
+    if (!allDone) {
+      return {
+        state: { ...state, completedQuestIds },
+        newlyCompleted,
+        rewards,
+        dayAdvanced: false,
+      };
+    }
+
+    const nextDay = state.tutorialDay + 1;
+    const hasNextDay = TUTORIAL_DAYS.some((d) => d.day === nextDay);
+    const nextDayDef = TUTORIAL_DAYS.find((d) => d.day === nextDay);
+
     return {
-      state: { ...state, completedQuestIds },
+      state: { ...state, completedQuestIds, tutorialDay: hasNextDay ? nextDay : 0 },
       newlyCompleted,
       rewards,
-      dayAdvanced: false,
+      dayAdvanced: true,
+      messageVi: hasNextDay
+        ? `Xong ngày ${state.tutorialDay}. Mai là "${nextDayDef?.titleVi}".`
+        : 'Ba ngày đầu đã qua. Bạn bước vào Chương 2 — Tiếng vọng từ lòng đất.',
     };
   }
 
-  const nextDay = state.tutorialDay + 1;
-  const hasNextDay = TUTORIAL_DAYS.some((d) => d.day === nextDay);
-  const nextDayDef = TUTORIAL_DAYS.find((d) => d.day === nextDay);
+  // Xử lý nhiệm vụ theo chương (Chương 2..8)
+  const currChapter = chapter(state.chapterIndex);
+  const allChapterDone = currChapter?.quests ? currChapter.quests.every((q) => completedQuestIds.includes(q.id)) : false;
 
   return {
-    state: { ...state, completedQuestIds, tutorialDay: hasNextDay ? nextDay : 0 },
+    state: { ...state, completedQuestIds },
     newlyCompleted,
     rewards,
-    dayAdvanced: true,
-    messageVi: hasNextDay
-      ? `Xong ngày ${state.tutorialDay}. Mai là "${nextDayDef?.titleVi}".`
-      : 'Ba ngày đầu đã qua. Từ giờ bạn tự quyết định mình sống thế nào.',
+    dayAdvanced: false,
+    messageVi: allChapterDone
+      ? `Đã hoàn thành toàn bộ mục tiêu của ${currChapter?.titleVi}! Sẵn sàng cho Đêm Trăng Máu thứ Bảy.`
+      : undefined,
   };
 }
 

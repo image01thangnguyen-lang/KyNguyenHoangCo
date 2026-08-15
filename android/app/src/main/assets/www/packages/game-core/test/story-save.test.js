@@ -76,18 +76,18 @@ test('mỗi Trăng Máu mở một chương mới, cột mốc bước tính l�
   assert.equal(pendingBeats(after.state, 12_000)[0] .id, 'ch2b1');
 });
 
-test('hết chương 8 thì mở Chế độ Vô Tận — game offline có cái kết thật (§5.6)', () => {
+test('hết 12 chương sử thi thì mở Chế độ Vô Tận — game offline có cái kết thật (§5.6)', () => {
   let state = createStoryState();
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < 11; i++) {
     state = advanceAfterBloodMoon(state, i * 10_000).state;
   }
 
-  assert.equal(state.chapterIndex, 8);
+  assert.equal(state.chapterIndex, 12);
   assert.equal(state.endlessUnlocked, true);
 
-  const beyond = advanceAfterBloodMoon(state, 100_000);
+  const beyond = advanceAfterBloodMoon(state, 150_000);
   assert.equal(beyond.unlockedChapter, null);
-  assert.equal(beyond.state.bloodMoonsCompleted, 8);
+  assert.equal(beyond.state.bloodMoonsCompleted, 12);
 });
 
 test('nhiệm vụ ngày 1 chấm theo số liệu tích luỹ', () => {
@@ -153,6 +153,31 @@ test('cổng demo cắt sau ngày 3 và mở lại sau khi mua (§9)', () => {
   assert.match(demoGate(state, 4).messageVi, /Mở khoá trọn đời/);
 
   assert.equal(demoGate(unlockFullGame(state), 40).gated, false);
+});
+
+test('sang Chương 2 mở hệ thống nhiệm vụ Chương', () => {
+  let state = createStoryState();
+  state = advanceAfterBloodMoon(state, 5000).state;
+  assert.equal(state.chapterIndex, 2);
+
+  const snap                = {
+    ...emptySnapshot(),
+    chapterSteps: 3200,
+    visitedZones: ['water'],
+    campLevel: 2,
+  };
+
+  const board = questBoard(state, snap);
+  assert.equal(board.length, 3);
+  assert.equal(board[0] .id, 'ch2q1');
+  assert.equal(board[0] .done, true);
+  assert.equal(board[1] .done, true);
+  assert.equal(board[2] .done, true);
+
+  const settled = settleQuests(state, snap);
+  assert.equal(settled.newlyCompleted.length, 3);
+  assert.match(settled.messageVi , /hoàn thành toàn bộ mục tiêu/);
+  assert.ok(settled.rewards.length > 0);
 });
 
 // ---------------------------------------------------------------- lưu

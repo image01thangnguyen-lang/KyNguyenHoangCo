@@ -108,8 +108,8 @@ test('mọi vật phẩm ăn/uống được đều có chỉ số hồi phục'
   }
 });
 
-test('cốt truyện đủ 8 chương và mỗi chương có beat (§5.6)', () => {
-  assert.equal(STORY.chapters.length, 8);
+test('cốt truyện đủ 12 chương sử thi và mỗi chương có beat (§5.6 & Phụ lục B)', () => {
+  assert.equal(STORY.chapters.length, 12);
   for (const chapter of STORY.chapters) {
     assert.ok(chapter.beats.length >= 3, `${chapter.id} chỉ có ${chapter.beats.length} beat`);
     assert.equal(chapter.beats[0] .triggerSteps, 0, `${chapter.id} thiếu beat mở chương`);
