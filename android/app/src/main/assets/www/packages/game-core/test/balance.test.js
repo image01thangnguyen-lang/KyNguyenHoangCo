@@ -20,13 +20,13 @@ test('bảng cân bằng không có tham chiếu hỏng', () => {
   assert.deepEqual(validateBalance(), []);
 });
 
-test('có khoảng 30 công thức chế tạo như §5.3', () => {
-  assert.ok(RECIPES.length >= 28 && RECIPES.length <= 40, `đang có ${RECIPES.length} công thức`);
+test('có đầy đủ các công thức chế tạo đa tầng (Cấp 1 - Cấp 5)', () => {
+  assert.ok(RECIPES.length >= 28 && RECIPES.length <= 60, `đang có ${RECIPES.length} công thức`);
 });
 
-test('doanh trại đúng 3 cấp, cấp 3 là cấp cuối', () => {
-  assert.equal(CAMP_TIERS.length, 3);
-  assert.equal(getCampTier(3).upgradeToNext, null);
+test('doanh trại mở rộng đến 5 cấp, cấp 5 là Cung Điện Thần Long tối thượng', () => {
+  assert.equal(CAMP_TIERS.length, 5);
+  assert.equal(getCampTier(5).upgradeToNext, null);
   assert.notEqual(getCampTier(1).upgradeToNext, null);
 });
 

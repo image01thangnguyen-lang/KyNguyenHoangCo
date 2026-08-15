@@ -125,7 +125,8 @@ export function validateBalance()           {
     if (recipe.outputKind === 'defense' && !defenseById.has(recipe.outputId)) {
       errors.push(`recipes.json: công thức "${recipe.id}" tạo công trình lạ "${recipe.outputId}"`);
     }
-    if (recipe.station && !stationsUnlockedAt(3).includes(recipe.station)) {
+    const maxTier = Math.max(...CAMP_TIERS.map((t) => t.level));
+    if (recipe.station && !stationsUnlockedAt(maxTier).includes(recipe.station)) {
       errors.push(`recipes.json: công thức "${recipe.id}" cần station lạ "${recipe.station}"`);
     }
   }

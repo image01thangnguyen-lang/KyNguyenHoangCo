@@ -184,7 +184,7 @@ test('tiến độ nâng cấp hiển thị đúng tỉ lệ', () => {
   assert.ok(half);
   assert.ok(Math.abs(half.ratio - 0.5) < 0.001);
 
-  assert.equal(upgradeProgress({ ...camp1(), level: 3 }, {}), null);
+  assert.equal(upgradeProgress({ ...camp1(), level: 5 }, {}), null);
 });
 
 test('bảng công thức đánh dấu đúng khoá / thiếu / làm được', () => {

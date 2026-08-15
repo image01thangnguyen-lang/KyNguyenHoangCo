@@ -4,14 +4,24 @@
  */
 
 export type ZoneId = 'trail' | 'wilderness' | 'forest' | 'water' | 'merchant';
-export type StationId = 'campfire' | 'drying_rack' | 'kiln' | 'forge';
+export type StationId =
+  | 'campfire'
+  | 'drying_rack'
+  | 'kiln'
+  | 'forge'
+  | 'bronze_furnace'
+  | 'altar_of_dragons';
 export type DefenseStructureId =
   | 'thorn_fence'
   | 'spike_trap'
   | 'wooden_wall'
   | 'stone_wall'
   | 'watch_tower'
-  | 'ballista';
+  | 'ballista'
+  | 'dong_son_drum'
+  | 'stone_fortress_wall'
+  | 'heavy_catapult'
+  | 'dragon_totem_bastion';
 
 export type ItemId = string;
 export type Inventory = Record<ItemId, number>;

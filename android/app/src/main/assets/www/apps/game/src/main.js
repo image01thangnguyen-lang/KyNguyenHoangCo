@@ -472,7 +472,7 @@ function getDynamicDropPool(zone        , campLevel        , activePetId        
       { id: 'sharp_stone', name: 'Đá nhọn' },
       { id: 'clay', name: 'Đất sét' },
       { id: 'fiber', name: 'Sợi thực vật' },
-      { id: 'ancient_pottery', name: 'Mảnh Gốm Đông Sơn' },
+      { id: 'ancient_pottery', name: 'Mảnh gốm Đông Sơn' },
     );
   } else {
     // Wilderness & Trail
@@ -485,47 +485,47 @@ function getDynamicDropPool(zone        , campLevel        , activePetId        
     );
   }
 
-  // 2. Tầng 2: Nhà Sàn Gỗ (Cấp 2+)
+  // 2. Tầng 2: Nhà sàn gỗ (Cấp 2+)
   if (campLevel >= 2) {
     pool.push(
       { id: 'log', name: 'Khúc gỗ lớn' },
       { id: 'rope', name: 'Dây thừng' },
-      { id: 'seed_corn', name: 'Hạt Giống Ngô Rừng' },
-      { id: 'copper_ore', name: 'Quặng Đồng Cổ' },
+      { id: 'seed_corn', name: 'Hạt giống ngô rừng' },
+      { id: 'copper_ore', name: 'Quặng đồng cổ' },
       { id: 'coal', name: 'Than đá' },
     );
   }
 
-  // 3. Tầng 3: Pháo Đài Đá Cổ (Cấp 3+)
+  // 3. Tầng 3: Pháo đài đá cổ (Cấp 3+)
   if (campLevel >= 3) {
     pool.push(
       { id: 'stone_block', name: 'Khối đá xẻ' },
       { id: 'iron_ore', name: 'Quặng sắt' },
       { id: 'leather', name: 'Da thú dày' },
-      { id: 'seed_herb', name: 'Hạt Giống Dược Thảo' },
-      { id: 'arrow', name: 'Bó Mũi Tên' },
+      { id: 'seed_herb', name: 'Hạt giống dược thảo' },
+      { id: 'arrow', name: 'Bó mũi tên' },
     );
     if (zone === 'water') {
-      pool.push({ id: 'pearl', name: 'Ngọc Trai Sông' });
+      pool.push({ id: 'pearl', name: 'Ngọc trai sông' });
     }
   }
 
-  // 4. Tầng 4+: Thành Cổ Thần Thoại (Cấp 4+)
+  // 4. Tầng 4+: Thành cổ thần thoại (Cấp 4+)
   if (campLevel >= 4) {
     pool.push(
       { id: 'gold_ore', name: 'Quặng vàng quý' },
-      { id: 'ancient_coin', name: 'Đồng Vàng Cổ' },
+      { id: 'ancient_coin', name: 'Đồng vàng cổ' },
       { id: 'iron_ingot', name: 'Thanh sắt' },
     );
   }
 
   // 5. Bonus từ Linh Thú xuất chiến đi cùng:
   if (activePetId === 'otter') {
-    pool.push({ id: 'pearl', name: 'Ngọc Trai Sông' }, { id: 'raw_fish', name: 'Cá tươi béo ngậy' });
+    pool.push({ id: 'pearl', name: 'Ngọc trai sông' }, { id: 'raw_fish', name: 'Cá tươi béo ngậy' });
   } else if (activePetId === 'hound') {
     pool.push({ id: 'leather', name: 'Da thú dày' }, { id: 'raw_meat', name: 'Thịt tươi' });
   } else if (activePetId === 'fox') {
-    pool.push({ id: 'seed_herb', name: 'Hạt Giống Dược Thảo' }, { id: 'red_mushroom', name: 'Nấm đỏ' });
+    pool.push({ id: 'seed_herb', name: 'Hạt giống dược thảo' }, { id: 'red_mushroom', name: 'Nấm đỏ' });
   } else if (activePetId === 'mammoth') {
     pool.push({ id: 'gold_ore', name: 'Quặng vàng quý' }, { id: 'log', name: 'Khúc gỗ lớn' });
   }
@@ -535,15 +535,15 @@ function getDynamicDropPool(zone        , campLevel        , activePetId        
 
 /**
  * Sinh DUY NHẤT 1 cụm vật phẩm quanh người chơi trong tầm phát hiện ~18m - 46m.
- * Tích hợp sự kiện Rương Báu 8.000 Bước chân mỗi ngày!
+ * Tích hợp sự kiện Rương báu 8.000 bước chân mỗi ngày!
  */
 function spawnSingleWorldDropNear(center        , zone        )       {
-  if (worldDrops.length > 0) return;
+  if (!center || worldDrops.length > 0) return;
 
-  const campLevel = app.profile?.player.camp.level ?? 1;
-  const activePet = app.profile?.player.pets?.find((p) => p.isActive);
+  const campLevel = app.profile?.player?.camp?.level ?? 1;
+  const activePet = app.profile?.player?.pets?.find((p) => p.isActive);
   const todayKey = toLocalTime(now()).day;
-  const totalStepsToday = app.profile?.player.steps.totalSteps ?? 0;
+  const totalStepsToday = app.profile?.player?.steps?.totalSteps ?? 0;
   const last8kChestDay = (app.profile?.player       )?.last8kChestDay;
 
   // Sinh toạ độ ngẫu nhiên xung quanh người chơi ở bán kính 18m - 46m
@@ -552,12 +552,12 @@ function spawnSingleWorldDropNear(center        , zone        )       {
   const dLat = (dist * Math.cos(angle)) * metersToLatDegrees(1);
   const dLon = (dist * Math.sin(angle)) * metersToLonDegrees(1, center.lat);
 
-  // Kiểm tra mốc 8.000 bước chân: Thả Rương Báu Tiền Sử nếu chưa nhận hôm nay
+  // Kiểm tra mốc 8.000 bước chân: Thả Rương báu tiền sử nếu chưa nhận hôm nay
   if (totalStepsToday >= 8000 && last8kChestDay !== todayKey) {
     worldDrops = [{
       id: `milestone_8k_${todayKey}`,
       itemId: 'ancient_chest',
-      nameVi: '🎁 Rương Báu 8.000 Bước (Tiền Sử)',
+      nameVi: '🎁 Rương báu 8.000 bước (tiền sử)',
       qty: 1,
       lat: center.lat + dLat,
       lon: center.lon + dLon,
@@ -596,19 +596,19 @@ function collectWorldDrop(drop           )       {
     return;
   }
 
-  // Xử lý nhặt Rương Báu 8.000 Bước Chân Hoành Tráng
+  // Xử lý nhặt Rương báu 8.000 bước chân hoành tráng
   if (drop.itemId === 'ancient_chest') {
     const todayKey = toLocalTime(now()).day;
     (app.profile.player       ).last8kChestDay = todayKey;
 
-    // Phần thưởng Rương Báu 8.000 Bước
+    // Phần thưởng Rương báu 8.000 bước
     const coins = 20;
     const potionCount = 2;
     const ironCount = 3;
     const goldOreCount = 2;
     const hasSpecial = Math.random() < 0.5;
     const specialItem = hasSpecial ? 'egg_forest' : 'blueprint';
-    const specialName = hasSpecial ? '1 Trứng Linh Thú Rừng' : '1 Bản Vẽ Chế Tạo Cổ';
+    const specialName = hasSpecial ? '1 trứng rừng cổ đại' : '1 bản vẽ chế tạo';
 
     app.profile.player.carried['ancient_coin'] = (app.profile.player.carried['ancient_coin'] ?? 0) + coins;
     app.profile.player.carried['greater_potion'] = (app.profile.player.carried['greater_potion'] ?? 0) + potionCount;

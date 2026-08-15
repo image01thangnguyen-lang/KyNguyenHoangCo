@@ -318,7 +318,84 @@ export function itemIconSvg(id        , className = 'item-svg')         {
         className,
       );
 
-    // -------------------------------- Công trình phòng thủ & Trạm chế tạo
+    case 'dong_son_axe':
+      return svg(
+        '<path d="M22 52 42 16" stroke="#854d0e" stroke-width="4" stroke-linecap="round"/><path d="M36 14c8-6 16-2 20 6-4 8-12 12-20 6Z" fill="#b45309" stroke="#fef08a" stroke-width="2.5"/><circle cx="44" cy="18" r="3" fill="#facc15"/><path d="m32 24 8 8" stroke="#ca8a04" stroke-width="2.5"/>',
+        className,
+      );
+
+    case 'dong_son_spear':
+      return svg(
+        '<path d="M14 52 44 18" stroke="#854d0e" stroke-width="4" stroke-linecap="round"/><path d="m38 22 16-14-4 18Z" fill="#b45309" stroke="#fef08a" stroke-width="2.5" stroke-linejoin="round"/><path d="m42 16 6 6M36 24l6 6" stroke="#fde047" stroke-width="2"/>',
+        className,
+      );
+
+    case 'bronze_ingot':
+      return svg(
+        '<path d="m15 25 14-8h16l-9 8Zm-3 17 5-15h26l-5 15Zm31-15 9-8v15l-9 8Z" fill="#b45309" stroke="#fef08a" stroke-width="2"/><path d="m15 26 23-1m-21 16 23-1" stroke="#fde047" stroke-width="1.5" stroke-linecap="round"/>',
+        className,
+      );
+
+    case 'bronze_plate_armor':
+      return svg(
+        '<path d="M18 16c6-4 10-2 14 2 4-4 8-6 14-2l4 28-10 8-8-4-8 4-10-8Z" fill="#b45309" stroke="#fef08a" stroke-width="2.5"/><circle cx="32" cy="28" r="6" fill="#78350f" stroke="#fde047" stroke-width="2"/><path d="M22 36h20" stroke="#fde047" stroke-width="2"/>',
+        className,
+      );
+
+    case 'divine_gold_blade':
+      return svg(
+        '<path d="m16 48 6-6m-2 4 4-4m-1 7-4-4" stroke="#d97706" stroke-width="3" stroke-linecap="round"/><path d="m20 44 26-26 6-6-6 6-26 26" fill="#eab308" stroke="#fef08a" stroke-width="3" stroke-linecap="round"/><path d="M18 40l6 6" stroke="#fbbf24" stroke-width="3.5"/><circle cx="44" cy="20" r="2.5" fill="#fff"/>',
+        className,
+      );
+
+    case 'divine_dragon_bow':
+      return svg(
+        '<path d="M18 10c28 10 28 34 0 44" fill="none" stroke="#ca8a04" stroke-width="4" stroke-linecap="round"/><path d="M18 10v44" stroke="#fef08a" stroke-width="2"/><circle cx="34" cy="32" r="4" fill="#38bdf8" stroke="#e0f2fe" stroke-width="1.5"/>',
+        className,
+      );
+
+    case 'celestial_elixir':
+      return svg(
+        '<path d="M26 12h12v6H26ZM22 22h20l4 24a8 8 0 0 1-8 8H26a8 8 0 0 1-8-8Z" fill="#0284c7" stroke="#38bdf8" stroke-width="2.5"/><circle cx="32" cy="36" r="6" fill="#facc15" stroke="#fff" stroke-width="1.5"/><path d="M26 32c4-4 8 0 12-4" stroke="#e0f2fe" stroke-width="2" stroke-linecap="round"/>',
+        className,
+      );
+
+    case 'bronze_furnace':
+      return svg(
+        '<path d="M16 52 24 20h16l8 32Z" fill="#78350f" stroke="#fbbf24" stroke-width="2.5"/><path d="M26 36h12v16H26Z" fill="#dc2626" stroke="#fef08a" stroke-width="2"/><circle cx="32" cy="44" r="3" fill="#facc15"/>',
+        className,
+      );
+
+    case 'altar_of_dragons':
+      return svg(
+        '<path d="M14 52h36l-4-16H18Zm8-16v-14l10-8 10 8v14Z" fill="#854d0e" stroke="#fef08a" stroke-width="2.5"/><circle cx="32" cy="26" r="5" fill="#38bdf8" stroke="#e0f2fe" stroke-width="2"/><path d="M10 52h44" stroke="#fbbf24" stroke-width="3"/>',
+        className,
+      );
+
+    case 'dong_son_drum':
+      return svg(
+        '<ellipse cx="32" cy="20" rx="18" ry="8" fill="#b45309" stroke="#fef08a" stroke-width="2.5"/><path d="M14 20c0 14 8 20 8 32h20c0-12 8-18 8-32" fill="#78350f" stroke="#fef08a" stroke-width="2.5"/><circle cx="32" cy="20" r="4" fill="#fde047"/><path d="M20 34h24M22 42h20" stroke="#fde047" stroke-width="2"/>',
+        className,
+      );
+
+    case 'stone_fortress_wall':
+      return svg(
+        '<path d="M10 18h44v34H10Z" fill="#44403c" stroke="#fbbf24" stroke-width="2.5"/><path d="M10 18v-5h8v5h10v-5h8v5h10v-5h8v5M10 30h44M10 42h44" stroke="#fde047" stroke-width="2"/><circle cx="32" cy="36" r="3" fill="#ca8a04"/>',
+        className,
+      );
+
+    case 'heavy_catapult':
+      return svg(
+        '<path d="M12 48h40M18 48 30 24l18 24" stroke="#78350f" stroke-width="3.5"/><path d="M22 36l26-16" stroke="#b45309" stroke-width="3"/><circle cx="48" cy="20" r="5" fill="#57534e" stroke="#e7e5e4" stroke-width="1.5"/><circle cx="20" cy="48" r="4" fill="#ca8a04"/><circle cx="44" cy="48" r="4" fill="#ca8a04"/>',
+        className,
+      );
+
+    case 'dragon_totem_bastion':
+      return svg(
+        '<path d="M16 52 24 16l8-8 8 8 8 36Z" fill="#78350f" stroke="#38bdf8" stroke-width="3"/><circle cx="32" cy="26" r="7" fill="#0284c7" stroke="#fde047" stroke-width="2"/><path d="M20 42h24M12 52h40" stroke="#fef08a" stroke-width="3"/>',
+        className,
+      );
+
     case 'thorn_fence':
       return svg(
         '<path d="M12 48 24 16m16 32L28 16m24 32L40 16" stroke="#7a5538" stroke-width="4" stroke-linecap="round"/><path d="M10 26h44M10 40h44" stroke="#48602a" stroke-width="3" stroke-linecap="round"/><path d="m18 22 4 8m14-8 4 8m-28 6 6 8m12-8 6 8" stroke="#9ec95f" stroke-width="2"/>',

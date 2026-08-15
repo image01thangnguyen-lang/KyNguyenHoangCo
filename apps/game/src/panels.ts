@@ -318,15 +318,17 @@ export function openCraftInspector(
       drying_rack: '🪵 Giá phơi',
       kiln: '🧱 Lò nung',
       forge: '⚒️ Lò rèn',
+      bronze_furnace: '🏺 Lò luyện đồng Đông Sơn',
+      altar_of_dragons: '🐉 Đền thờ Thần Long',
     };
     stationEl.textContent = `Yêu cầu trạm: ${stationNames[entry.recipe.station] ?? entry.recipe.station}`;
   } else {
-    stationEl.textContent = '✨ Chế tạo tự do (Không cần trạm)';
+    stationEl.textContent = '✨ Chế tạo tự do (không cần trạm)';
   }
 
   descEl.textContent = (itemDef as any)?.descVi || 'Công thức chế tạo sinh tồn thời kỳ hoang cổ.';
   timeEl.textContent = `⏱️ ${formatDuration(durationSec)}${rank.speedMultiplier < 1 ? ` (⚡ -${Math.round((1 - rank.speedMultiplier) * 100)}% TG)` : ''}`;
-  tierEl.textContent = `Cấp ${entry.recipe.tier} (${getCampTier(entry.recipe.tier).nameVi})`;
+  tierEl.textContent = `Cấp ${entry.recipe.tier} (${getCampTier(entry.recipe.tier)?.nameVi ?? `Cấp ${entry.recipe.tier}`})`;
 
   // Danh sách nguyên liệu
   needsEl.replaceChildren();
@@ -366,7 +368,7 @@ export function openCraftInspector(
     btnSubmit.disabled = false;
     btnSubmit.style.opacity = '1';
     btnSubmit.style.cursor = 'pointer';
-    btnSubmit.textContent = '🔨 Bắt Đầu Chế Tạo Ngay';
+    btnSubmit.textContent = '🔨 Bắt đầu chế tạo ngay';
     btnSubmit.onclick = () => {
       handlers.onCraft(entry.recipe.id);
       overlay.hidden = true;
@@ -380,7 +382,12 @@ export function openCraftInspector(
   overlay.hidden = false;
 }
 
-export function renderCraft(view: GameView, profile: ProfileSave, handlers: Handlers, onlyCraftable: boolean): void {
+export function renderCraft(
+  view: GameView,
+  profile: ProfileSave,
+  handlers: Handlers,
+  onlyCraftable: boolean = false,
+): void {
   const jobs = el('craft-jobs');
   jobs.replaceChildren();
 
@@ -411,24 +418,24 @@ export function renderCraft(view: GameView, profile: ProfileSave, handlers: Hand
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);">
       <span style="font-size:0.75rem;color:var(--ink-muted);">Dùng <strong>${rank.upgradeCostGold} ${coinIconSvg(14)}</strong> để tấn phong ngay</span>
-      <button class="btn btn--tiny btn--primary btn-artisan-upgrade" style="padding:4px 10px;font-size:0.75rem;display:inline-flex;align-items:center;gap:4px;">${coinIconSvg(14)} Tấn Phong (${rank.upgradeCostGold} ${coinIconSvg(12)})</button>
+      <button class="btn btn--tiny btn--primary btn-artisan-upgrade" style="padding:4px 10px;font-size:0.75rem;display:inline-flex;align-items:center;gap:4px;">${coinIconSvg(14)} Tấn phong (${rank.upgradeCostGold} ${coinIconSvg(12)})</button>
     </div>
     ` : `
-    <div style="font-size:0.72rem;color:#4ade80;margin-top:6px;font-weight:700;">👑 Đã đạt Cấp Bậc Tối Thượng — Đại Sư Hoang Cổ!</div>
+    <div style="font-size:0.72rem;color:#4ade80;margin-top:6px;font-weight:700;">👑 Đã đạt cấp bậc tối thượng — Đại sư hoang cổ!</div>
     `}
   `;
 
   rankCard.querySelector('.btn-artisan-upgrade')?.addEventListener('click', () => {
-    handlers.onUpgradeArtisan?.();
+    handlers.onArtisanUpgradeGold?.();
   });
 
   jobs.append(rankCard);
 
   for (const job of profile.craftJobs) {
-    const ready = view.nowMs >= job.readyAtMs;
+    const ready = (view.nowMs ?? 0) >= job.readyAtMs;
     const row = document.createElement('div');
     row.className = `row${ready ? ' is-ready' : ''}`;
-    const seconds = Math.max(0, Math.ceil((job.readyAtMs - view.nowMs) / 1000));
+    const seconds = Math.max(0, Math.ceil((job.readyAtMs - (view.nowMs ?? 0)) / 1000));
     row.innerHTML = `
       <div class="row__body">
         <div class="row__title">${nameOfRecipe(view, job.recipeId)}</div>
@@ -457,13 +464,25 @@ export function renderCraft(view: GameView, profile: ProfileSave, handlers: Hand
     byTier.set(entry.recipe.tier, bucket);
   }
 
-  for (const tier of [1, 2, 3]) {
+  // Duyệt qua TẤT CẢ các cấp độ (Cấp 1 đến Cấp 5)
+  const allTiers = Array.from(
+    new Set([
+      ...CAMP_TIERS.map((t) => t.level),
+      ...Array.from(byTier.keys()),
+    ])
+  ).sort((a, b) => a - b);
+
+  for (const tier of allTiers) {
     const entries = byTier.get(tier);
     if (!entries?.length) continue;
 
+    const campTierDef = CAMP_TIERS.find((t) => t.level === tier);
+    const tierName = campTierDef ? campTierDef.nameVi : `Cấp ${tier}`;
+    const eraName = campTierDef?.eraVi ? ` • ${campTierDef.eraVi}` : '';
+
     const heading = document.createElement('h3');
     heading.className = 'section-title';
-    heading.textContent = `Cấp ${tier} — ${getCampTier(tier).nameVi}`;
+    heading.textContent = `Cấp ${tier} — ${tierName}${eraName}`;
     list.append(heading);
 
     const grid = document.createElement('div');
@@ -479,7 +498,7 @@ export function renderCraft(view: GameView, profile: ProfileSave, handlers: Hand
         ? '🔒 Khoá'
         : entry.craftable
         ? '✨ Làm được'
-        : 'Thiếu NL';
+        : 'Thiếu đồ';
 
       card.innerHTML = `
         <div class="craft-slot-icon">${itemIconSvg(outputId, 'card-svg')}</div>
@@ -1585,7 +1604,7 @@ export function openTradeConfirm(
   let currentQty = 1;
   const max = Math.max(1, item.maxQty);
 
-  titleEl.textContent = item.isBuy ? '🛒 Mua Hàng Hoá' : '💰 Bán Vật Phẩm';
+  titleEl.textContent = item.isBuy ? '🛒 Mua hàng hoá' : '💰 Bán vật phẩm';
   iconEl.innerHTML = itemIconSvg(item.itemId as any, 'inspect-svg');
   nameEl.textContent = item.nameVi;
   descEl.innerHTML = `
@@ -1599,8 +1618,8 @@ export function openTradeConfirm(
     const total = currentQty * item.unitPrice;
     totalGoldEl.innerHTML = item.isBuy ? `${total} ${coinIconSvg(16)}` : `+${total} ${coinIconSvg(16)}`;
     btnSubmit.innerHTML = item.isBuy
-      ? `Xác Nhận Mua (-${total} ${coinIconSvg(14)})`
-      : `Xác Nhận Bán (+${total} ${coinIconSvg(14)})`;
+      ? `Xác nhận mua (-${total} ${coinIconSvg(14)})`
+      : `Xác nhận bán (+${total} ${coinIconSvg(14)})`;
   }
 
   btnMinus.onclick = () => {
