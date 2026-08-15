@@ -157,6 +157,8 @@ export interface LifetimeStats {
   steps: number;
   collected: Record<ItemId, number>;
   craftedRecipeIds: string[];
+  /** Tổng số lần chế tạo thành công tích luỹ cả đời */
+  craftCount?: number;
   visitedZones: ZoneId[];
   performedActionIds: string[];
   nightDefenseWins: number;
@@ -200,6 +202,8 @@ export interface PlayerState {
   incubatingEgg?: any | null;
   /** Danh sách linh thú / thú cưng tiền sử đồng hành */
   pets?: any[];
+  /** Cấp bậc thợ thủ công chế tác (1..4) */
+  artisanLevel?: number;
   createdAtMs: number;
 }
 

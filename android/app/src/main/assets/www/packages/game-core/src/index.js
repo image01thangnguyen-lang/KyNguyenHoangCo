@@ -29,4 +29,5 @@ export * from './pets.js';
 export * from './farming.js';
 export * from './lunar.js';
 export * from './coop.js';
+export * from './merchant.js';
 export * from './game.js';

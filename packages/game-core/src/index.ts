@@ -29,4 +29,5 @@ export * from './pets.ts';
 export * from './farming.ts';
 export * from './lunar.ts';
 export * from './coop.ts';
+export * from './merchant.ts';
 export * from './game.ts';

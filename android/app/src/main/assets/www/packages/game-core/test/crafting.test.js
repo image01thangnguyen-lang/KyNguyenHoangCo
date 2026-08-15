@@ -9,9 +9,11 @@ import {
   startCampUpgrade,
   startCraft,
   upgradeProgress,
+  getArtisanRank,
+  upgradeArtisanRankWithGold,
 } from '../src/crafting.js';
 import { dropFraction, moveToSafe, slotsUsed } from '../src/inventory.js';
-                                                 
+                                                              
 
 const T0 = Date.UTC(2026, 7, 14, 3, 0, 0);
 
@@ -222,3 +224,109 @@ test('slotsUsed tính theo kích thước stack của từng vật phẩm', () =
   assert.equal(slotsUsed({ dry_branch: 201 }), 2);
   assert.equal(slotsUsed({}), 0);
 });
+
+test('CẤP BẬC THỢ: Tính toán chính xác cấp bậc, tốc độ và số ô chế tác cùng lúc', () => {
+  const r0 = getArtisanRank(0);
+  assert.equal(r0.level, 1);
+  assert.equal(r0.titleVi, 'Thổ Dân Học Việc');
+  assert.equal(r0.maxConcurrentSlots, 1);
+  assert.equal(r0.speedMultiplier, 1.0);
+
+  const r8 = getArtisanRank(8);
+  assert.equal(r8.level, 2);
+  assert.equal(r8.titleVi, 'Thợ Thủ Công Hoang Cổ');
+  assert.equal(r8.maxConcurrentSlots, 2);
+  assert.equal(r8.speedMultiplier, 0.85);
+
+  const r25 = getArtisanRank(25);
+  assert.equal(r25.level, 3);
+  assert.equal(r25.titleVi, 'Nghệ Nhân Lành Nghề');
+  assert.equal(r25.maxConcurrentSlots, 3);
+  assert.equal(r25.speedMultiplier, 0.7);
+
+  const r60 = getArtisanRank(60);
+  assert.equal(r60.level, 4);
+  assert.equal(r60.titleVi, 'Đại Sư Luyện Kim & Chế Tác');
+  assert.equal(r60.maxConcurrentSlots, 4);
+  assert.equal(r60.speedMultiplier, 0.55);
+});
+
+test('CẤP BẬC THỢ: Giới hạn số ô chế tạo cùng lúc', () => {
+  const inv = { dry_branch: 20, sharp_stone: 10, vine: 10 };
+  
+  // Cấp 1 (Thổ dân học việc) chỉ có 1 ô: đang có 1 job -> từ chối
+  const attemptFull = startCraft({
+    recipeId: 'stone_axe',
+    camp: camp1(),
+    inventory: inv,
+    nowMs: T0,
+    atCamp: true,
+    currentCraftJobsCount: 1,
+    totalCraftCount: 0,
+  });
+  assert.equal(attemptFull.ok, false);
+  assert.match(attemptFull.reasonVi , /Hàng đợi chế tác đã đầy/);
+
+  // Cấp 2 (Thợ thủ công) có 2 ô: đang có 1 job -> được phép
+  const attemptOk = startCraft({
+    recipeId: 'stone_axe',
+    camp: camp1(),
+    inventory: inv,
+    nowMs: T0,
+    atCamp: true,
+    currentCraftJobsCount: 1,
+    totalCraftCount: 10,
+  });
+  assert.equal(attemptOk.ok, true);
+});
+
+test('CẤP BẬC THỢ: Tấn phong cấp bậc bằng Đồng Vàng Cổ (ancient_coin)', () => {
+  const dummyPlayer              = {
+    id: 'test_player',
+    displayName: 'Thổ Dân',
+    survival: { hp: 100, hunger: 100, thirst: 100, energy: 100, sick: false },
+    carried: { ancient_coin: 20 },
+    safeStorage: {},
+    camp: camp1(),
+    steps: { total: 0, daily: {}, lastResetDate: '2026-08-15' },
+    lifetime: {
+      steps: 0,
+      collected: {}       ,
+      craftedRecipeIds: [],
+      craftCount: 0,
+      visitedZones: [],
+      performedActionIds: [],
+      nightDefenseWins: 0,
+      nightDefenseLosses: 0,
+      bloodMoonWins: 0,
+      daysPlayed: 1,
+    },
+    knownRecipes: [],
+    artisanLevel: 1,
+    createdAtMs: T0,
+  };
+
+  // Nâng từ Cấp 1 lên Cấp 2 (Tốn 15 Vàng)
+  const up1 = upgradeArtisanRankWithGold(dummyPlayer);
+  assert.equal(up1.ok, true);
+  assert.equal(up1.newLevel, 2);
+  assert.equal(up1.player.carried.ancient_coin, 5);
+  assert.match(up1.messageVi, /Thợ Thủ Công Hoang Cổ/);
+
+  // Nâng tiếp từ Cấp 2 lên Cấp 3 (Cần 45 Vàng, nhưng chỉ còn 5 Vàng) -> Thất bại
+  const up2Fail = upgradeArtisanRankWithGold(up1.player);
+  assert.equal(up2Fail.ok, false);
+  assert.match(up2Fail.messageVi, /Chưa đủ Đồng Vàng Cổ/);
+
+  // Nạp thêm 100 Vàng và nâng tiếp lên Cấp 3 -> Thành công
+  const richPlayer              = {
+    ...up1.player,
+    carried: { ancient_coin: 105 },
+  };
+  const up2Ok = upgradeArtisanRankWithGold(richPlayer);
+  assert.equal(up2Ok.ok, true);
+  assert.equal(up2Ok.newLevel, 3);
+  assert.equal(up2Ok.player.carried.ancient_coin, 60);
+});
+
+

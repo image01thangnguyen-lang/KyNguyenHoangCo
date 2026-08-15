@@ -7,9 +7,23 @@ function svg(content: string, className = 'item-svg'): string {
   return `<svg class="${className}" viewBox="0 0 64 64" aria-hidden="true" focusable="false">${content}</svg>`;
 }
 
+/** Biểu tượng Đồng Tiền Vàng Cổ Đông Sơn vector chuẩn xác (không lo lỗi font/vuông chữ nhật emoji). */
+export function coinIconSvg(size = 16): string {
+  return `<svg style="display:inline-block;vertical-align:-2.5px;width:${size}px;height:${size}px;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.5));" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><circle cx="32" cy="32" r="26" fill="#f59e0b" stroke="#fef08a" stroke-width="3.5"/><circle cx="32" cy="32" r="21" fill="#d97706" stroke="#b45309" stroke-width="2"/><rect x="23" y="23" width="18" height="18" rx="2.5" fill="#1c130c" stroke="#fef08a" stroke-width="2.5"/><path d="M32 11v7M32 46v7M11 32h7M46 32h7" stroke="#fef08a" stroke-width="2.5" stroke-linecap="round"/></svg>`;
+}
+
 /** Icon cho vật phẩm, công trình phòng thủ, trạm chế tạo, hoặc cấp doanh trại. */
 export function itemIconSvg(id: string, className = 'item-svg'): string {
   switch (id) {
+    // -------------------------------- Tiền tệ & Kim loại quý
+    case 'ancient_coin':
+    case 'gold':
+    case 'gold_coin':
+      return svg(
+        '<circle cx="32" cy="32" r="26" fill="#f59e0b" stroke="#fef08a" stroke-width="3.5"/><circle cx="32" cy="32" r="21" fill="#d97706" stroke="#b45309" stroke-width="2"/><rect x="23" y="23" width="18" height="18" rx="2.5" fill="#1c130c" stroke="#fef08a" stroke-width="2.5"/><path d="M32 11v7M32 46v7M11 32h7M46 32h7" stroke="#fef08a" stroke-width="2.5" stroke-linecap="round"/>',
+        className,
+      );
+
     // -------------------------------- Vật liệu cơ bản & chế tác
     case 'log':
       return svg(

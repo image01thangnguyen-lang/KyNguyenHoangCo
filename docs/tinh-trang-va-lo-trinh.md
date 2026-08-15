@@ -13,7 +13,7 @@ Toàn bộ hệ thống lõi, cân bằng, bản đồ 30 quận huyện Hà N�
 
 | Kiểm tra | Kết quả |
 |---|---|
-| `npm test` | **178/178 pass (100%)** |
+| `npm test` | **181/181 pass (100%)** |
 | `node tools/simulate.ts 30` | Chạy thành công; người đi nhiều không còn tiến chậm hơn người đi ít |
 | `node tools/build-apk.ts` | **Pass** — Biên dịch Gradle và xuất file APK độc lập `ky-nguyen-hoang-co.apk` |
 | Edge headless `/tools/smoke.html` | **34/34 pass** |
@@ -28,12 +28,13 @@ dữ liệu cân bằng hoặc giao diện.
 
 | Tiêu chí | Trạng thái |
 |---|---|
-| Code | 56 file, ~16.500 dòng TS/HTML/CSS |
-| Test lõi | 178 (`npm test`) — **đã qua 100%** |
+| Code | 57 file, ~17.000 dòng TS/HTML/CSS |
+| Test lõi | 181 (`npm test`) — **đã qua 100%** |
 | Test trình duyệt | 34 (`/tools/smoke.html`) — **đã qua** |
 | Dependency | 0 (Zero-dependency, Node 24 native TS) |
 | Chạy offline hoàn toàn | Có (Service Worker trên Web + Local Assets trên Android APK) |
-| Dữ liệu bản đồ | 350+ POI tiền sử hoá phủ kín toàn bộ 30 quận/huyện Hà Nội + Lối mòn đất nện + 4 dòng sông |
+| Dữ liệu bản đồ | 400+ POI tiền sử hoá: Toàn bộ hàng quán, nhà hàng, quán ăn truyền thống, đại siêu thị & 30 quận/huyện Hà Nội |
+| Hệ thống Tiệm NPC Thương Nhân | Mua bán 2 chiều: Mua vật phẩm quý hiếm bằng Đồng Vàng Cổ `🪙` & Bán tài nguyên thu thập đổi lấy Vàng |
 | Hệ thống bẫy thú | Đặt bẫy & thu hoạch bẫy GPS thực tế ($\le 35\text{m}$) |
 | Hệ thống 12 Chương Sử Thi | Toàn bộ 12 chương có 36 audio beats + hệ thống Chapter Quests & Boss Trăng Máu |
 | Phong cách Kể Chuyện VN | Thoại Visual Novel với biểu cảm Lạc Lạc, danh ngôn khắc đá (Epigraph), audio waveform |

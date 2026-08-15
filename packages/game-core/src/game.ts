@@ -341,6 +341,7 @@ export interface ActionResultBase {
 }
 
 export function craft(profile: ProfileSave, recipeId: string, nowMs: number, atCamp: boolean): ActionResultBase {
+  const craftCount = profile.player.lifetime.craftCount ?? 0;
   const attempt = startCraft({
     recipeId,
     camp: profile.player.camp,
@@ -348,6 +349,9 @@ export function craft(profile: ProfileSave, recipeId: string, nowMs: number, atC
     nowMs,
     atCamp,
     knownRecipes: profile.player.knownRecipes,
+    currentCraftJobsCount: profile.craftJobs.length,
+    totalCraftCount: craftCount,
+    artisanLevel: profile.player.artisanLevel ?? 1,
   });
 
   if (!attempt.ok) return { profile, ok: false, messageVi: attempt.reasonVi ?? 'Không chế tạo được.' };
@@ -369,10 +373,22 @@ export function collectCrafts(profile: ProfileSave, nowMs: number): ActionResult
     return { profile, ok: false, messageVi: 'Chưa có gì xong.', messagesVi: [] };
   }
 
+  const newCraftCount = (profile.player.lifetime.craftCount ?? 0) + jobs.craftedIds.length;
+  const newCraftedRecipeIds = Array.from(new Set([...profile.player.lifetime.craftedRecipeIds, ...jobs.craftedIds]));
+
   return {
     profile: {
       ...profile,
-      player: { ...profile.player, carried: jobs.inventory, camp: jobs.camp },
+      player: {
+        ...profile.player,
+        carried: jobs.inventory,
+        camp: jobs.camp,
+        lifetime: {
+          ...profile.player.lifetime,
+          craftCount: newCraftCount,
+          craftedRecipeIds: newCraftedRecipeIds,
+        },
+      },
       craftJobs: jobs.remaining,
     },
     ok: true,
@@ -841,7 +857,9 @@ function collectFinishedJobs(
       remaining.push(job);
       continue;
     }
-    const result = collectCraft(job.recipeId, job.readyAtMs, nowMs, inv, currentCamp);
+    const craftCount = profile.player.lifetime.craftCount ?? 0;
+    const artisanLevel = profile.player.artisanLevel ?? 1;
+    const result = collectCraft(job.recipeId, job.readyAtMs, nowMs, inv, currentCamp, craftCount, artisanLevel);
     if (result.ok) {
       inv = result.inventory;
       currentCamp = result.camp;

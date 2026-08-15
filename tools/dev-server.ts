@@ -103,15 +103,18 @@ const server = createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log('');
   console.log('  KỶ NGUYÊN HOANG CỔ — prototype offline');
   console.log('  ─────────────────────────────────────');
-  console.log(`  Mở:        http://localhost:${PORT}/`);
-  console.log(`  Thư mục:   ${ROOT}`);
-  console.log('  Dừng:      Ctrl+C');
+  console.log(`  Máy tính (Local):   http://localhost:${PORT}/`);
+  console.log(`  Điện thoại (LAN):   http://192.168.1.14:${PORT}/`);
+  console.log(`  Thư mục:            ${ROOT}`);
+  console.log('  Dừng:               Ctrl+C');
   console.log('');
-  console.log('  Lưu ý: server này CHỈ để phát triển. Game khi chạy không gọi mạng lần nào —');
-  console.log('  ngắt Wi-Fi sau khi tải xong trang, mọi thứ vẫn chạy đầy đủ.');
+  console.log('  👉 Cách test trên iOS (iPhone/iPad):');
+  console.log('     1. Mở Safari trên iPhone truy cập: http://192.168.1.14:5173/');
+  console.log('     2. Bấm nút Chia Sẻ (Share) -> "Thêm vào MH chính" (Add to Home Screen)');
+  console.log('     3. Mở từ Màn hình chính để chơi Full màn hình như App cài đặt thật!');
   console.log('');
 });

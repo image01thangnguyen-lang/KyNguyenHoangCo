@@ -15,7 +15,7 @@
     { "id": "iron_ingot",       "nameVi": "Thanh sắt",         "kind": "material", "stack": 100, "weight": 4 },
     { "id": "red_mushroom",     "nameVi": "Nấm đỏ",            "kind": "material", "stack": 50,  "weight": 1 },
     { "id": "seed",             "nameVi": "Hạt giống",         "kind": "material", "stack": 50,  "weight": 1 },
-    { "id": "ancient_coin",     "nameVi": "Đồng tiền cổ",      "kind": "material", "stack": 100, "weight": 1, "safe": true },
+    { "id": "ancient_coin",     "nameVi": "Đồng Vàng Cổ",      "kind": "material", "stack": 999, "weight": 0, "safe": true },
     { "id": "leather",          "nameVi": "Da thú dày",        "kind": "material", "stack": 100, "weight": 2 },
     { "id": "coal",             "nameVi": "Than đá",           "kind": "material", "stack": 200, "weight": 2 },
     { "id": "gold_ore",         "nameVi": "Quặng vàng",        "kind": "material", "stack": 100, "weight": 4, "safe": true },

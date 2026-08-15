@@ -8,10 +8,15 @@
     />
     <meta name="theme-color" content="#12100d" />
     <meta name="description" content="Kỷ Nguyên Hoang Cổ — game sinh tồn đi bộ, chơi hoàn toàn offline." />
+    <!-- Hỗ trợ WebApp Fullscreen & Icon trên iOS (iPhone / iPad) -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Hoang Cổ" />
+    <link rel="apple-touch-icon" href="./icon.svg" />
     <title>Kỷ Nguyên Hoang Cổ</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600;1,700&display=swap" rel="stylesheet" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
@@ -239,7 +244,7 @@
         </button>
       </nav>
 
-      <!-- Bộ mô phỏng bước chân: máy tính để bàn không có cảm biến -->
+      <!-- Bộ mô phỏng bước chân: máy tính để bàn không có cảm biến (Chỉ dùng cho Dev/PC) -->
       <div id="pedometer-panel" class="pedo">
         <div class="pedo__head">
           <strong id="pedo-source">Nguồn bước: —</strong>
@@ -257,9 +262,41 @@
             <button id="btn-tonight" class="btn btn--tiny">Tới 20h</button>
             <button id="btn-saturday" class="btn btn--tiny">Tới Trăng Máu</button>
           </label>
+          <div class="pedo__section" style="margin-top:8px;border-top:1px dashed rgba(255,255,255,0.15);padding-top:6px;">
+            <div style="font-size:0.75rem;font-weight:800;color:#fef08a;margin-bottom:4px;">📍 Dịch chuyển đến NPC gần nhất (Dev Demo):</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+              <button id="btn-tp-nearest-npc" class="btn btn--tiny btn--primary" style="grid-column: span 2;">🚀 Đến NPC gần nhất</button>
+              <button id="btn-tp-cafe" class="btn btn--tiny">☕ Quán Cà Phê</button>
+              <button id="btn-tp-teahouse" class="btn btn--tiny">🍵 Trà Quán Cổ</button>
+              <button id="btn-tp-market" class="btn btn--tiny">🏺 Tiệm Đồ Cổ</button>
+              <button id="btn-tp-restaurant" class="btn btn--tiny">🍲 Quán Ăn</button>
+            </div>
+          </div>
         </div>
       </div>
     </section>
+
+    <!-- Lớp phủ bắt buộc GPS thực tế trên thiết bị di động (APK Production) -->
+    <div id="overlay-gps-required" class="overlay overlay--gps" hidden>
+      <div class="card card--gps-required">
+        <div class="gps-icon-pulse">🛰️</div>
+        <h2 class="gps-title">YÊU CẦU ĐỊNH VỊ GPS THẬT</h2>
+        <p class="gps-desc">
+          <strong>Kỷ Nguyên Hoang Cổ</strong> là game sinh tồn thế giới thực tương tác dựa trên bước chân và vị trí GPS thực tế của bạn.
+        </p>
+        <div class="gps-alert-box" id="gps-status-text">
+          ⚠️ Chưa nhận được tín hiệu vệ tinh GPS. Vui lòng bật <strong>Vị trí (GPS)</strong> và <strong>cấp quyền Vị trí</strong> cho game để tiếp tục hành trình.
+        </div>
+        <div class="gps-actions">
+          <button id="btn-gps-grant-permission" class="btn btn--primary" style="width:100%;font-weight:800;margin-bottom:8px;">
+            ⚙️ Cấp Quyền & Bật Định Vị GPS
+          </button>
+          <button id="btn-gps-retry" class="btn" style="width:100%;">
+            🔄 Kiểm Tra Lại Tín Hiệu
+          </button>
+        </div>
+      </div>
+    </div>
 
     <!-- Lớp phủ: lời dẫn Lạc Lạc phong cách Visual Novel Điện Ảnh -->
     <div id="overlay-narration" class="overlay overlay--narration" hidden>
@@ -433,6 +470,138 @@
             <button id="btn-ar-capture" class="btn btn--primary ar-capture-btn">📸 Chụp Ảnh Kỷ Niệm</button>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Lớp phủ: Tiệm Mua Bán Thương Nhân NPC (NPC Merchant Shop) -->
+    <div id="overlay-merchant-shop" class="overlay" hidden>
+      <div class="card card--merchant-shop">
+        <div class="panel-head">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:1.5rem;">🏺</span>
+            <div>
+              <h2 style="margin:0;font-size:1.1rem;">Thương Nhân Hoang Cổ</h2>
+              <div id="merchant-poi-name" style="font-size:0.8rem;color:var(--gold-faint);">Tiệm Trao Đổi Tiền Sử</div>
+            </div>
+          </div>
+          <button id="btn-merchant-close" class="drawer-close" title="Đóng">✕</button>
+        </div>
+
+        <div class="merchant-gold-bar">
+          <span>Túi Tiền Của Bạn:</span>
+          <strong id="merchant-player-gold" class="merchant-gold-value">0 🪙</strong>
+        </div>
+
+        <div class="merchant-tabs">
+          <button id="btn-tab-merchant-buy" class="merchant-tab-btn is-active">🛒 Mua Hàng</button>
+          <button id="btn-tab-merchant-sell" class="merchant-tab-btn">💰 Bán Đồ (Đổi Lấy Vàng)</button>
+        </div>
+
+        <div id="merchant-buy-content" class="merchant-pane">
+          <div id="merchant-buy-list" class="merchant-item-grid"></div>
+        </div>
+
+        <div id="merchant-sell-content" class="merchant-pane" hidden>
+          <div id="merchant-sell-list" class="merchant-item-grid"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lớp phủ: Chi tiết Công Thức Chế Tạo (Craft Inspection Modal) -->
+    <div id="overlay-craft-inspect" class="overlay" hidden>
+      <div class="card card--craft-inspect">
+        <div class="panel-head">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div id="craft-inspect-icon" class="inspect-icon"></div>
+            <div>
+              <h2 id="craft-inspect-name" style="margin:0;font-size:1.15rem;color:#fef08a;">Tên Công Thức</h2>
+              <div id="craft-inspect-station" style="font-size:0.78rem;color:var(--gold-faint);margin-top:2px;">Trạm yêu cầu</div>
+            </div>
+          </div>
+          <button id="btn-craft-inspect-close" class="drawer-close" title="Đóng">✕</button>
+        </div>
+
+        <div class="craft-inspect-body">
+          <div id="craft-inspect-desc" class="inspect-desc">Mô tả sản phẩm tạo ra.</div>
+          
+          <div class="craft-needs-title" style="font-size:0.85rem;font-weight:700;color:var(--gold);margin:8px 0 4px 0;">Nguyên liệu cần có:</div>
+          <div id="craft-inspect-needs" class="craft-needs-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;"></div>
+
+          <div id="craft-inspect-meta" class="craft-meta-bar" style="display:flex;justify-content:space-between;background:rgba(0,0,0,0.35);padding:6px 10px;border-radius:6px;font-size:0.8rem;color:var(--ink-muted);border:1px solid rgba(255,255,255,0.06);">
+            <span id="craft-inspect-time">⏱️ 15 giây</span>
+            <span id="craft-inspect-tier">Cấp 1</span>
+          </div>
+        </div>
+
+        <button id="btn-craft-submit" class="btn btn--primary" style="width:100%;padding:10px;font-size:1rem;margin-top:10px;">🔨 Chế Tạo Ngay</button>
+      </div>
+    </div>
+
+    <!-- Lớp phủ: Chi tiết Vật Phẩm trong Túi (Item Inspection Sheet) -->
+    <div id="overlay-item-inspect" class="overlay" hidden>
+      <div class="card card--item-inspect">
+        <div class="panel-head">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div id="inspect-item-icon" class="inspect-icon"></div>
+            <div>
+              <h2 id="inspect-item-name" style="margin:0;font-size:1.15rem;color:#fef08a;">Tên Vật Phẩm</h2>
+              <span id="inspect-item-kind" class="chip chip--warn" style="font-size:0.75rem;">Phân loại</span>
+            </div>
+          </div>
+          <button id="btn-inspect-close" class="drawer-close" title="Đóng">✕</button>
+        </div>
+
+        <div class="inspect-body">
+          <p id="inspect-item-desc" class="inspect-desc">Mô tả công dụng chi tiết của vật phẩm.</p>
+          <div id="inspect-item-stats" class="inspect-stats"></div>
+          <div class="inspect-qty-bar">
+            <span>Số lượng đang mang:</span>
+            <strong id="inspect-item-qty" style="color:#fbbf24;font-size:1.1rem;">1</strong>
+          </div>
+        </div>
+
+        <div id="inspect-actions" class="inspect-actions"></div>
+      </div>
+    </div>
+
+    <!-- Lớp phủ: Xác nhận Giao Dịch Mua/Bán NPC -->
+    <div id="overlay-merchant-trade-confirm" class="overlay" hidden>
+      <div class="card card--merchant-trade-confirm">
+        <div class="panel-head">
+          <h2 id="trade-confirm-title">Xác Nhận Giao Dịch</h2>
+          <button id="btn-trade-confirm-close" class="drawer-close" title="Đóng">✕</button>
+        </div>
+        <div class="trade-confirm-body">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+            <div id="trade-item-icon" class="inspect-icon"></div>
+            <div>
+              <h3 id="trade-item-name" style="margin:0;color:#fef08a;">Tên Vật Phẩm</h3>
+              <div id="trade-item-desc" style="font-size:0.82rem;color:var(--ink-muted);">Mô tả</div>
+            </div>
+          </div>
+
+          <div class="trade-calc-box">
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+              <span>Đơn giá:</span>
+              <strong id="trade-unit-price" style="color:#fbbf24;">6 🪙</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <span>Số lượng:</span>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <button id="btn-trade-minus" class="btn btn--tiny">-</button>
+                <span id="trade-qty-value" style="font-weight:700;font-size:1.1rem;min-width:24px;text-align:center;">1</span>
+                <button id="btn-trade-plus" class="btn btn--tiny">+</button>
+                <button id="btn-trade-max" class="btn btn--tiny" style="font-size:0.75rem;">Max</button>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:space-between;border-top:1px solid rgba(255,255,255,0.1);padding-top:6px;font-size:1rem;">
+              <span>Tổng chi phí:</span>
+              <strong id="trade-total-gold" style="color:#fbbf24;font-size:1.2rem;">6 🪙</strong>
+            </div>
+          </div>
+        </div>
+
+        <button id="btn-trade-submit" class="btn btn--primary" style="width:100%;margin-top:12px;font-size:1rem;padding:10px;">Xác Nhận</button>
       </div>
     </div>
 

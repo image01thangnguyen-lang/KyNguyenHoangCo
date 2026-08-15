@@ -27,6 +27,153 @@ import type {
   StationId,
 } from './types.ts';
 
+export interface ArtisanRank {
+  level: number;
+  titleVi: string;
+  icon: string;
+  requiredCrafts: number;
+  nextCrafts: number | null;
+  upgradeCostGold: number;
+  maxConcurrentSlots: number;
+  speedMultiplier: number;
+  doubleOutputChance: number;
+  descVi: string;
+}
+
+export const ARTISAN_RANKS: ArtisanRank[] = [
+  {
+    level: 1,
+    titleVi: 'Thổ Dân Học Việc',
+    icon: '🪵',
+    requiredCrafts: 0,
+    nextCrafts: 8,
+    upgradeCostGold: 15,
+    maxConcurrentSlots: 1,
+    speedMultiplier: 1.0,
+    doubleOutputChance: 0.0,
+    descVi: 'Chế tác 1 món cùng lúc. Tốc độ tiêu chuẩn.',
+  },
+  {
+    level: 2,
+    titleVi: 'Thợ Thủ Công Hoang Cổ',
+    icon: '⚒️',
+    requiredCrafts: 8,
+    nextCrafts: 25,
+    upgradeCostGold: 45,
+    maxConcurrentSlots: 2,
+    speedMultiplier: 0.85,
+    doubleOutputChance: 0.05,
+    descVi: 'Chế tác 2 món cùng lúc. Nhanh hơn 15%. 5% tỉ lệ nhận x2 sản phẩm.',
+  },
+  {
+    level: 3,
+    titleVi: 'Nghệ Nhân Lành Nghề',
+    icon: '🏺',
+    requiredCrafts: 25,
+    nextCrafts: 60,
+    upgradeCostGold: 120,
+    maxConcurrentSlots: 3,
+    speedMultiplier: 0.7,
+    doubleOutputChance: 0.12,
+    descVi: 'Chế tác 3 món cùng lúc. Nhanh hơn 30%. 12% tỉ lệ nhận x2 sản phẩm.',
+  },
+  {
+    level: 4,
+    titleVi: 'Đại Sư Luyện Kim & Chế Tác',
+    icon: '👑',
+    requiredCrafts: 60,
+    nextCrafts: null,
+    upgradeCostGold: 0,
+    maxConcurrentSlots: 4,
+    speedMultiplier: 0.55,
+    doubleOutputChance: 0.25,
+    descVi: 'Chế tác 4 món cùng lúc. Nhanh hơn 45%. 25% tỉ lệ nhận x2 sản phẩm.',
+  },
+];
+
+export function getArtisanRank(craftCount = 0, explicitLevel = 1): ArtisanRank & {
+  currentCrafts: number;
+  progressPercent: number;
+  neededForNext: number;
+} {
+  let rankByCrafts = ARTISAN_RANKS[0];
+  for (let i = ARTISAN_RANKS.length - 1; i >= 0; i--) {
+    if (craftCount >= ARTISAN_RANKS[i].requiredCrafts) {
+      rankByCrafts = ARTISAN_RANKS[i];
+      break;
+    }
+  }
+
+  const effectiveLevel = Math.max(explicitLevel, rankByCrafts.level);
+  const rank = ARTISAN_RANKS[effectiveLevel - 1] ?? ARTISAN_RANKS[0];
+
+  let progressPercent = 100;
+  let neededForNext = 0;
+
+  if (rank.nextCrafts !== null) {
+    const prev = rank.requiredCrafts;
+    const next = rank.nextCrafts;
+    const current = Math.max(0, craftCount - prev);
+    const total = next - prev;
+    progressPercent = Math.min(100, Math.round((current / total) * 100));
+    neededForNext = Math.max(0, next - craftCount);
+  }
+
+  return {
+    ...rank,
+    currentCrafts: craftCount,
+    progressPercent,
+    neededForNext,
+  };
+}
+
+export interface ArtisanUpgradeResult {
+  ok: boolean;
+  messageVi: string;
+  player: PlayerState;
+  newLevel: number;
+}
+
+export function upgradeArtisanRankWithGold(player: PlayerState): ArtisanUpgradeResult {
+  const currentLevel = player.artisanLevel ?? 1;
+  if (currentLevel >= 4) {
+    return {
+      ok: false,
+      messageVi: 'Bạn đã đạt Cấp Bậc Tối Thượng — Đại Sư Luyện Kim & Chế Tác!',
+      player,
+      newLevel: currentLevel,
+    };
+  }
+
+  const currentRank = ARTISAN_RANKS[currentLevel - 1];
+  const nextRank = ARTISAN_RANKS[currentLevel];
+  const costGold = currentRank.upgradeCostGold;
+
+  const currentGold = countOf(player.carried, 'ancient_coin');
+  if (currentGold < costGold) {
+    return {
+      ok: false,
+      messageVi: `Chưa đủ Đồng Vàng Cổ để tấn phong lên "${nextRank.titleVi}" (Cần ${costGold} 🪙, hiện có ${currentGold} 🪙).`,
+      player,
+      newLevel: currentLevel,
+    };
+  }
+
+  const updatedCarried = removeItems(player.carried, [{ itemId: 'ancient_coin', qty: costGold }]);
+  const updatedPlayer: PlayerState = {
+    ...player,
+    carried: updatedCarried,
+    artisanLevel: currentLevel + 1,
+  };
+
+  return {
+    ok: true,
+    messageVi: `🎉 Tấn phong thành công! Bạn đã trở thành ${nextRank.titleVi} (${nextRank.maxConcurrentSlots} ô chế tạo, +${Math.round((1 - nextRank.speedMultiplier) * 100)}% tốc độ).`,
+    player: updatedPlayer,
+    newLevel: currentLevel + 1,
+  };
+}
+
 export function createCampState(nowMs: number, homeCell: string | null = null): CampState {
   return {
     level: 1,
@@ -45,6 +192,9 @@ export interface CraftContext {
   /** Người chơi phải ở trại mới dùng được công trình chế tạo (lửa trại, lò nung, lò rèn). */
   atCamp: boolean;
   knownRecipes?: string[];
+  currentCraftJobsCount?: number;
+  totalCraftCount?: number;
+  artisanLevel?: number;
 }
 
 /** Kiểm tra + trừ nguyên liệu. KHÔNG cộng sản phẩm — sản phẩm trả ở `collectCraft`. */
@@ -117,11 +267,25 @@ export function startCraft(ctx: CraftContext): CraftAttempt & { inventory: Inven
     return { ok: false, reasonVi: `Còn thiếu: ${missing}.`, inventory: ctx.inventory };
   }
 
+  // Kiểm tra giới hạn số ô chế tạo cùng lúc theo Cấp Bậc Thợ
+  const rank = getArtisanRank(ctx.totalCraftCount ?? 0, ctx.artisanLevel ?? 1);
+  if (ctx.currentCraftJobsCount !== undefined && ctx.currentCraftJobsCount >= rank.maxConcurrentSlots) {
+    const nextRank = rank.nextCrafts ? ARTISAN_RANKS[rank.level] : null;
+    return {
+      ok: false,
+      reasonVi: `Hàng đợi chế tác đã đầy (${ctx.currentCraftJobsCount}/${rank.maxConcurrentSlots} ô). Cần nâng cấp lên "${nextRank ? nextRank.titleVi : 'Cấp tối đa'}" hoặc đợi món đang làm xong!`,
+      inventory: ctx.inventory,
+    };
+  }
+
+  // Áp dụng tốc độ chế tác rút ngắn theo cấp bậc thợ
+  const durationSeconds = Math.max(1, Math.round(recipe.seconds * rank.speedMultiplier));
+
   return {
     ok: true,
     consumed: recipe.inputs,
     produced: { kind: recipe.outputKind, id: recipe.outputId, qty: recipe.outputQty },
-    readyAtMs: ctx.nowMs + recipe.seconds * 1000,
+    readyAtMs: ctx.nowMs + durationSeconds * 1000,
     inventory: removeItems(ctx.inventory, recipe.inputs),
   };
 }
@@ -132,6 +296,7 @@ export interface CollectResult {
   inventory: Inventory;
   camp: CampState;
   messageVi?: string;
+  isDoubleBonus?: boolean;
 }
 
 /** Thu sản phẩm sau khi hết thời gian chế tạo. */
@@ -141,6 +306,8 @@ export function collectCraft(
   nowMs: number,
   inventory: Inventory,
   camp: CampState,
+  totalCraftCount = 0,
+  artisanLevel = 1,
 ): CollectResult {
   if (nowMs < readyAtMs) {
     const secondsLeft = Math.ceil((readyAtMs - nowMs) / 1000);
@@ -148,13 +315,18 @@ export function collectCraft(
   }
 
   const recipe = getRecipe(recipeId);
+  const rank = getArtisanRank(totalCraftCount, artisanLevel);
+  const isDouble = Math.random() < rank.doubleOutputChance;
+  const finalQty = isDouble ? recipe.outputQty * 2 : recipe.outputQty;
 
   if (recipe.outputKind === 'item') {
+    const doubleMsg = isDouble ? ` ✨ [Đại Sư ${rank.titleVi}] Bạn may mắn nhận x2 sản phẩm (${finalQty} món)!` : '';
     return {
       ok: true,
-      inventory: addItems(inventory, [{ itemId: recipe.outputId, qty: recipe.outputQty }]),
+      inventory: addItems(inventory, [{ itemId: recipe.outputId, qty: finalQty }]),
       camp,
-      messageVi: `Đã chế tạo ${recipe.outputQty} ${recipe.nameVi}.`,
+      messageVi: `Đã chế tạo ${finalQty} ${recipe.nameVi}.${doubleMsg}`,
+      isDoubleBonus: isDouble,
     };
   }
 

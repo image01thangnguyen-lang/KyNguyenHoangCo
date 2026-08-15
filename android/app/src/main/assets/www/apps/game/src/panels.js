@@ -17,8 +17,13 @@ import {
   createInitialFarmPlots,
   getActiveLunarEvent,
   CHAPTERS,
+  NPC_SHOP_CATALOG,
+  ITEM_SELL_PRICES,
+  countOf,
+  getArtisanRank,
+  ARTISAN_RANKS,
 } from '../../../packages/game-core/src/index.js';
-import { actionIconSvg, itemIconSvg, zoneIconSvg } from './itemIcons.js';
+import { actionIconSvg, itemIconSvg, zoneIconSvg, coinIconSvg } from './itemIcons.js';
 import { audio } from './audio.js';
              
            
@@ -51,6 +56,7 @@ export function el                       (id        )    {
                                                        
                                        
                                          
+                            
                     
                       
                                                                                                      
@@ -200,12 +206,17 @@ export function renderZoneActions(view          , profile             , handlers
     bar.append(actionButton(action, () => handlers.onGather(action.id, poiId, zone), profile));
   }
 
-  if (zone === 'merchant') {
+  const insidePoi = view.location?.insidePoi;
+  const isMerchantZone = zone === 'merchant' || insidePoi?.zone === 'merchant';
+
+  if (isMerchantZone) {
+    const poiName = insidePoi ? insidePoi.nameVi : 'Thương Nhân Hoang Cổ';
     const button = document.createElement('button');
     button.className = 'btn btn--action';
+    button.style.borderColor = '#f59e0b';
     button.innerHTML = `
       <span class="action-btn__icon">${actionIconSvg('merchant_trade')}</span>
-      <div class="action-btn__body">Đổi hàng<small>1 lượt mỗi ngày</small></div>`;
+      <div class="action-btn__body">🏺 Tiệm ${poiName.slice(0, 16)}<small>Mua & bán với NPC</small></div>`;
     button.onclick = () => handlers.onTrade(-1, poiId);
     bar.append(button);
   }
@@ -260,21 +271,159 @@ function actionButton(action                 , onClick            , profile     
 
 // ---------------------------------------------------------------- chế tạo
 
+export function openCraftInspector(
+  entry            ,
+  profile             ,
+  handlers          ,
+)       {
+  const overlay = el('overlay-craft-inspect');
+  const iconEl = el('craft-inspect-icon');
+  const nameEl = el('craft-inspect-name');
+  const stationEl = el('craft-inspect-station');
+  const descEl = el('craft-inspect-desc');
+  const needsEl = el('craft-inspect-needs');
+  const timeEl = el('craft-inspect-time');
+  const tierEl = el('craft-inspect-tier');
+  const btnSubmit = el                   ('btn-craft-submit');
+  const btnClose = el('btn-craft-inspect-close');
+
+  const outputId = entry.recipe.outputId || entry.recipe.id;
+  const itemDef = findItem(outputId);
+  const rank = getArtisanRank(profile.player.lifetime.craftCount ?? 0, profile.player.artisanLevel ?? 1);
+  const isQueueFull = profile.craftJobs.length >= rank.maxConcurrentSlots;
+  const durationSec = Math.max(1, Math.round(entry.recipe.seconds * rank.speedMultiplier));
+
+  iconEl.innerHTML = itemIconSvg(outputId, 'inspect-svg');
+  nameEl.textContent = entry.recipe.nameVi;
+  
+  if (entry.recipe.station) {
+    const stationNames                         = {
+      campfire: '🔥 Lửa trại',
+      drying_rack: '🪵 Giá phơi',
+      kiln: '🧱 Lò nung',
+      forge: '⚒️ Lò rèn',
+    };
+    stationEl.textContent = `Yêu cầu trạm: ${stationNames[entry.recipe.station] ?? entry.recipe.station}`;
+  } else {
+    stationEl.textContent = '✨ Chế tạo tự do (Không cần trạm)';
+  }
+
+  descEl.textContent = (itemDef       )?.descVi || 'Công thức chế tạo sinh tồn thời kỳ hoang cổ.';
+  timeEl.textContent = `⏱️ ${formatDuration(durationSec)}${rank.speedMultiplier < 1 ? ` (⚡ -${Math.round((1 - rank.speedMultiplier) * 100)}% TG)` : ''}`;
+  tierEl.textContent = `Cấp ${entry.recipe.tier} (${getCampTier(entry.recipe.tier).nameVi})`;
+
+  // Danh sách nguyên liệu
+  needsEl.replaceChildren();
+  for (const input of entry.recipe.inputs) {
+    const inputDef = findItem(input.itemId);
+    const have = profile.player.carried[input.itemId] ?? 0;
+    const isMissing = have < input.qty;
+
+    const row = document.createElement('div');
+    row.style.cssText = `display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:6px;background:${isMissing ? 'rgba(239,68,68,0.12)' : 'rgba(16,185,129,0.12)'};border:1px solid ${isMissing ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.3)'};font-size:0.82rem;`;
+    row.innerHTML = `
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="width:20px;height:20px;display:flex;align-items:center;justify-content:center;">${itemIconSvg(input.itemId, 'mini-svg')}</span>
+        <strong style="color:${isMissing ? '#fca5a5' : '#86efac'};">${inputDef?.nameVi ?? input.itemId}</strong>
+      </div>
+      <span style="font-weight:700;color:${isMissing ? '#f87171' : '#4ade80'};">${have}/${input.qty}</span>
+    `;
+    needsEl.append(row);
+  }
+
+  if (entry.locked) {
+    btnSubmit.disabled = true;
+    btnSubmit.style.opacity = '0.5';
+    btnSubmit.style.cursor = 'not-allowed';
+    btnSubmit.textContent = `🔒 ${entry.lockReasonVi}`;
+  } else if (isQueueFull) {
+    btnSubmit.disabled = true;
+    btnSubmit.style.opacity = '0.5';
+    btnSubmit.style.cursor = 'not-allowed';
+    btnSubmit.textContent = `⚠️ Hàng đợi đã đầy (${profile.craftJobs.length}/${rank.maxConcurrentSlots} ô)`;
+  } else if (!entry.craftable) {
+    btnSubmit.disabled = true;
+    btnSubmit.style.opacity = '0.5';
+    btnSubmit.style.cursor = 'not-allowed';
+    btnSubmit.textContent = '❌ Chưa đủ nguyên liệu';
+  } else {
+    btnSubmit.disabled = false;
+    btnSubmit.style.opacity = '1';
+    btnSubmit.style.cursor = 'pointer';
+    btnSubmit.textContent = '🔨 Bắt Đầu Chế Tạo Ngay';
+    btnSubmit.onclick = () => {
+      handlers.onCraft(entry.recipe.id);
+      overlay.hidden = true;
+    };
+  }
+
+  btnClose.onclick = () => {
+    overlay.hidden = true;
+  };
+
+  overlay.hidden = false;
+}
+
 export function renderCraft(view          , profile             , handlers          , onlyCraftable         )       {
   const jobs = el('craft-jobs');
   jobs.replaceChildren();
+
+  // 1. Thẻ Cấp Bậc Thợ Thủ Công Hoang Cổ (Artisan Mastery Card)
+  const rank = getArtisanRank(profile.player.lifetime.craftCount ?? 0, profile.player.artisanLevel ?? 1);
+  const rankCard = document.createElement('div');
+  rankCard.className = 'artisan-rank-card';
+  rankCard.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:1.6rem;filter:drop-shadow(0 2px 6px rgba(245,158,11,0.5));">${rank.icon}</span>
+        <div>
+          <div style="font-size:0.95rem;font-weight:800;color:#fef08a;">Cấp ${rank.level}: ${rank.titleVi}</div>
+          <div style="font-size:0.75rem;color:var(--ink-dim);">${rank.descVi}</div>
+        </div>
+      </div>
+      <span class="chip chip--warn" style="font-size:0.72rem;padding:3px 8px;font-weight:700;">${profile.craftJobs.length}/${rank.maxConcurrentSlots} ô đang làm</span>
+    </div>
+    ${rank.nextCrafts ? `
+    <div style="margin-top:8px;">
+      <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--ink-dim);margin-bottom:3px;">
+        <span>Tiến độ lên <strong>${ARTISAN_RANKS[rank.level]?.titleVi}</strong></span>
+        <span>${rank.currentCrafts}/${rank.nextCrafts} lần (${rank.progressPercent}%)</span>
+      </div>
+      <div style="height:6px;background:rgba(0,0,0,0.5);border-radius:3px;overflow:hidden;border:1px solid rgba(255,255,255,0.08);">
+        <div style="height:100%;width:${rank.progressPercent}%;background:linear-gradient(90deg, #f59e0b, #10b981);border-radius:3px;transition:width 0.3s ease;"></div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);">
+      <span style="font-size:0.75rem;color:var(--ink-muted);">Dùng <strong>${rank.upgradeCostGold} ${coinIconSvg(14)}</strong> để tấn phong ngay</span>
+      <button class="btn btn--tiny btn--primary btn-artisan-upgrade" style="padding:4px 10px;font-size:0.75rem;display:inline-flex;align-items:center;gap:4px;">${coinIconSvg(14)} Tấn Phong (${rank.upgradeCostGold} ${coinIconSvg(12)})</button>
+    </div>
+    ` : `
+    <div style="font-size:0.72rem;color:#4ade80;margin-top:6px;font-weight:700;">👑 Đã đạt Cấp Bậc Tối Thượng — Đại Sư Hoang Cổ!</div>
+    `}
+  `;
+
+  rankCard.querySelector('.btn-artisan-upgrade')?.addEventListener('click', () => {
+    handlers.onUpgradeArtisan?.();
+  });
+
+  jobs.append(rankCard);
 
   for (const job of profile.craftJobs) {
     const ready = view.nowMs >= job.readyAtMs;
     const row = document.createElement('div');
     row.className = `row${ready ? ' is-ready' : ''}`;
     const seconds = Math.max(0, Math.ceil((job.readyAtMs - view.nowMs) / 1000));
-    row.innerHTML = `<div class="row__body"><div class="row__title">${nameOfRecipe(view, job.recipeId)}</div><div class="row__sub">${ready ? 'Xong — bấm để thu' : `còn ${formatDuration(seconds)}`}</div></div>`;
+    row.innerHTML = `
+      <div class="row__body">
+        <div class="row__title">${nameOfRecipe(view, job.recipeId)}</div>
+        <div class="row__sub">${ready ? '✨ Xong — bấm để thu sản phẩm' : `⏱️ Đang chế tác (còn ${formatDuration(seconds)})`}</div>
+      </div>
+    `;
 
     if (ready) {
       const button = document.createElement('button');
-      button.className = 'btn btn--tiny';
-      button.textContent = 'Thu';
+      button.className = 'btn btn--tiny btn--primary';
+      button.textContent = 'Thu nhận';
       button.onclick = handlers.onCollectCrafts;
       row.append(button);
     }
@@ -301,67 +450,42 @@ export function renderCraft(view          , profile             , handlers      
     heading.textContent = `Cấp ${tier} — ${getCampTier(tier).nameVi}`;
     list.append(heading);
 
-    for (const entry of entries) list.append(recipeRow(entry, profile, handlers));
+    const grid = document.createElement('div');
+    grid.className = 'craft-slot-grid';
+
+    for (const entry of entries) {
+      const outputId = entry.recipe.outputId || entry.recipe.id;
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = `craft-slot-card${entry.locked ? ' is-locked' : entry.craftable ? ' is-craftable' : ' is-missing'}`;
+      
+      const badgeText = entry.locked
+        ? '🔒 Khoá'
+        : entry.craftable
+        ? '✨ Làm được'
+        : 'Thiếu NL';
+
+      card.innerHTML = `
+        <div class="craft-slot-icon">${itemIconSvg(outputId, 'card-svg')}</div>
+        <div class="craft-slot-title">${entry.recipe.nameVi}</div>
+        <span class="craft-slot-badge ${entry.locked ? 'badge-locked' : entry.craftable ? 'badge-craftable' : 'badge-missing'}">${badgeText}</span>
+      `;
+
+      card.onclick = () => openCraftInspector(entry, profile, handlers);
+      grid.append(card);
+    }
+
+    list.append(grid);
   }
 
   if (!list.children.length) {
     const empty = document.createElement('p');
     empty.className = 'fineprint';
-    empty.textContent = 'Chưa đủ nguyên liệu cho công thức nào. Đi bộ thêm một vòng đi.';
+    empty.style.textAlign = 'center';
+    empty.style.padding = '24px 0';
+    empty.textContent = 'Chưa đủ nguyên liệu cho công thức nào. Hãy đi bộ khám phá xung quanh để nhặt thêm tài nguyên!';
     list.append(empty);
   }
-}
-
-function recipeRow(entry            , profile             , handlers          )              {
-  const row = document.createElement('div');
-  row.className = `row row--recipe${entry.locked ? ' is-locked' : ''}`;
-
-  const outputId = entry.recipe.outputId || entry.recipe.id;
-  const badgesHtml           = [];
-
-  if (entry.locked) {
-    badgesHtml.push(`<span class="need-badge is-missing">${entry.lockReasonVi}</span>`);
-  } else {
-    for (const input of entry.recipe.inputs) {
-      const item = findItem(input.itemId);
-      const have = profile.player.carried[input.itemId] ?? 0;
-      const isMissing = have < input.qty;
-      badgesHtml.push(
-        `<span class="need-badge ${isMissing ? 'is-missing' : 'is-met'}">${itemIconSvg(input.itemId, 'mini-svg')} ${input.qty} ${item?.nameVi ?? input.itemId}${isMissing ? ` (${have}/${input.qty})` : ''}</span>`,
-      );
-    }
-
-    if (entry.recipe.station) {
-      const stationNames                         = {
-        campfire: 'Lửa trại',
-        drying_rack: 'Giá phơi',
-        kiln: 'Lò nung',
-        forge: 'Lò rèn',
-      };
-      const sName = stationNames[entry.recipe.station] ?? entry.recipe.station;
-      badgesHtml.push(
-        `<span class="station-badge">${itemIconSvg(entry.recipe.station, 'mini-svg')} Cần ${sName}</span>`,
-      );
-    }
-
-    badgesHtml.push(`<span class="time-badge">⏱️ ${formatDuration(entry.recipe.seconds)}</span>`);
-  }
-
-  row.innerHTML = `
-    <div class="recipe__icon">${itemIconSvg(outputId)}</div>
-    <div class="row__body">
-      <div class="row__title">${entry.recipe.nameVi}</div>
-      <div class="recipe__badges">${badgesHtml.join('')}</div>
-    </div>`;
-
-  const button = document.createElement('button');
-  button.className = 'btn btn--tiny';
-  button.textContent = 'Làm';
-  button.disabled = !entry.craftable;
-  button.onclick = () => handlers.onCraft(entry.recipe.id);
-  row.append(button);
-
-  return row;
 }
 
 function nameOfRecipe(view          , recipeId        )         {
@@ -688,6 +812,109 @@ function renderFarming(view          , profile             , handlers          )
   box.append(grid);
 }
 
+export function openItemInspector(
+  itemId        ,
+  qty        ,
+  isCarried         ,
+  handlers          ,
+)       {
+  const overlay = el('overlay-item-inspect');
+  const iconEl = el('inspect-item-icon');
+  const nameEl = el('inspect-item-name');
+  const kindEl = el('inspect-item-kind');
+  const descEl = el('inspect-item-desc');
+  const statsEl = el('inspect-item-stats');
+  const qtyEl = el('inspect-item-qty');
+  const actionsEl = el('inspect-actions');
+
+  const item = getItem(itemId       );
+  if (!item) return;
+
+  iconEl.innerHTML = itemIconSvg(itemId       , 'inspect-svg');
+  nameEl.textContent = item.nameVi;
+  kindEl.textContent =
+    item.kind === 'food'
+      ? '🍖 Thực Phẩm'
+      : item.kind === 'drink'
+      ? '💧 Nước Uống'
+      : item.kind === 'consumable'
+      ? '💊 Dược Phẩm'
+      : item.kind === 'tool'
+      ? '🪓 Công Cụ'
+      : item.kind === 'weapon'
+      ? '⚔️ Vũ Khí'
+      : item.kind === 'armor'
+      ? '🛡️ Giáp / Khiên'
+      : item.kind === 'deployable'
+      ? '🪤 Bẫy Đặt'
+      : '📦 Nguyên Liệu';
+
+  descEl.textContent = (item       ).descVi || 'Vật phẩm sinh tồn trong Kỷ Nguyên Hoang Cổ.';
+  qtyEl.textContent = `${qty.toLocaleString('vi-VN')} món`;
+
+  // Thống kê
+  const statsList           = [];
+  if (item.satiety) statsList.push(`🍖 Hồi độ no: +${item.satiety}`);
+  if (item.hydration) statsList.push(`💧 Hồi độ khát: +${item.hydration}`);
+  if (item.hp) statsList.push(`❤️ Hồi thể lực: +${item.hp} HP`);
+  if (item.attack) statsList.push(`⚔️ Sát thương: ${item.attack} ATK`);
+  if (item.defense) statsList.push(`🛡️ Phòng thủ: +${item.defense} DEF`);
+  if (item.durability) statsList.push(`🔨 Độ bền: ${item.durability} lần`);
+  if (item.chopBonus) statsList.push(`🪵 Tốc độ chặt gỗ: x${item.chopBonus}`);
+  if (item.curesSickness) statsList.push(`✨ Chữa khỏi hoàn toàn bệnh tật`);
+  if (item.raw) statsList.push(`⚠️ Đồ sống: Ăn có nguy cơ đau bụng!`);
+  if (item.infectionRisk) statsList.push(`⚠️ 40% nguy cơ nhiễm khuẩn!`);
+  if (item.safe) statsList.push(`🔒 Bảo hộ: Không rơi khi ngất/thua đêm!`);
+
+  statsEl.innerHTML = statsList.length
+    ? statsList.map((s) => `<div class="inspect-stat-badge">${s}</div>`).join('')
+    : '';
+
+  // Hành động
+  actionsEl.replaceChildren();
+
+  const edible = item.kind === 'food' || item.kind === 'drink' || item.kind === 'consumable';
+  if (isCarried && edible) {
+    const useBtn = document.createElement('button');
+    useBtn.className = 'btn btn--primary';
+    useBtn.textContent = item.kind === 'drink' ? '💧 Uống Ngay' : '🍖 Ăn / Dùng';
+    useBtn.onclick = () => {
+      handlers.onConsume(itemId);
+      overlay.hidden = true;
+    };
+    actionsEl.append(useBtn);
+  }
+
+  const isTrap = itemId === 'rabbit_trap' || itemId === 'deer_trap' || itemId === 'beast_trap';
+  if (isCarried && isTrap) {
+    const trapBtn = document.createElement('button');
+    trapBtn.className = 'btn btn--primary';
+    trapBtn.textContent = '🪤 Đặt Bẫy Tại Tọa Độ GPS Này';
+    trapBtn.onclick = () => {
+      handlers.onPlaceTrap(itemId       );
+      overlay.hidden = true;
+    };
+    actionsEl.append(trapBtn);
+  }
+
+  if (isCarried) {
+    const storeBtn = document.createElement('button');
+    storeBtn.className = 'btn btn--ghost';
+    storeBtn.textContent = '📦 Cất Vào Két An Toàn';
+    storeBtn.onclick = () => {
+      handlers.onStoreSafe(itemId, qty);
+      overlay.hidden = true;
+    };
+    actionsEl.append(storeBtn);
+  }
+
+  el('btn-inspect-close').onclick = () => {
+    overlay.hidden = true;
+  };
+
+  overlay.hidden = false;
+}
+
 function renderInventory(
   containerId        ,
   inventory                        ,
@@ -695,6 +922,7 @@ function renderInventory(
   carried         ,
 )       {
   const box = el(containerId);
+  box.className = 'inventory-grid';
   box.replaceChildren();
 
   const entries = Object.entries(inventory).filter(([, qty]) => qty > 0);
@@ -704,34 +932,29 @@ function renderInventory(
     const item = findItem(itemId);
     if (!item) continue;
 
-    const card = document.createElement('div');
-    card.className = `item item--${item.kind}`;
-    card.innerHTML = `
-      <div class="item__top">
-        <div class="item__icon">${itemIconSvg(itemId)}</div>
-        <div class="item__meta"><strong>${item.nameVi}</strong><span>×${qty}</span></div>
-      </div>`;
+    const slot = document.createElement('button');
+    slot.type = 'button';
+    slot.className = `slot-card slot-card--${item.kind}${item.safe ? ' slot-card--safe' : ''}`;
+    slot.title = `${item.nameVi} (×${qty})`;
+    slot.innerHTML = `
+      <div class="slot-card__icon">${itemIconSvg(itemId, 'slot-svg')}</div>
+      <span class="slot-card__badge">×${qty}</span>
+    `;
+    slot.onclick = () => openItemInspector(itemId, qty, carried, handlers);
+    box.append(slot);
+  }
 
-    if (carried) {
-      const edible = item.kind === 'food' || item.kind === 'drink' || item.kind === 'consumable';
-      if (edible) {
-        const use = document.createElement('button');
-        use.textContent = item.kind === 'drink' ? 'Uống' : 'Dùng';
-        use.onclick = () => handlers.onConsume(itemId);
-        card.append(use);
-      }
-      const store = document.createElement('button');
-      store.textContent = 'Cất vào két';
-      store.onclick = () => handlers.onStoreSafe(itemId, qty);
-      card.append(store);
-    }
-
-    box.append(card);
+  const minSlots = Math.max(12, Math.ceil(entries.length / 4) * 4);
+  for (let i = entries.length; i < minSlots; i++) {
+    const emptySlot = document.createElement('div');
+    emptySlot.className = 'slot-card slot-card--empty';
+    box.append(emptySlot);
   }
 }
 
 export function renderBagPanel(profile             , handlers          )       {
   const box = el('inv-bag');
+  box.className = 'inventory-grid';
   box.replaceChildren();
 
   const inventory = profile.player.carried ?? {};
@@ -749,7 +972,10 @@ export function renderBagPanel(profile             , handlers          )       {
   if (entries.length === 0) {
     const empty = document.createElement('p');
     empty.className = 'fineprint';
-    empty.textContent = 'Túi đồ đang trống. Hãy đi bộ để nhặt tài nguyên hoặc thực hiện các hành động thu lượm / chế tạo!';
+    empty.style.gridColumn = '1 / -1';
+    empty.style.textAlign = 'center';
+    empty.style.padding = '24px 0';
+    empty.textContent = 'Túi đồ đang trống. Hãy đi bộ khám phá xung quanh để thu thập tài nguyên!';
     box.append(empty);
     return;
   }
@@ -758,37 +984,23 @@ export function renderBagPanel(profile             , handlers          )       {
     const item = findItem(itemId);
     if (!item) continue;
 
-    const card = document.createElement('div');
-    card.className = `item item--${item.kind}`;
-    card.innerHTML = `
-      <div class="item__top">
-        <div class="item__icon">${itemIconSvg(itemId)}</div>
-        <div class="item__meta">
-          <strong>${item.nameVi}</strong>
-          <span>×${qty}</span>
-        </div>
-      </div>
-      <div class="item__desc">${item.descVi ?? ''}</div>`;
+    const slot = document.createElement('button');
+    slot.type = 'button';
+    slot.className = `slot-card slot-card--${item.kind}${item.safe ? ' slot-card--safe' : ''}`;
+    slot.title = `${item.nameVi} (×${qty})`;
+    slot.innerHTML = `
+      <div class="slot-card__icon">${itemIconSvg(itemId, 'slot-svg')}</div>
+      <span class="slot-card__badge">×${qty}</span>
+    `;
+    slot.onclick = () => openItemInspector(itemId, qty, true, handlers);
+    box.append(slot);
+  }
 
-    const edible = item.kind === 'food' || item.kind === 'drink' || item.kind === 'consumable';
-    if (edible) {
-      const use = document.createElement('button');
-      use.className = 'btn btn--tiny btn--primary';
-      use.textContent = item.kind === 'drink' ? 'Uống' : 'Ăn / Dùng';
-      use.onclick = () => handlers.onConsume(itemId);
-      card.append(use);
-    }
-
-    const isTrap = itemId === 'rabbit_trap' || itemId === 'deer_trap' || itemId === 'beast_trap';
-    if (isTrap) {
-      const trapBtn = document.createElement('button');
-      trapBtn.className = 'btn btn--tiny btn--primary';
-      trapBtn.textContent = '🪤 Đặt Bẫy Tại Đây';
-      trapBtn.onclick = () => handlers.onPlaceTrap(itemId                                              );
-      card.append(trapBtn);
-    }
-
-    box.append(card);
+  const minSlots = Math.max(16, Math.ceil(entries.length / 4) * 4);
+  for (let i = entries.length; i < minSlots; i++) {
+    const emptySlot = document.createElement('div');
+    emptySlot.className = 'slot-card slot-card--empty';
+    box.append(emptySlot);
   }
 }
 
@@ -1061,6 +1273,201 @@ export function formatDuration(seconds        )         {
   if (seconds < 3600) return `${Math.ceil(seconds / 60)}′`;
   const hours = seconds / 3600;
   return hours < 24 ? `${hours.toFixed(1)} giờ` : `${Math.round(hours / 24)} ngày`;
+}
+
+export function openTradeConfirm(
+  item                                                                                                       ,
+  onSubmit                       ,
+)       {
+  const overlay = el('overlay-merchant-trade-confirm');
+  const titleEl = el('trade-confirm-title');
+  const iconEl = el('trade-item-icon');
+  const nameEl = el('trade-item-name');
+  const descEl = el('trade-item-desc');
+  const unitPriceEl = el('trade-unit-price');
+  const qtyValEl = el('trade-qty-value');
+  const totalGoldEl = el('trade-total-gold');
+  const btnSubmit = el('btn-trade-submit');
+  const btnMinus = el('btn-trade-minus');
+  const btnPlus = el('btn-trade-plus');
+  const btnMax = el('btn-trade-max');
+  const btnClose = el('btn-trade-confirm-close');
+
+  let currentQty = 1;
+  const max = Math.max(1, item.maxQty);
+
+  titleEl.textContent = item.isBuy ? '🛒 Mua Hàng Hoá' : '💰 Bán Vật Phẩm';
+  iconEl.innerHTML = itemIconSvg(item.itemId       , 'inspect-svg');
+  nameEl.textContent = item.nameVi;
+  descEl.textContent = item.descVi;
+  unitPriceEl.innerHTML = `${item.unitPrice} ${coinIconSvg(15)}`;
+
+  function updateTradeCalc() {
+    qtyValEl.textContent = String(currentQty);
+    const total = currentQty * item.unitPrice;
+    totalGoldEl.innerHTML = item.isBuy ? `${total} ${coinIconSvg(16)}` : `+${total} ${coinIconSvg(16)}`;
+    btnSubmit.innerHTML = item.isBuy
+      ? `Xác Nhận Mua (-${total} ${coinIconSvg(14)})`
+      : `Xác Nhận Bán (+${total} ${coinIconSvg(14)})`;
+  }
+
+  btnMinus.onclick = () => {
+    if (currentQty > 1) {
+      currentQty--;
+      updateTradeCalc();
+    }
+  };
+
+  btnPlus.onclick = () => {
+    if (currentQty < max) {
+      currentQty++;
+      updateTradeCalc();
+    }
+  };
+
+  btnMax.onclick = () => {
+    currentQty = max;
+    updateTradeCalc();
+  };
+
+  btnSubmit.onclick = () => {
+    onSubmit(currentQty);
+    overlay.hidden = true;
+  };
+
+  btnClose.onclick = () => {
+    overlay.hidden = true;
+  };
+
+  updateTradeCalc();
+  overlay.hidden = false;
+}
+
+export function renderMerchantShop(
+  profile             ,
+  poiName        ,
+  onBuy                                            ,
+  onSell                                       ,
+)       {
+  const overlay = el('overlay-merchant-shop');
+  const poiNameEl = el('merchant-poi-name');
+  const goldEl = el('merchant-player-gold');
+  const buyList = el('merchant-buy-list');
+  const sellList = el('merchant-sell-list');
+
+  const currentGold = countOf(profile.player.carried, 'ancient_coin');
+  poiNameEl.textContent = poiName || 'Tiệm Trao Đổi Tiền Sử';
+  goldEl.innerHTML = `${currentGold.toLocaleString('vi-VN')} ${coinIconSvg(18)}`;
+
+  // 1. Render Danh Sách Mua dạng Ô Vuông Grid
+  buyList.className = 'merchant-slot-grid';
+  buyList.replaceChildren();
+  for (const item of NPC_SHOP_CATALOG) {
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'merchant-slot-card';
+    const canAfford = currentGold >= item.priceGold;
+    if (!canAfford) card.classList.add('is-unaffordable');
+    
+    card.innerHTML = `
+      <div class="merchant-slot-icon">${itemIconSvg(item.itemId, 'card-svg')}</div>
+      <div class="merchant-slot-title">${item.qty > 1 ? `${item.qty}x ` : ''}${item.nameVi}</div>
+      <span class="merchant-slot-price">${item.priceGold} ${coinIconSvg(13)}</span>
+    `;
+
+    card.onclick = () => {
+      const maxAffordable = Math.floor(currentGold / item.priceGold);
+      openTradeConfirm(
+        {
+          nameVi: `${item.qty > 1 ? `${item.qty}x ` : ''}${item.nameVi}`,
+          descVi: item.descVi,
+          itemId: item.itemId,
+          unitPrice: item.priceGold,
+          maxQty: Math.max(1, maxAffordable),
+          isBuy: true,
+        },
+        (qty) => {
+          onBuy(item.id, qty);
+        }
+      );
+    };
+
+    buyList.append(card);
+  }
+
+  // 2. Render Danh Sách Bán dạng Ô Vuông Grid
+  sellList.className = 'merchant-slot-grid';
+  sellList.replaceChildren();
+  let hasSellable = false;
+
+  for (const [itemId, qty] of Object.entries(profile.player.carried)) {
+    if (itemId === 'ancient_coin' || qty <= 0) continue;
+    const unitPrice = ITEM_SELL_PRICES[itemId];
+    if (!unitPrice) continue;
+
+    hasSellable = true;
+    const itemDef = getItem(itemId       );
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'merchant-slot-card';
+
+    card.innerHTML = `
+      <div class="merchant-slot-icon">${itemIconSvg(itemId       , 'card-svg')}</div>
+      <div class="merchant-slot-title">${itemDef?.nameVi || itemId}</div>
+      <div class="merchant-slot-have">Có: ${qty}</div>
+      <span class="merchant-slot-price is-sell">+${unitPrice} ${coinIconSvg(13)}</span>
+    `;
+
+    card.onclick = () => {
+      openTradeConfirm(
+        {
+          nameVi: itemDef?.nameVi || itemId,
+          descVi: (itemDef       )?.descVi || 'Nguyên liệu thu thập mang bán.',
+          itemId: itemId,
+          unitPrice: unitPrice,
+          maxQty: qty,
+          isBuy: false,
+        },
+        (chosenQty) => {
+          onSell(itemId, chosenQty);
+        }
+      );
+    };
+
+    sellList.append(card);
+  }
+
+  if (!hasSellable) {
+    const emptyNotice = document.createElement('p');
+    emptyNotice.className = 'fineprint';
+    emptyNotice.style.gridColumn = '1 / -1';
+    emptyNotice.style.textAlign = 'center';
+    emptyNotice.style.padding = '24px 0';
+    emptyNotice.textContent = 'Bạn không có vật phẩm nào có thể bán trong túi đồ lúc này.';
+    sellList.append(emptyNotice);
+  }
+
+  // Tab switching
+  const tabBuyBtn = el('btn-tab-merchant-buy');
+  const tabSellBtn = el('btn-tab-merchant-sell');
+  const buyContent = el('merchant-buy-content');
+  const sellContent = el('merchant-sell-content');
+
+  tabBuyBtn.onclick = () => {
+    tabBuyBtn.classList.add('is-active');
+    tabSellBtn.classList.remove('is-active');
+    buyContent.hidden = false;
+    sellContent.hidden = true;
+  };
+
+  tabSellBtn.onclick = () => {
+    tabSellBtn.classList.add('is-active');
+    tabBuyBtn.classList.remove('is-active');
+    buyContent.hidden = true;
+    sellContent.hidden = false;
+  };
+
+  overlay.hidden = false;
 }
 
 export { describeInventory };

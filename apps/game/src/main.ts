@@ -73,6 +73,7 @@ import {
   startCoopBattle,
   processCoopRound,
   resolveCoopRewards,
+  upgradeArtisanRankWithGold,
 } from '../../../packages/game-core/src/index.ts';
 import type {
   DifficultyId,
@@ -83,6 +84,8 @@ import type {
   SaveFile,
   StoryBeat,
   CoopRoom,
+  buyItemFromNpc,
+  sellItemToNpc,
 } from '../../../packages/game-core/src/index.ts';
 
 import { MapView, featureAtPoint } from './mapView.ts';
@@ -110,6 +113,7 @@ import {
   renderSettings,
   renderZoneActions,
   renderZonePanel,
+  renderMerchantShop,
   toast,
 } from './panels.ts';
 import type { Handlers } from './panels.ts';
@@ -269,6 +273,15 @@ function getHomeCampCenter(): LatLon | null {
 }
 
 let smoothRenderPos: LatLon | null = null;
+let devMockPosition: LatLon | null = null;
+
+export function isNativeApk(): boolean {
+  return (
+    typeof (globalThis as any).AndroidBridge !== 'undefined' ||
+    navigator.userAgent.includes('KyNguyenHoangCo') ||
+    (globalThis as any).__IS_APK__ === true
+  );
+}
 
 /** Vị trí dùng để tính toán & vẽ: GPS thật với nội suy êm dịu 60 FPS khi người chơi bước đi. */
 function currentPosition(): { position: LatLon | null; render: LatLon; hasFix: boolean } {
@@ -279,9 +292,13 @@ function currentPosition(): { position: LatLon | null; render: LatLon; hasFix: b
   if (state?.position && geo?.hasFreshFix()) {
     targetPos = state.position;
     hasFix = true;
+  } else if (!isNativeApk() && devMockPosition) {
+    targetPos = devMockPosition;
+    hasFix = true;
   } else {
     const steps = app.profile?.player?.lifetime?.steps ?? 0;
     targetPos = steps > 0 ? simulatedWalk(FALLBACK_POSITION, steps) : FALLBACK_POSITION;
+    hasFix = !isNativeApk();
   }
 
   if (!smoothRenderPos) {
@@ -293,7 +310,7 @@ function currentPosition(): { position: LatLon | null; render: LatLon; hasFix: b
   }
 
   return {
-    position: targetPos,
+    position: isNativeApk() ? (hasFix ? targetPos : null) : targetPos,
     render: smoothRenderPos,
     hasFix,
   };
@@ -316,6 +333,7 @@ function boot(): void {
 
   renderProfileScreen();
   wireStaticControls();
+  checkGpsRequirement();
   registerServiceWorker();
 }
 
@@ -418,6 +436,21 @@ function enterProfile(slot: number): void {
         toast(result.messageVi, 'bad');
       }
     };
+    mapView.onFeatureClick = (feat) => {
+      if (!app.profile) return;
+      const { render: playerAt } = currentPosition();
+      const dist = Math.round(distanceMeters(playerAt, { lat: feat.lat, lon: feat.lon }));
+      const radius = Math.max(feat.radiusMeters || 0, 60);
+
+      // Nếu đang trong phạm vi 60m: Mở ngay Tiệm Thương Nhân NPC
+      if (dist <= radius) {
+        audio.play('click');
+        openMerchantStore(feat.nameVi);
+        return;
+      }
+
+      toast(`📍 ${feat.nameVi} cách bạn ${dist}m. Hãy đi bộ tới gần (≤${radius}m) để gặp NPC mua bán & trao đổi!`);
+    };
     globalThis.addEventListener('resize', () => mapView?.resize());
   }
   mapView.resize();
@@ -450,11 +483,67 @@ function enterProfile(slot: number): void {
     el('overlay-set-home').hidden = false;
   }
 
+  // Nút đóng Tiệm Thương Nhân NPC
+  el('btn-merchant-close').onclick = () => {
+    el('overlay-merchant-shop').hidden = true;
+  };
+
   const { render: at } = currentPosition();
   spawnSingleWorldDropNear(at, app.view?.location?.zone ?? 'wilderness');
 
   sync();
   startLoops();
+}
+
+function openMerchantStore(poiName?: string): void {
+  if (!app.profile) return;
+  const currentPoi = poiName || app.view?.location?.insidePoi?.poi.nameVi || 'Tiệm Trao Đổi Tiền Sử';
+
+  renderMerchantShop(
+    app.profile,
+    currentPoi,
+    (shopItemId, qty = 1) => {
+      if (!app.profile) return;
+      let lastMsg = '';
+      let successCount = 0;
+      for (let i = 0; i < qty; i++) {
+        const res = buyItemFromNpc(app.profile.player, shopItemId);
+        if (res.success) {
+          app.profile.player = res.player;
+          successCount++;
+          lastMsg = res.messageVi;
+        } else {
+          lastMsg = res.messageVi;
+          break;
+        }
+      }
+      if (successCount > 0) {
+        audio.play('pickup');
+        toast(successCount > 1 ? `Đã mua thành công ${successCount} lượt!` : lastMsg, 'good');
+        if (app.profile.settings.haptics) buzz(20);
+        persist();
+        render();
+        openMerchantStore(currentPoi);
+      } else {
+        toast(lastMsg, 'bad');
+      }
+    },
+    (itemId, qty) => {
+      if (!app.profile) return;
+      const res = sellItemToNpc(app.profile.player, itemId as any, qty);
+      if (res.success) {
+        app.profile.player = res.player;
+        audio.play('pickup');
+        toast(res.messageVi, 'good');
+        if (app.profile.settings.haptics) buzz(20);
+        persist();
+        render();
+        openMerchantStore(currentPoi);
+      } else {
+        toast(res.messageVi, 'bad');
+      }
+    },
+  );
 }
 
 // ---------------------------------------------------------------- vòng đồng bộ
@@ -466,10 +555,21 @@ function startLoops(): void {
   if (syncTimer) clearInterval(syncTimer);
   syncTimer = setInterval(() => sync(), 5000);
 
-  const frame = () => {
+  let lastFrameTime = 0;
+  // Giới hạn nhịp render ổn định 35 FPS trên thiết bị di động để giữ máy mượt mà và tiết kiệm pin
+  const targetFps = 35;
+  const frameInterval = 1000 / targetFps;
+
+  const frame = (timestamp: number) => {
+    rafHandle = requestAnimationFrame(frame);
+    if (document.hidden) return;
+
+    const elapsed = timestamp - lastFrameTime;
+    if (elapsed < frameInterval) return;
+    lastFrameTime = timestamp - (elapsed % frameInterval);
+
     app.simTick++;
     drawMap();
-    rafHandle = requestAnimationFrame(frame);
   };
   cancelAnimationFrame(rafHandle);
   rafHandle = requestAnimationFrame(frame);
@@ -485,6 +585,8 @@ function startLoops(): void {
  */
 function sync(): void {
   if (!app.profile) return;
+
+  checkGpsRequirement();
 
   const steps = pedometer.drain();
   const { position } = currentPosition();
@@ -562,16 +664,6 @@ function sync(): void {
     now(),
     isRaining,
   );
-
-  // Cập nhật nhạc nền Ambient theo thời gian & sự kiện
-  const ambientMood = app.view.bloodMoon.active
-    ? 'bloodmoon'
-    : app.view.phase === 'night'
-      ? 'night'
-      : app.view.phase === 'evening'
-        ? 'evening'
-        : 'day';
-  audio.setAmbientMood(ambientMood);
 
   persist();
   render();
@@ -789,6 +881,22 @@ const handlers: Handlers = {
     afterAction();
   },
 
+  onUpgradeArtisan() {
+    if (!app.profile) return;
+    const result = upgradeArtisanRankWithGold(app.profile.player);
+    if (result.ok) {
+      app.profile = {
+        ...app.profile,
+        player: result.player,
+      };
+      toast(result.messageVi, 'good');
+      audio.play('quest_complete');
+    } else {
+      toast(result.messageVi, 'bad');
+    }
+    afterAction();
+  },
+
   onConsume(itemId) {
     if (!app.profile) return;
     const result = consume(app.profile, itemId, now());
@@ -840,6 +948,13 @@ const handlers: Handlers = {
     };
 
     const action = findAction(actionId);
+
+    if (actionId === 'merchant_trade') {
+      const poiName = app.view?.location?.insidePoi?.poi.nameVi || 'Tiệm Trao Đổi Tiền Sử';
+      openMerchantStore(poiName);
+      return;
+    }
+
     if (!action?.minigame) {
       run();
       return;
@@ -871,19 +986,10 @@ const handlers: Handlers = {
 
   onTrade(_index, poiId) {
     if (!app.profile) return;
-
-    const offers = merchantOffers(app.profile.player.carried);
-    const affordable = offers.find((offer) => offer.affordable);
-    if (!affordable) {
-      toast(`Chưa đủ hàng để đổi. Ví dụ: ${offers[0]?.labelVi ?? '—'}`, 'bad');
-      return;
-    }
-
-    const result = trade(app.profile, affordable.index, poiId, now());
-    app.profile = result.profile;
-    toast(result.messageVi, result.ok ? 'good' : 'bad');
-    if (result.ok) audio.play('craft');
-    afterAction();
+    const insidePoi = app.view?.location?.insidePoi;
+    const poiName = insidePoi?.nameVi || 'Tiệm Thương Nhân';
+    audio.play('click');
+    openMerchantStore(poiName);
   },
 
   onSleep() {
@@ -1334,28 +1440,80 @@ function wireStaticControls(): void {
     }
   };
 
-  // Bấm vào cảnh vật trên bản đồ để xem thông tin
-  el<HTMLCanvasElement>('map-canvas').onclick = (event) => {
-    if (!app.view || !app.profile) return;
-
-    const canvas = el<HTMLCanvasElement>('map-canvas');
-    const rect = canvas.getBoundingClientRect();
-    const feature = featureAtPoint(
-      app.view.mapFeatures,
-      currentPosition().render,
-      { x: event.clientX - rect.left, y: event.clientY - rect.top },
-      canvas,
-    );
-    if (!feature) return;
-
-    toast(`${feature.nameVi} — ${feature.kind === 'poi' ? 'điểm tài nguyên thật' : 'cảnh vật hoang dã'}`);
-  };
-
+  wireGpsOverlay();
   wirePedometerPanel();
+}
+
+function wireGpsOverlay(): void {
+  const btnGrant = document.getElementById('btn-gps-grant-permission');
+  if (btnGrant) {
+    btnGrant.onclick = () => {
+      (globalThis as any).AndroidBridge?.requestLocationPermission?.();
+      (globalThis as any).AndroidBridge?.openLocationSettings?.();
+      geo?.start();
+      setTimeout(() => {
+        checkGpsRequirement();
+        sync();
+      }, 1000);
+    };
+  }
+
+  const btnRetry = document.getElementById('btn-gps-retry');
+  if (btnRetry) {
+    btnRetry.onclick = () => {
+      geo?.start();
+      checkGpsRequirement();
+      sync();
+      toast('🔄 Đang dò lại sóng vệ tinh GPS...');
+    };
+  }
+}
+
+function checkGpsRequirement(): void {
+  const overlay = document.getElementById('overlay-gps-required');
+  if (!isNativeApk()) {
+    if (overlay) overlay.hidden = true;
+    return;
+  }
+
+  // Tắt và xoá hoàn toàn bảng Dev Widget trên Android APK
+  const pedoPanel = document.getElementById('pedometer-panel');
+  if (pedoPanel) {
+    pedoPanel.style.display = 'none';
+    pedoPanel.remove();
+  }
+
+  if (!overlay) return;
+
+  const state = geo?.current();
+  const hasFix = state?.position !== null && geo?.hasFreshFix();
+  const hasPerm = (globalThis as any).AndroidBridge?.hasLocationPermission?.() ?? true;
+
+  if (!hasPerm || !hasFix) {
+    overlay.hidden = false;
+    const statusText = document.getElementById('gps-status-text');
+    if (statusText) {
+      if (!hasPerm) {
+        statusText.innerHTML = '🚫 <strong>Chưa cấp quyền Vị trí (GPS)</strong>. Kỷ Nguyên Hoang Cổ là game sinh tồn GPS thế giới thực — bạn bắt buộc phải cấp quyền vị trí để chơi.';
+      } else {
+        statusText.innerHTML = '🛰️ <strong>Đang kết nối tín hiệu vệ tinh GPS...</strong> Vui lòng ra nơi thoáng đãng hoặc bật Định vị (GPS) chính xác cao trong máy.';
+      }
+    }
+  } else {
+    overlay.hidden = true;
+  }
 }
 
 function wirePedometerPanel(): void {
   const panel = el('pedometer-panel');
+  if (!panel) return;
+
+  if (isNativeApk()) {
+    panel.style.display = 'none';
+    panel.remove();
+    return;
+  }
+
   const body = el('pedo-body');
 
   el('pedo-toggle').onclick = () => {
@@ -1413,6 +1571,54 @@ function wirePedometerPanel(): void {
     toast(`🔴 Đã chuyển tới Trăng Máu! (${toLocalTime(targetMs).day})`, 'warn');
     sync();
   };
+
+  // --- Dịch chuyển đến NPC gần nhất (Dev Demo) ---
+  const teleportToPoi = (filter?: (poi: any) => boolean) => {
+    const allPois = PACK?.pois ?? [];
+    const { render: current } = currentPosition();
+    
+    let candidates = allPois;
+    if (filter) {
+      candidates = allPois.filter(filter);
+    }
+    if (candidates.length === 0) candidates = allPois;
+
+    candidates.sort((a, b) => {
+      const da = distanceMeters(current, { lat: a.lat, lon: a.lon });
+      const db = distanceMeters(current, { lat: b.lat, lon: b.lon });
+      return da - db;
+    });
+
+    const target = candidates[0];
+    if (!target) {
+      toast('Không tìm thấy NPC phù hợp gần đây.', 'bad');
+      return;
+    }
+
+    devMockPosition = {
+      lat: target.lat + 0.00008,
+      lon: target.lon + 0.00008,
+    };
+    smoothRenderPos = { ...devMockPosition };
+    toast(`📍 [Dev] Đã dịch chuyển đến sát "${target.nameVi}" (${target.categoryVi})!`, 'good');
+    sync();
+    render();
+  };
+
+  const btnNear = document.getElementById('btn-tp-nearest-npc');
+  if (btnNear) btnNear.onclick = () => teleportToPoi();
+
+  const btnCafe = document.getElementById('btn-tp-cafe');
+  if (btnCafe) btnCafe.onclick = () => teleportToPoi((p) => p.category === 'cafe' || p.categoryVi?.includes('Cà phê') || p.nameVi?.includes('Cà phê'));
+
+  const btnTea = document.getElementById('btn-tp-teahouse');
+  if (btnTea) btnTea.onclick = () => teleportToPoi((p) => p.category === 'teahouse' || p.categoryVi?.includes('Trà') || p.nameVi?.includes('Trà'));
+
+  const btnMarket = document.getElementById('btn-tp-market');
+  if (btnMarket) btnMarket.onclick = () => teleportToPoi((p) => p.category === 'market' || p.categoryVi?.includes('Chợ') || p.categoryVi?.includes('Đồ cổ') || p.nameVi?.includes('Cổ'));
+
+  const btnRest = document.getElementById('btn-tp-restaurant');
+  if (btnRest) btnRest.onclick = () => teleportToPoi((p) => p.category === 'restaurant' || p.categoryVi?.includes('Ăn') || p.nameVi?.includes('Quán'));
 }
 
 /** Nhảy chính xác tới đúng giờ đích (ví dụ 7h00 sáng hoặc 20h00 tối). */

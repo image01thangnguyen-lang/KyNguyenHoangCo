@@ -41,6 +41,10 @@ async function copyAndTransformTree(srcDir: string, destDir: string): Promise<vo
         // Đổi src="...main.ts" thành src="...main.js" trong các file HTML
         let html = await readFile(src, 'utf8');
         html = html.replace(/\.ts(["'])/g, '.js$1');
+        // Đánh dấu môi trường APK production
+        if (entry.name === 'index.html') {
+          html = html.replace('<head>', '<head>\n    <script>window.__IS_APK__ = true;</script>');
+        }
         await ensureDir(dirname(dest));
         await writeFile(dest, html, 'utf8');
       } else {

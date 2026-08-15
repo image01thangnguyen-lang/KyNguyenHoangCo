@@ -344,6 +344,8 @@ export class MapView {
   onDropClick?: (drop: WorldDrop) => void;
   /** Callback khi chạm vào bẫy thú trên bản đồ để thu hoạch. */
   onTrapClick?: (trap: PlacedTrap) => void;
+  /** Callback khi chạm vào một Địa Điểm / Hàng Quán / POI trên bản đồ. */
+  onFeatureClick?: (feature: MapFeature) => void;
 
   private viewportDirty = false;
 
@@ -453,6 +455,28 @@ export class MapView {
 
             if (nearestDrop) {
               this.onDropClick?.(nearestDrop);
+              this.lastPointer = null;
+              this.pointerDownPos = null;
+              return;
+            }
+          }
+
+          // 3. Tìm Địa Điểm / Hàng Quán / POI gần điểm chạm nhất trong bán kính 45px
+          if (this.lastInput?.features) {
+            let nearestFeature: MapFeature | null = null;
+            let minFeatureDist = 45 * this.dpr;
+
+            for (const feat of this.lastInput.features) {
+              const [fx, fy] = this.lastProject({ lat: feat.lat, lon: feat.lon });
+              const d = Math.hypot(clickX - fx, clickY - fy);
+              if (d < minFeatureDist) {
+                minFeatureDist = d;
+                nearestFeature = feat;
+              }
+            }
+
+            if (nearestFeature) {
+              this.onFeatureClick?.(nearestFeature);
             }
           }
         }
@@ -538,7 +562,8 @@ export class MapView {
 
   resize(): void {
     const rect = this.canvas.getBoundingClientRect();
-    this.dpr = Math.min(globalThis.devicePixelRatio || 1, 1.75);
+    // Tối ưu DPR trên di động (tối đa 1.25) giúp giảm 50% số pixel GPU cần fill, giữ FPS cao và mượt mà
+    this.dpr = Math.min(globalThis.devicePixelRatio || 1, 1.25);
     this.canvas.width = Math.max(1, Math.round(rect.width * this.dpr));
     this.canvas.height = Math.max(1, Math.round(rect.height * this.dpr));
   }
@@ -557,6 +582,7 @@ export class MapView {
     this.tick++;
     this.lastInput = input;
 
+    const TILT_Y = 0.68; // Tỉ lệ phối cảnh nghiêng 2.5D Isometric (cos ~47 độ)
     const baseSpan = input.spanMeters ?? 420;
     const spanMeters = baseSpan / this.zoomFactor;
     const pxPerMeter = Math.min(w, h) / spanMeters;
@@ -565,7 +591,7 @@ export class MapView {
     const project = (at: LatLon): [number, number] => {
       const dx = (at.lon - input.center.lon) / metersToLonDegrees(1, input.center.lat);
       const dy = (at.lat - input.center.lat) / metersToLatDegrees(1);
-      return [w / 2 + dx * pxPerMeter + this.panX, h / 2 - dy * pxPerMeter + this.panY];
+      return [w / 2 + dx * pxPerMeter + this.panX, h / 2 - dy * pxPerMeter * TILT_Y + this.panY];
     };
     this.lastProject = project;
 
@@ -573,19 +599,24 @@ export class MapView {
     this.drawGround(w, h, palette, input, project, pxPerMeter);
     this.drawTrailGrid(w, h, pxPerMeter, palette, input.center);
 
-    // Vẽ các dòng sông lớn tự nhiên chảy qua Hà Nội (Sông Hồng, Sông Đuống, Sông Tô Lịch, Sông Đáy)
+    // 1. Vẽ các dòng sông lớn tự nhiên chảy qua Hà Nội trong không gian 2.5D
     this.drawNaturalRivers(project, pxPerMeter, input.phase);
 
-    // Vẽ các trục đường phố đại lộ thực tế (Đường Lê Đức Thọ, Hàm Nghi, Nguyễn Hoàng, Hồ Tùng Mậu...)
+    // 2. Vẽ các trục đường phố đại lộ thực tế trong không gian 2.5D
     this.drawRealRoads(project, pxPerMeter, input.phase);
 
-    // Vẽ theo lớp: nước dưới cùng, rừng giữa, thương nhân trên — tránh cây che mất mép hồ.
-    const order: MapFeature['zone'][] = ['water', 'wilderness', 'forest', 'merchant', 'trail'];
-    for (const zone of order) {
-      for (const feature of input.features) {
-        if (feature.zone !== zone) continue;
+    // 3. Lớp nước dưới cùng (Hồ Gươm, Hồ Tây, Trúc Bạch...)
+    for (const feature of input.features) {
+      if (feature.zone === 'water') {
         this.drawFeature(feature, project, pxPerMeter, input);
       }
+    }
+
+    // 4. Các công trình & cảnh vật nổi khối 3D sắp xếp theo chiều sâu Y (Y-Depth Sorting cho 2.5D)
+    const solidFeatures = input.features.filter((f) => f.zone !== 'water');
+    solidFeatures.sort((a, b) => b.lat - a.lat); // Vĩ độ cao hơn (ở phía Bắc/ở trên) vẽ trước
+    for (const feature of solidFeatures) {
+      this.drawFeature(feature, project, pxPerMeter, input);
     }
 
     if (input.homeCellCenter) this.drawCamp(project(input.homeCellCenter), pxPerMeter);
@@ -845,11 +876,11 @@ export class MapView {
 
     const isDetailed = spanMeters < 1600;
 
-    // Tính toán chính xác toạ độ vùng nhìn thấy thực tế trên màn hình (Viewport Culling Bounding Box)
+    // Tính toán chính xác toạ độ vùng nhìn thấy thực tế trên màn hình (Viewport Culling Bounding Box cho 2.5D Tilt)
     const margin = 100 * this.dpr;
-    const halfSpanLat = ((h / 2 + margin) / pxPerMeter) * metersToLatDegrees(1);
+    const halfSpanLat = ((h / (2 * 0.68) + margin) / pxPerMeter) * metersToLatDegrees(1);
     const halfSpanLon = ((w / 2 + margin) / pxPerMeter) * metersToLonDegrees(1, input.center.lat);
-    const centerPanLat = input.center.lat + (this.panY / pxPerMeter) * metersToLatDegrees(1);
+    const centerPanLat = input.center.lat + (this.panY / (pxPerMeter * 0.68)) * metersToLatDegrees(1);
     const centerPanLon = input.center.lon - (this.panX / pxPerMeter) * metersToLonDegrees(1, input.center.lat);
 
     const minLatIdx = Math.floor((centerPanLat - halfSpanLat) / latStep);
@@ -952,55 +983,49 @@ export class MapView {
 
     ctx.save();
     ctx.lineCap = 'round';
+    ctx.strokeStyle = tipColor;
+    ctx.lineWidth = Math.max(1.1 * this.dpr, 1.6 * scale * this.dpr);
 
-    // Vẽ từng ngọn cỏ nhọn uốn cong
+    ctx.beginPath();
+    // Vẽ gộp các ngọn cỏ nhọn trong một path duy nhất (chiều cao thấp vừa vặn, không che khuất tầm nhìn)
     for (let b = 0; b < bladeCount; b++) {
-      const bSeed = seed + b * 17;
-      const bRng = createRng(bSeed);
-      const height = (11 + bRng() * 11) * scale * this.dpr;
-      const spread = (b - (bladeCount - 1) / 2) * (2.6 * scale * this.dpr);
-      const windSway = Math.sin(this.tick / 15 + (x + b * 12) * 0.03) * (3.5 * scale * this.dpr);
-      const tipX = x + spread * 1.4 + windSway;
+      const bRng = createRng(seed + b * 17);
+      const height = (4.2 + bRng() * 4.0) * scale * this.dpr;
+      const spread = (b - (bladeCount - 1) / 2) * (2.0 * scale * this.dpr);
+      const windSway = Math.sin(this.tick / 15 + (x + b * 12) * 0.03) * (1.8 * scale * this.dpr);
+      const tipX = x + spread * 1.2 + windSway;
       const tipY = y - height;
 
-      const grad = ctx.createLinearGradient(x, y, tipX, tipY);
-      grad.addColorStop(0, baseColor);
-      grad.addColorStop(1, tipColor);
-
-      ctx.strokeStyle = grad;
-      ctx.lineWidth = Math.max(1.1 * this.dpr, (2.1 - bRng() * 0.6) * scale * this.dpr);
-
-      ctx.beginPath();
       ctx.moveTo(x + spread * 0.35, y);
-      ctx.quadraticCurveTo(x + spread * 0.7 + windSway * 0.4, y - height * 0.55, tipX, tipY);
-      ctx.stroke();
+      ctx.quadraticCurveTo(x + spread * 0.6 + windSway * 0.4, y - height * 0.55, tipX, tipY);
     }
+    ctx.stroke();
 
-    // Hoa dại nở trên bụi cỏ
-    if (phase !== 'night' && rng() > 0.55) {
+    // Hoa dại nhỏ li ti nở trên thảm cỏ
+    if (phase !== 'night' && rng() > 0.6) {
       const flowerColor = rng() > 0.5 ? '#f59e0b' : '#ef4444';
-      const fHeight = (12 + rng() * 6) * scale * this.dpr;
-      const fSway = Math.sin(this.tick / 15 + x * 0.03) * (3 * scale * this.dpr);
+      const fHeight = (5.5 + rng() * 3.5) * scale * this.dpr;
+      const fSway = Math.sin(this.tick / 15 + x * 0.03) * (1.8 * scale * this.dpr);
       const fx = x + fSway;
       const fy = y - fHeight;
 
       // Cánh hoa
       ctx.fillStyle = flowerColor;
       ctx.beginPath();
-      ctx.arc(fx, fy, 2.2 * scale * this.dpr, 0, Math.PI * 2);
+      ctx.arc(fx, fy, 1.6 * scale * this.dpr, 0, Math.PI * 2);
       ctx.fill();
 
       // Nhuỵ vàng
       ctx.fillStyle = '#fef08a';
       ctx.beginPath();
-      ctx.arc(fx, fy, 0.9 * scale * this.dpr, 0, Math.PI * 2);
+      ctx.arc(fx, fy, 0.7 * scale * this.dpr, 0, Math.PI * 2);
       ctx.fill();
     }
 
     ctx.restore();
   }
 
-  /** Vẽ cành lá dương xỉ tiền sử với các nhánh lá con xoè rộng. */
+  /** Vẽ cành lá dương xỉ tiền sử với các nhánh lá con xoè rộng thấp sát đất. */
   private drawFern(
     x: number,
     y: number,
@@ -1015,30 +1040,30 @@ export class MapView {
     ctx.save();
     ctx.strokeStyle = fernColor;
     ctx.fillStyle = fernColor;
-    ctx.lineWidth = 1.4 * this.dpr;
+    ctx.lineWidth = 1.2 * this.dpr;
     ctx.lineCap = 'round';
 
     const frondCount = 3 + Math.floor(rng() * 2);
     for (let f = 0; f < frondCount; f++) {
       const angle = -Math.PI * 0.5 + (f - (frondCount - 1) / 2) * 0.45;
-      const len = (14 + rng() * 10) * scale * this.dpr;
+      const len = (6.5 + rng() * 4.5) * scale * this.dpr;
       const endX = x + Math.cos(angle) * len;
       const endY = y + Math.sin(angle) * len;
 
       ctx.beginPath();
       ctx.moveTo(x, y);
-      ctx.quadraticCurveTo(x + (endX - x) * 0.5 + 2 * this.dpr, y + (endY - y) * 0.5, endX, endY);
+      ctx.quadraticCurveTo(x + (endX - x) * 0.5 + 1.5 * this.dpr, y + (endY - y) * 0.5, endX, endY);
       ctx.stroke();
 
       // Nhánh lá con 2 bên sống lá
-      const pairs = 4;
+      const pairs = 3;
       for (let p = 1; p <= pairs; p++) {
         const t = p / (pairs + 1);
         const px = x + (endX - x) * t;
         const py = y + (endY - y) * t;
-        const leafLen = (5 - p * 0.6) * scale * this.dpr;
+        const leafLen = (2.6 - p * 0.45) * scale * this.dpr;
 
-        ctx.fillRect(px - leafLen, py - 1 * this.dpr, leafLen * 2, 1.8 * this.dpr);
+        ctx.fillRect(px - leafLen, py - 0.8 * this.dpr, leafLen * 2, 1.4 * this.dpr);
       }
     }
 
@@ -1297,7 +1322,7 @@ export class MapView {
     ctx.restore();
   }
 
-  /** Lưới ô 200 m vẽ thành lối mòn đất hữu cơ mịn màng, di chuyển đồng bộ khi kéo bản đồ. */
+  /** Lưới ô 200 m vẽ thành lối mòn đất hữu cơ mịn màng trong không gian 2.5D. */
   private drawTrailGrid(
     w: number,
     h: number,
@@ -1306,8 +1331,9 @@ export class MapView {
     center: LatLon,
   ): void {
     const { ctx } = this;
-    const cellPx = 200 * pxPerMeter;
-    if (cellPx < 24) return;
+    const cellPxX = 200 * pxPerMeter;
+    const cellPxY = 200 * pxPerMeter * 0.68;
+    if (cellPxX < 24) return;
 
     const latStep = metersToLatDegrees(200);
     const lonStep = metersToLonDegrees(200, center.lat);
@@ -1317,18 +1343,18 @@ export class MapView {
     ctx.strokeStyle = palette.trail;
     ctx.lineWidth = Math.max(1.8 * this.dpr, 3.5 * this.dpr);
     ctx.lineCap = 'round';
-    const minI = Math.floor((-w / 2 - this.panX) / cellPx) - 2;
-    const maxI = Math.ceil((w / 2 - this.panX) / cellPx) + 2;
-    const minJ = Math.floor((-h / 2 - this.panY) / cellPx) - 2;
-    const maxJ = Math.ceil((h / 2 - this.panY) / cellPx) + 2;
+    const minI = Math.floor((-w / 2 - this.panX) / cellPxX) - 2;
+    const maxI = Math.ceil((w / 2 - this.panX) / cellPxX) + 2;
+    const minJ = Math.floor((-h / 2 - this.panY) / cellPxY) - 2;
+    const maxJ = Math.ceil((h / 2 - this.panY) / cellPxY) + 2;
 
     for (let i = minI; i <= maxI; i++) {
-      const x = w / 2 + (i - offsetX) * cellPx + this.panX;
-      this.wobbleLine(x, -50, x, h + 50, cellPx * 0.05, hashSeed('vx', i));
+      const x = w / 2 + (i - offsetX) * cellPxX + this.panX;
+      this.wobbleLine(x, -50, x, h + 50, cellPxX * 0.05, hashSeed('vx', i));
     }
     for (let j = minJ; j <= maxJ; j++) {
-      const y = h / 2 + (j + offsetY) * cellPx + this.panY;
-      this.wobbleLine(-50, y, w + 50, y, cellPx * 0.05, hashSeed('hz', j));
+      const y = h / 2 + (j + offsetY) * cellPxY + this.panY;
+      this.wobbleLine(-50, y, w + 50, y, cellPxY * 0.05, hashSeed('hz', j));
     }
     ctx.globalAlpha = 1;
   }
@@ -1425,7 +1451,28 @@ export class MapView {
   ): void {
     const { ctx } = this;
     const [x, y] = project(feature);
-    const r = Math.max(16 * this.dpr, feature.radiusMeters * pxPerMeter);
+    const isWater = feature.zone === 'water';
+    const name = feature.nameVi;
+    const fid = feature.id;
+
+    // Phân loại địa điểm nhỏ (quán cafe, tiệm trà, tạp hoá, vịnh xe buýt, quán ăn...) vs địa điểm lớn (trường học, bệnh viện, hoàng thành, di tích...)
+    const isSmallPoi =
+      fid.includes('highlands') || name.includes('Highlands') ||
+      name.includes('Phúc Long') || name.includes('The Coffee House') || name.includes('Cộng Trà') ||
+      name.includes('Trà Quán') || name.includes('Trung Nguyên') || name.includes('Starbucks') ||
+      name.includes('WinMart') || name.includes('Circle K') || name.includes('Tiệm Trao Đổi') ||
+      fid.includes('bus') || name.includes('Vịnh Xén Hè') || name.includes('Điểm Dừng Xe Buýt') ||
+      name.includes('Xe Buýt') || name.includes('Trạm Chờ Xe') || name.includes('Phở') ||
+      name.includes('Bún') || name.includes('Bánh Cuốn') || name.includes('Pizza') ||
+      name.includes('Haidilao') || name.includes('Gogi') || name.includes('Kichi') ||
+      name.includes('Manwah') || name.includes('Kombo') || name.includes('Quán Ăn') ||
+      name.includes('Mỏ Vàng') || name.includes('Mỏ Than') || name.includes('Mỏ Đất Sét') ||
+      name.includes('Bãi Hươu');
+
+    // Quán cafe & tiệm nhỏ có kích thước bằng 2/3 (66.7%) các địa điểm lớn như trường học, bệnh viện
+    const typeScale = isWater ? 0.85 : (isSmallPoi ? 0.35 : 0.52);
+    const minR = isSmallPoi ? 6.5 * this.dpr : 10 * this.dpr;
+    const r = Math.max(minR, feature.radiusMeters * pxPerMeter * typeScale);
     const w = this.canvas.width;
     const h = this.canvas.height;
 
@@ -1439,9 +1486,6 @@ export class MapView {
     const isActive = input.activePoiId === feature.id;
 
     ctx.save();
-
-    const name = feature.nameVi;
-    const fid = feature.id;
 
     // Phân loại cảnh quan đặc biệt
     if (fid === 'bd_05' || name.includes('Một Cột') || name.includes('Liên Hoa')) {
@@ -1564,34 +1608,121 @@ export class MapView {
       }
     }
 
+    // 1. Vòng hào quang tương tác 2.5D và sóng radar khi nhân vật ở gần địa điểm
     if (isActive) {
-      ctx.globalAlpha = 0.6 + 0.4 * Math.sin(this.tick / 12);
-      ctx.strokeStyle = '#e07a3c';
-      ctx.lineWidth = 2.8 * this.dpr;
+      const pulse = 0.5 + 0.5 * Math.sin(this.tick / 8);
+      ctx.save();
+      ctx.strokeStyle = `rgba(245, 158, 11, ${0.5 + 0.45 * pulse})`;
+      ctx.lineWidth = 2.2 * this.dpr;
       ctx.beginPath();
-      ctx.arc(x, y, r + 6 * this.dpr, 0, Math.PI * 2);
+      ctx.ellipse(x, y + r * 0.35, r + 6 * this.dpr, (r + 6 * this.dpr) * 0.68, 0, 0, Math.PI * 2);
       ctx.stroke();
+
+      const wave = ((this.tick * 0.8) % 36) / 36;
+      ctx.strokeStyle = `rgba(251, 191, 36, ${0.55 * (1 - wave)})`;
+      ctx.lineWidth = 1.4 * this.dpr;
+      ctx.beginPath();
+      ctx.ellipse(x, y + r * 0.35, r + wave * 18 * this.dpr, (r + wave * 18 * this.dpr) * 0.68, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
     }
 
-    ctx.globalAlpha = feature.kind === 'poi' ? 0.95 : 0.6;
-    ctx.fillStyle = '#fef08a';
-    const fontSize = Math.max(9, Math.min(12, 11 * Math.pow(this.zoomFactor, 0.35))) * this.dpr;
-    ctx.font = `bold ${fontSize}px system-ui, -apple-system, sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.shadowColor = 'rgba(0,0,0,0.95)';
-    ctx.shadowBlur = 4 * this.dpr;
-    ctx.fillText(feature.nameVi, x, y + r + (fontSize + 4) * this.dpr);
+    // 2. Thẻ Tên Địa Điểm & Icon Phù Điêu Sang Trọng (Landmark Floating Pill Badge)
+    const icon = this.getFeatureIcon(feature);
+    const baseFontSize = isSmallPoi ? 8.2 : 9.8;
+    const fontSize = Math.max(isSmallPoi ? 7.2 : 8.5, Math.min(isSmallPoi ? 9.5 : 11.2, baseFontSize * Math.pow(this.zoomFactor, 0.35))) * this.dpr;
+    ctx.font = `bold ${fontSize}px 'Be Vietnam Pro', system-ui, sans-serif`;
+
+    const text = `${icon} ${feature.nameVi}`;
+    const textMetrics = ctx.measureText(text);
+    const textW = textMetrics.width;
+    const badgePadX = (isSmallPoi ? 5 : 6.5) * this.dpr;
+    const badgePadY = (isSmallPoi ? 2.6 : 3.4) * this.dpr;
+    const badgeW = textW + badgePadX * 2;
+    const badgeH = fontSize + badgePadY * 2;
+    const badgeX = x - badgeW / 2;
+    const badgeY = y + r * 0.65 + (isSmallPoi ? 2 : 3) * this.dpr;
+
+    ctx.save();
+    // Bóng đổ của thẻ tên
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
+    ctx.shadowBlur = 5 * this.dpr;
+    ctx.shadowOffsetY = 1.5 * this.dpr;
+
+    // Nền thẻ sáp cổ điển bo góc
+    ctx.fillStyle = isActive ? 'rgba(38, 26, 14, 0.96)' : 'rgba(20, 16, 12, 0.90)';
+    ctx.strokeStyle = isActive ? '#f59e0b' : 'rgba(217, 151, 91, 0.55)';
+    ctx.lineWidth = isActive ? 1.6 * this.dpr : 1.0 * this.dpr;
+
+    ctx.beginPath();
+    const rad = badgeH / 2;
+    ctx.moveTo(badgeX + rad, badgeY);
+    ctx.lineTo(badgeX + badgeW - rad, badgeY);
+    ctx.arc(badgeX + badgeW - rad, badgeY + rad, rad, -Math.PI / 2, Math.PI / 2);
+    ctx.lineTo(badgeX + rad, badgeY + badgeH);
+    ctx.arc(badgeX + rad, badgeY + rad, rad, Math.PI / 2, Math.PI * 1.5);
+    ctx.closePath();
+    ctx.fill();
     ctx.shadowBlur = 0;
+    ctx.stroke();
+
+    // Chữ & Icon địa điểm
+    ctx.fillStyle = isActive ? '#fef08a' : '#fef3c7';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, x, badgeY + badgeH / 2);
+
+    // Nếu trong tầm tương tác: có nhãn phụ chỉ dẫn
+    if (isActive) {
+      ctx.fillStyle = '#f59e0b';
+      ctx.font = `bold ${8 * this.dpr}px 'Be Vietnam Pro', system-ui, sans-serif`;
+      ctx.fillText('▼ Chạm để mở', x, badgeY + badgeH + 7.5 * this.dpr);
+    }
+    ctx.restore();
+
     ctx.restore();
   }
 
-  /** Bóng đổ mềm tiếp đất tự nhiên cho các công trình / địa danh. */
-  private groundContactShadow(x: number, y: number, r: number, seed: number): void {
+  /** Biểu tượng Icon đặc trưng cho từng loại địa điểm / di tích. */
+  private getFeatureIcon(feature: MapFeature): string {
+    const name = feature.nameVi;
+    const fid = feature.id;
+    if (fid === 'bd_05' || name.includes('Một Cột') || name.includes('Liên Hoa')) return '🪷';
+    if (fid === 'bd_01' || name.includes('Hoàng Thành') || name.includes('Vương Thành')) return '🏯';
+    if (fid === 'bd_03' || name.includes('Văn Miếu') || name.includes('Quốc Tử Giám')) return '📜';
+    if (fid === 'bd_02' || name.includes('Ba Đình') || name.includes('Lăng Bác')) return '🏛️';
+    if (fid === 'hk_06' || name.includes('Nhà Thờ') || name.includes('Tháp Thánh')) return '⛪';
+    if (fid.includes('highlands') || name.includes('Highlands') || name.includes('Cà phê')) return '☕';
+    if (name.includes('Phúc Long') || name.includes('The Coffee House') || name.includes('Trà') || name.includes('Cộng')) return '🍵';
+    if (name.includes('WinMart') || name.includes('Circle K') || name.includes('Tạp Hoá') || name.includes('Tiệm Trao Đổi')) return '🏪';
+    if (fid.includes('bus') || name.includes('Xe Buýt') || name.includes('Bến Xe') || name.includes('Vịnh Xén Hè')) return '🚌';
+    if (fid.includes('nhat_ban') || name.includes('Nhật Bản') || name.includes('Phù Tang')) return '⛩️';
+    if (name.includes('Sun Square') || name.includes('Thái Dương')) return '☀️';
+    if (name.includes('Cổ Mộ') || name.includes('Mai Dịch') || fid.includes('maidich')) return '🪦';
+    if (name.includes('Y Viện') || name.includes('Thảo Dược') || name.includes('Bạch Mai') || name.includes('198')) return '🌿';
+    if (name.includes('Học Viện') || name.includes('Tri Thức') || name.includes('Đại Học')) return '📜';
+    if (name.includes('Đấu Trường') || name.includes('Mỹ Đình') || name.includes('Sân Vận Động')) return '🏟️';
+    if (name.includes('Trạm Lữ Khách') || name.includes('Lữ Điểm')) return '🏕️';
+    if (name.includes('Vàng') || fid.includes('gold')) return '🪙';
+    if (name.includes('Than') || name.includes('Quặng') || name.includes('Sắt') || fid.includes('iron')) return '⛏️';
+    if (name.includes('Hươu') || fid.includes('deer')) return '🦌';
+    if (name.includes('Cự Mộc') || fid.startsWith('cl_')) return '🌳';
+    if (name.includes('Đất Sét') || fid.includes('clay')) return '🏺';
+    if (name.includes('Tháp') || name.includes('Keangnam') || name.includes('Lotte') || name.includes('Dolphin')) return '🗼';
+    if (name.includes('Long Cốt') || name.includes('Cầu')) return '🐉';
+    if (feature.zone === 'water') return '🏞️';
+    if (feature.zone === 'forest') return '🌲';
+    if (feature.zone === 'merchant') return '🏺';
+    return '📍';
+  }
+
+  /** Bóng đổ mềm tiếp đất tự nhiên cho các công trình / địa danh trong không gian 2.5D. */
+  private groundContactShadow(x: number, y: number, r: number, _seed: number): void {
     const { ctx } = this;
     ctx.save();
-    ctx.fillStyle = 'rgba(8, 6, 4, 0.42)';
+    ctx.fillStyle = 'rgba(10, 8, 5, 0.48)';
     ctx.beginPath();
-    ctx.ellipse(x, y + r * 0.25, r * 0.85, r * 0.35, 0, 0, Math.PI * 2);
+    ctx.ellipse(x, y + r * 0.35, r * 0.95, r * 0.95 * 0.68, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
@@ -3278,11 +3409,9 @@ export class MapView {
         ctx.save();
         ctx.translate(mx, my);
         ctx.rotate(Math.abs(angle) > Math.PI / 2 ? angle + Math.PI : angle);
-        ctx.fillStyle = '#fef08a';
-        ctx.font = `bold ${Math.max(9, Math.min(11, 10 * this.dpr))}px Outfit, system-ui, sans-serif`;
+        ctx.font = `bold ${Math.max(9, Math.min(11, 10 * this.dpr))}px 'Be Vietnam Pro', system-ui, sans-serif`;
         ctx.textAlign = 'center';
-        ctx.shadowColor = 'rgba(0,0,0,0.95)';
-        ctx.shadowBlur = 4 * this.dpr;
+        ctx.fillStyle = '#fef08a';
         ctx.fillText(`🌾 ${road.name}`, 0, -4 * this.dpr);
         ctx.restore();
       }
@@ -3486,33 +3615,36 @@ export class MapView {
 
     ctx.save();
 
-    // 0. Sóng định vị Radar Beacon toả rộng (giúp thấy ngay vị trí khi zoom xa toàn bản đồ)
+    // 0. Sóng định vị Radar Beacon toả rộng dạng 2.5D (giúp thấy ngay vị trí khi zoom xa toàn bản đồ)
     const beaconTime = (this.tick % 45) / 45;
     const beaconRadius = (16 + beaconTime * 32) * this.dpr;
     ctx.strokeStyle = isFemale ? `rgba(45, 212, 191, ${0.75 * (1 - beaconTime)})` : `rgba(245, 158, 11, ${0.75 * (1 - beaconTime)})`;
     ctx.lineWidth = 2 * this.dpr;
     ctx.beginPath();
-    ctx.arc(x, y, beaconRadius, 0, Math.PI * 2);
+    ctx.ellipse(x, y, beaconRadius, beaconRadius * 0.68, 0, 0, Math.PI * 2);
     ctx.stroke();
 
-    // 1. Vòng bán kính tương tác 30m
+    // 1. Vòng bán kính tương tác 30m dạng 2.5D
     ctx.strokeStyle = `rgba(254, 240, 138, ${0.2 + pulse * 0.18})`;
     ctx.lineWidth = 1.8 * this.dpr;
     ctx.setLineDash([6 * this.dpr, 6 * this.dpr]);
     ctx.beginPath();
-    ctx.arc(x, y, 30 * pxPerMeter, 0, Math.PI * 2);
+    ctx.ellipse(x, y, 30 * pxPerMeter, 30 * pxPerMeter * 0.68, 0, 0, Math.PI * 2);
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // 2. Vầng hào quang nhận thức mềm mịn quanh người chơi
-    const glow = ctx.createRadialGradient(x, y, 4 * this.dpr, x, y, 32 * this.dpr);
+    // 2. Vầng hào quang nhận thức mềm mịn quanh người chơi dạng 2.5D
+    ctx.save();
+    ctx.scale(1, 0.68);
+    const glow = ctx.createRadialGradient(x, y / 0.68, 4 * this.dpr, x, y / 0.68, 36 * this.dpr);
     glow.addColorStop(0, isFemale ? 'rgba(45, 212, 191, 0.35)' : 'rgba(249, 115, 22, 0.35)');
     glow.addColorStop(0.55, isFemale ? 'rgba(13, 148, 136, 0.15)' : 'rgba(234, 88, 12, 0.15)');
     glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
     ctx.fillStyle = glow;
     ctx.beginPath();
-    ctx.arc(x, y, 32 * this.dpr, 0, Math.PI * 2);
+    ctx.arc(x, y / 0.68, 36 * this.dpr, 0, Math.PI * 2);
     ctx.fill();
+    ctx.restore();
 
     // 3. Đom đóm / 6 hạt bụi ánh sáng linh hồn xoay 3D quanh nhân vật
     for (let s = 0; s < 6; s++) {
@@ -3964,20 +4096,16 @@ export class MapView {
         const pulse = 0.5 + 0.5 * Math.sin(this.tick / (8 + f % 5) + f * 2);
         const glowRadius = (6 + 8 * pulse) * this.dpr;
 
-        // Vầng hào quang đom đóm
-        const fGlow = ctx.createRadialGradient(fx, fy, 0.5 * this.dpr, fx, fy, glowRadius);
-        fGlow.addColorStop(0, `rgba(190, 242, 100, ${0.85 * pulse})`);
-        fGlow.addColorStop(0.4, `rgba(132, 204, 22, ${0.35 * pulse})`);
-        fGlow.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = fGlow;
+        // Vầng hào quang đom đóm (tối ưu hóa vẽ nhanh không tạo gradient)
+        ctx.fillStyle = `rgba(163, 230, 53, ${0.35 * pulse})`;
         ctx.beginPath();
         ctx.arc(fx, fy, glowRadius, 0, Math.PI * 2);
         ctx.fill();
 
         // Điểm sáng đom đóm trung tâm
-        ctx.fillStyle = `rgba(254, 252, 232, ${0.9 * pulse})`;
+        ctx.fillStyle = `rgba(254, 252, 232, ${0.95 * pulse})`;
         ctx.beginPath();
-        ctx.arc(fx, fy, 1.3 * this.dpr, 0, Math.PI * 2);
+        ctx.arc(fx, fy, 1.4 * this.dpr, 0, Math.PI * 2);
         ctx.fill();
       }
     }
@@ -3994,11 +4122,12 @@ export function featureAtPoint(
   canvas: HTMLCanvasElement,
   spanMeters = 420,
 ): MapFeature | null {
+  const TILT_Y = 0.68;
   const rect = canvas.getBoundingClientRect();
   const pxPerMeter = Math.min(rect.width, rect.height) / spanMeters;
 
   const dxMeters = (point.x - rect.width / 2) / pxPerMeter;
-  const dyMeters = -(point.y - rect.height / 2) / pxPerMeter;
+  const dyMeters = -(point.y - rect.height / 2) / (pxPerMeter * TILT_Y);
 
   const at: LatLon = {
     lat: center.lat + dyMeters * metersToLatDegrees(1),

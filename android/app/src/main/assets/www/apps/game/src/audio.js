@@ -31,19 +31,18 @@ class SoundSynthesizer {
           bgmGain                  = null;
 
           soundEnabled = true;
-          musicEnabled = true;
+          musicEnabled = false;
 
           currentMood                     = null;
           ambientInterval                = null;
           activeBgmNodes              = [];
 
   constructor() {
-    // Tự động khôi phục cấu hình từ localStorage
+    // Tự động khôi phục cấu hình từ localStorage (mặc định tắt nhạc nền)
     try {
       const sfxPref = localStorage.getItem('khc_sound_enabled');
       if (sfxPref !== null) this.soundEnabled = sfxPref === 'true';
-      const bgmPref = localStorage.getItem('khc_music_enabled');
-      if (bgmPref !== null) this.musicEnabled = bgmPref === 'true';
+      this.musicEnabled = false;
     } catch {
       /* chạy trong sandbox an toàn */
     }
@@ -348,56 +347,9 @@ class SoundSynthesizer {
     }
   }
 
-  /** Điều chỉnh nhạc nền Ambient theo thời gian thực (Ban ngày / Chiều tà / Đêm / Trăng Máu). */
-         setAmbientMood(mood             )       {
-    if (this.currentMood === mood && this.ambientInterval !== null) return;
-    this.currentMood = mood;
-    if (!this.musicEnabled) return;
-
+  /** Điều chỉnh nhạc nền Ambient theo thời gian thực (Đã tắt theo yêu cầu người dùng). */
+         setAmbientMood(_mood             )       {
     this.stopAmbient();
-
-    const ctx = this.ensureContext();
-    if (!ctx || !this.bgmGain) return;
-
-    // Chơi nốt ngũ cung tiền sử ngẫu nhiên định kỳ 3.5 - 6s
-    const pentatonicDay = [220, 246.94, 293.66, 329.63, 392.0, 440];
-    const pentatonicNight = [146.83, 164.81, 196.0, 220.0, 261.63];
-    const pentatonicBloodMoon = [110, 123.47, 138.59, 164.81, 196.0];
-
-    const playDroneChord = () => {
-      if (!this.musicEnabled) return;
-      const nowCtx = this.ensureContext();
-      if (!nowCtx || !this.bgmGain) return;
-
-      const t = nowCtx.currentTime;
-      const scale = mood === 'bloodmoon' ? pentatonicBloodMoon : mood === 'night' ? pentatonicNight : pentatonicDay;
-      const freq = scale[Math.floor(Math.random() * scale.length)] ;
-
-      const osc = nowCtx.createOscillator();
-      const filter = nowCtx.createBiquadFilter();
-      const gain = nowCtx.createGain();
-
-      osc.type = mood === 'bloodmoon' ? 'sawtooth' : 'sine';
-      osc.frequency.setValueAtTime(freq, t);
-
-      filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(mood === 'bloodmoon' ? 450 : 600, t);
-
-      gain.gain.setValueAtTime(0.001, t);
-      gain.gain.linearRampToValueAtTime(mood === 'bloodmoon' ? 0.25 : 0.18, t + 1.2);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 4.2);
-
-      osc.connect(filter);
-      filter.connect(gain);
-      gain.connect(this.bgmGain);
-
-      osc.start(t);
-      osc.stop(t + 4.5);
-    };
-
-    // Chơi nốt đầu tiên ngay lập tức
-    playDroneChord();
-    this.ambientInterval = window.setInterval(playDroneChord, 4000);
   }
 
          stopAmbient()       {

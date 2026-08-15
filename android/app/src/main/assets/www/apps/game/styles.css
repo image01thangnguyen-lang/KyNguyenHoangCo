@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Outfit:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600;1,700&display=swap');
 
 /*
  * BẢNG MÀU KỶ NGUYÊN HOANG CỔ (Tiền Sử Hoá Cao Cấp):
@@ -32,8 +32,8 @@
   --safe-b: env(safe-area-inset-bottom, 0px);
   --safe-t: env(safe-area-inset-top, 0px);
 
-  --font-title: 'Cinzel', 'Playfair Display', Georgia, serif;
-  --font-ui: 'Outfit', system-ui, -apple-system, sans-serif;
+  --font-title: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-ui: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
 * {
@@ -75,8 +75,8 @@ h2,
 h3 {
   margin: 0;
   font-family: var(--font-title);
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-weight: 800;
+  letter-spacing: -0.01em;
 }
 
 /* ---------------------------------------------------------------- khung màn hình */
@@ -109,8 +109,9 @@ h3 {
 .titlecard__name {
   font-family: var(--font-title);
   font-size: clamp(32px, 9.5vw, 50px);
+  font-weight: 900;
   line-height: 1.05;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.01em;
   color: #fff;
   background: linear-gradient(180deg, #ffffff 15%, #fef08a 60%, #f59e0b 100%);
   -webkit-background-clip: text;
@@ -2761,3 +2762,666 @@ h3 {
   line-height: 1.35;
   flex: 1;
 }
+
+/* ---------------------------------------------------------------- Tiệm Thương Nhân NPC */
+.card--merchant-shop {
+  max-width: 520px;
+  width: 95%;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, rgba(32, 22, 14, 0.98), rgba(18, 12, 8, 0.98));
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.85), 0 0 20px rgba(245, 158, 11, 0.2);
+}
+
+.merchant-gold-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 8px;
+  padding: 8px 14px;
+  margin: 10px 0 12px;
+  font-size: 13px;
+  color: var(--bone);
+}
+
+.merchant-gold-value {
+  color: #fbbf24;
+  font-size: 16px;
+  font-weight: 800;
+  text-shadow: 0 0 8px rgba(251, 191, 36, 0.4);
+}
+
+.merchant-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.merchant-tab-btn {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--ink-muted);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.merchant-tab-btn.is-active {
+  background: linear-gradient(135deg, #b45309, #d97706);
+  border-color: #f59e0b;
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(217, 119, 6, 0.35);
+}
+
+.merchant-pane {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 52vh;
+  padding-right: 4px;
+}
+
+.merchant-item-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.merchant-item-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px 12px;
+  transition: border-color 0.2s ease;
+}
+
+.merchant-item-card:hover {
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.merchant-item-icon {
+  font-size: 24px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+
+.merchant-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.merchant-item-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #fef08a;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.merchant-item-desc {
+  font-size: 11.5px;
+  color: var(--ink-muted);
+  line-height: 1.3;
+}
+
+.merchant-item-action {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.merchant-price-tag {
+  font-size: 13px;
+  font-weight: 800;
+  color: #fbbf24;
+}
+
+.merchant-btn-buy {
+  background: #047857;
+  color: #fff;
+  border: 1px solid #10b981;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.merchant-btn-buy:active {
+  transform: scale(0.96);
+}
+
+.merchant-btn-sell {
+  background: #b45309;
+  color: #fff;
+  border: 1px solid #f59e0b;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.merchant-btn-sell:active {
+  transform: scale(0.96);
+}
+
+/* ==========================================================================
+   🎮 GIAO DIỆN TÚI ĐỒ & KHO DẠNG Ô VUÔNG RPG (INVENTORY SQUARE SLOT GRID)
+   ========================================================================== */
+
+.inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(68px, 1fr));
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.slot-card {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(145deg, #221a14, #14100c);
+  border: 1.5px solid rgba(241, 218, 167, 0.18);
+  border-radius: 10px;
+  padding: 4px;
+  cursor: pointer;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6), 0 3px 6px rgba(0, 0, 0, 0.35);
+  transition: transform 0.12s ease-out, border-color 0.12s ease-out;
+  transform: translateZ(0);
+  overflow: hidden;
+}
+
+.slot-card:active {
+  transform: scale(0.93);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.8);
+}
+
+.slot-card:hover {
+  border-color: #f59e0b;
+  background: linear-gradient(145deg, #2c221a, #1a1510);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
+}
+
+.slot-card__icon {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.slot-card__icon svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+.slot-card__badge {
+  position: absolute;
+  bottom: 3px;
+  right: 4px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #fef08a;
+  background: rgba(12, 10, 8, 0.85);
+  border: 1px solid rgba(241, 218, 167, 0.2);
+  padding: 0 4px;
+  border-radius: 4px;
+  line-height: 1.2;
+  pointer-events: none;
+  text-shadow: 0 1px 2px #000;
+}
+
+/* Màu viền theo loại vật phẩm */
+.slot-card--food,
+.slot-card--consumable {
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.slot-card--drink {
+  border-color: rgba(56, 189, 248, 0.4);
+}
+
+.slot-card--tool,
+.slot-card--weapon {
+  border-color: rgba(249, 115, 22, 0.4);
+}
+
+.slot-card--armor,
+.slot-card--deployable {
+  border-color: rgba(217, 119, 6, 0.4);
+}
+
+.slot-card--safe {
+  border-color: #f59e0b !important;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.3) !important;
+}
+
+.slot-card--empty {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1.5px dashed rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+  cursor: default;
+  opacity: 0.4;
+}
+
+/* ==========================================================================
+   🔍 MODAL XEM CHI TIẾT & TƯƠNG TÁC VẬT PHẨM (ITEM INSPECT MODAL)
+   ========================================================================== */
+
+.card--item-inspect {
+  max-width: 360px;
+  width: 90vw;
+  background: #18130e;
+  border: 1.5px solid rgba(241, 218, 167, 0.35);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.85);
+}
+
+.inspect-icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(241, 218, 167, 0.2);
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.inspect-icon svg {
+  width: 34px;
+  height: 34px;
+}
+
+.inspect-body {
+  margin: 12px 0;
+}
+
+.inspect-desc {
+  font-size: 13px;
+  color: var(--bone);
+  line-height: 1.4;
+  margin: 0 0 10px 0;
+}
+
+.inspect-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.inspect-stat-badge {
+  font-size: 12px;
+  font-weight: 600;
+  color: #fde68a;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.inspect-qty-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 12.5px;
+  color: var(--ink-muted);
+}
+
+.inspect-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.inspect-actions button {
+  width: 100%;
+  padding: 10px;
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+/* ==========================================================================
+   🏺 TIỆM THƯƠNG NHÂN DẠNG Ô VUÔNG (MERCHANT SQUARE SLOT GRID)
+   ========================================================================== */
+
+.merchant-slot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  gap: 10px;
+  padding: 6px 0;
+}
+
+.merchant-slot-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 106px;
+  background: linear-gradient(145deg, #241c15, #14100c);
+  border: 1.5px solid rgba(241, 218, 167, 0.2);
+  border-radius: 12px;
+  padding: 8px 6px;
+  cursor: pointer;
+  text-align: center;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  transition: all 0.16s ease;
+}
+
+.merchant-slot-card:active {
+  transform: scale(0.94);
+}
+
+.merchant-slot-card:hover {
+  border-color: #f59e0b;
+  background: linear-gradient(145deg, #30241b, #1a140f);
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.35);
+}
+
+.merchant-slot-card.is-unaffordable {
+  opacity: 0.5;
+  filter: grayscale(0.4);
+}
+
+.merchant-slot-icon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.merchant-slot-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.merchant-slot-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #fef08a;
+  line-height: 1.2;
+  margin: 4px 0 2px 0;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.merchant-slot-have {
+  font-size: 10.5px;
+  color: var(--ink-muted);
+}
+
+.merchant-slot-price {
+  font-size: 12px;
+  font-weight: 800;
+  color: #fbbf24;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.merchant-slot-price.is-sell {
+  color: #4ade80;
+  border-color: rgba(74, 222, 128, 0.3);
+}
+
+/* Modal Xác Nhận Giao Dịch */
+.card--merchant-trade-confirm {
+  max-width: 340px;
+  width: 90vw;
+  background: #18130e;
+  border: 1.5px solid #f59e0b;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.85);
+}
+
+.trade-calc-box {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--bone);
+}
+
+/* ==========================================================================
+   🔨 GIAO DIỆN BẢNG CHẾ TẠO DẠNG Ô VUÔNG RPG (CRAFTING SQUARE SLOT GRID)
+   ========================================================================== */
+
+.craft-slot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 10px;
+  padding: 6px 0 12px 0;
+}
+
+.craft-slot-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 102px;
+  background: linear-gradient(145deg, #221b15, #14100c);
+  border: 1.5px solid rgba(241, 218, 167, 0.18);
+  border-radius: 12px;
+  padding: 8px 4px 6px 4px;
+  cursor: pointer;
+  text-align: center;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+  transition: transform 0.12s ease-out, border-color 0.12s ease-out;
+  transform: translateZ(0);
+  overflow: hidden;
+}
+
+.craft-slot-card:active {
+  transform: scale(0.94);
+}
+
+.craft-slot-card:hover {
+  border-color: #f59e0b;
+  background: linear-gradient(145deg, #2c221a, #1a1510);
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.35);
+}
+
+.craft-slot-card.is-craftable {
+  border-color: rgba(16, 185, 129, 0.5);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.2);
+}
+
+.craft-slot-card.is-craftable:hover {
+  border-color: #10b981;
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.45);
+}
+
+.craft-slot-card.is-missing {
+  opacity: 0.72;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.craft-slot-card.is-locked {
+  opacity: 0.42;
+  filter: grayscale(0.6);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.craft-slot-icon {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.craft-slot-icon svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6));
+}
+
+.craft-slot-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fef08a;
+  line-height: 1.2;
+  margin: 4px 0;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+.craft-slot-badge {
+  font-size: 9.5px;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+.badge-craftable {
+  background: rgba(16, 185, 129, 0.25);
+  color: #4ade80;
+  border: 1px solid rgba(16, 185, 129, 0.5);
+}
+
+.badge-missing {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.badge-locked {
+  background: rgba(0, 0, 0, 0.5);
+  color: var(--ink-muted);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Modal Chi Tiết Chế Tạo */
+.card--craft-inspect {
+  max-width: 350px;
+  width: 90vw;
+  background: #18130e;
+  border: 1.5px solid rgba(241, 218, 167, 0.35);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.85);
+}
+
+.artisan-rank-card {
+  background: linear-gradient(145deg, #241c14, #15110d);
+  border: 1.5px solid rgba(245, 158, 11, 0.4);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* Modal Yêu Cầu GPS Thật trên Mobile APK */
+.overlay--gps {
+  z-index: 99999;
+  background: rgba(10, 8, 6, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.card--gps-required {
+  max-width: 360px;
+  width: 90vw;
+  background: linear-gradient(145deg, #1c150f, #110d0a);
+  border: 2px solid rgba(245, 158, 11, 0.6);
+  border-radius: 20px;
+  padding: 24px 20px;
+  text-align: center;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.9), 0 0 20px rgba(245, 158, 11, 0.2);
+}
+
+.gps-icon-pulse {
+  font-size: 3rem;
+  margin-bottom: 12px;
+  animation: gpsPulse 2s infinite ease-in-out;
+  display: inline-block;
+}
+
+@keyframes gpsPulse {
+  0% { transform: scale(1); filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.4)); }
+  50% { transform: scale(1.15); filter: drop-shadow(0 0 16px rgba(245, 158, 11, 0.9)); }
+  100% { transform: scale(1); filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.4)); }
+}
+
+.gps-title {
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: #fef08a;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.gps-desc {
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--ink-dim);
+  margin-bottom: 14px;
+}
+
+.gps-alert-box {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 10px;
+  padding: 10px;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: #fca5a5;
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+
+
+

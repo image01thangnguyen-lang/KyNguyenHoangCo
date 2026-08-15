@@ -68,11 +68,15 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
 
     private void setupWebView() {
         webView.setBackgroundColor(Color.parseColor("#12100d"));
+        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+
         WebSettings settings = webView.getSettings();
 
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setDatabaseEnabled(true);
+        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
         settings.setAllowFileAccess(true);
         settings.setAllowContentAccess(true);
         settings.setAllowFileAccessFromFileURLs(true);
@@ -90,6 +94,9 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            settings.setSafeBrowsingEnabled(false);
         }
 
         // Đăng ký cầu nối Native Bridge để JavaScript đọc toạ độ GPS trực tiếp từ phần cứng
@@ -159,6 +166,30 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
                         loc.getLatitude(), loc.getLongitude(), loc.getAccuracy(), loc.getTime());
             }
             return null;
+        }
+
+        @JavascriptInterface
+        public boolean isNativeApk() {
+            return true;
+        }
+
+        @JavascriptInterface
+        public boolean hasLocationPermission() {
+            return MainActivity.this.hasLocationPermission();
+        }
+
+        @JavascriptInterface
+        public void requestLocationPermission() {
+            runOnUiThread(() -> MainActivity.this.requestLocationPermissions());
+        }
+
+        @JavascriptInterface
+        public void openLocationSettings() {
+            try {
+                android.content.Intent intent = new android.content.Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                startActivity(intent);
+            } catch (Exception ignored) {
+            }
         }
     }
 
