@@ -348,6 +348,9 @@ export class MapView {
   onFeatureClick                                ;
 
           viewportDirty = false;
+          cachedInputFeatures                      = null;
+          cachedWaterFeatures               = [];
+          cachedSolidFeatures               = [];
 
   constructor(canvas                   ) {
     this.canvas = canvas;
@@ -605,17 +608,22 @@ export class MapView {
     // 2. Vẽ các trục đường phố đại lộ thực tế trong không gian 2.5D
     this.drawRealRoads(project, pxPerMeter, input.phase);
 
-    // 3. Lớp nước dưới cùng (Hồ Gươm, Hồ Tây, Trúc Bạch...)
-    for (const feature of input.features) {
-      if (feature.zone === 'water') {
-        this.drawFeature(feature, project, pxPerMeter, input);
-      }
+    // Cập nhật bộ nhớ đệm features đã sắp xếp theo chiều sâu Y khi danh sách đầu vào thay đổi
+    if (this.cachedInputFeatures !== input.features) {
+      this.cachedInputFeatures = input.features;
+      this.cachedWaterFeatures = input.features.filter((f) => f.zone === 'water');
+      this.cachedSolidFeatures = input.features
+        .filter((f) => f.zone !== 'water')
+        .sort((a, b) => b.lat - a.lat);
     }
 
-    // 4. Các công trình & cảnh vật nổi khối 3D sắp xếp theo chiều sâu Y (Y-Depth Sorting cho 2.5D)
-    const solidFeatures = input.features.filter((f) => f.zone !== 'water');
-    solidFeatures.sort((a, b) => b.lat - a.lat); // Vĩ độ cao hơn (ở phía Bắc/ở trên) vẽ trước
-    for (const feature of solidFeatures) {
+    // 3. Lớp nước dưới cùng (Hồ Gươm, Hồ Tây, Trúc Bạch...)
+    for (const feature of this.cachedWaterFeatures) {
+      this.drawFeature(feature, project, pxPerMeter, input);
+    }
+
+    // 4. Các công trình & cảnh vật nổi khối 3D sắp xếp theo chiều sâu Y
+    for (const feature of this.cachedSolidFeatures) {
       this.drawFeature(feature, project, pxPerMeter, input);
     }
 
@@ -682,8 +690,28 @@ export class MapView {
         ctx.fill();
       }
 
-      // 3. Khung vẽ bẫy 3D theo cấp bẫy (Nhỏ / Vừa / Lớn)
-      if (trap.tier === 'small') {
+      // 3. Khung vẽ bẫy 3D theo cấp bẫy (Dưới nước / Nhỏ / Vừa / Lớn)
+      if (trap.tier === 'water') {
+        // Rọ Cá: Lồng nan tre đan hình thoi màu lam viền sáng
+        ctx.strokeStyle = '#0284c7';
+        ctx.lineWidth = 2.5 * this.dpr;
+        ctx.beginPath();
+        ctx.ellipse(x, y, 13 * this.dpr, 9 * this.dpr, 0, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.fillStyle = 'rgba(14, 165, 233, 0.45)';
+        ctx.fill();
+
+        // Nan rọ cá
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 1.5 * this.dpr;
+        ctx.beginPath();
+        ctx.moveTo(x - 8 * this.dpr, y - 6 * this.dpr);
+        ctx.lineTo(x + 8 * this.dpr, y + 6 * this.dpr);
+        ctx.moveTo(x - 8 * this.dpr, y + 6 * this.dpr);
+        ctx.lineTo(x + 8 * this.dpr, y - 6 * this.dpr);
+        ctx.stroke();
+      } else if (trap.tier === 'small') {
         // Bẫy Thỏ: Khung gỗ đan dây
         ctx.strokeStyle = '#854d0e';
         ctx.lineWidth = 2.5 * this.dpr;

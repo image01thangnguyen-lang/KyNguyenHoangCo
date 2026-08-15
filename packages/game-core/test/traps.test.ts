@@ -3,7 +3,14 @@ import assert from 'node:assert/strict';
 
 import { createProfile } from '../src/save.ts';
 import { addItems } from '../src/inventory.ts';
-import { placeTrap, tickTraps, collectTrap } from '../src/traps.ts';
+import {
+  collectTrap,
+  FISH_TRAP_TIERS,
+  getFishTrapTier,
+  placeTrap,
+  tickTraps,
+  upgradeFishTrapWithGold,
+} from '../src/traps.ts';
 
 const NOW = 1_700_000_000_000;
 const HANOI_POS = { lat: 21.0285, lon: 105.8542 };
@@ -72,4 +79,45 @@ test('thu bẫy: đứng xa bị từ chối, đứng gần (<=35m) thu được
   assert.equal(nearCollect.player.carried['beast_trap'], 1); // Thu hồi bẫy
   assert.ok((nearCollect.player.carried[nearCollect.gained.itemId] ?? 0) >= nearCollect.gained.qty);
   assert.equal(nearCollect.player.traps?.length, 0); // Bẫy đã được dọn
+});
+
+test('RỌ BẮT CÁ: Đặt bẫy nước, nâng cấp bằng Đồng Vàng Cổ và thu hoạch cá', () => {
+  let profile = createProfile('Ngư Dân', NOW, 'male');
+  profile.player.carried = { fish_trap: 2, ancient_coin: 50 };
+  assert.equal(getFishTrapTier(1).nameVi, 'Rọ Tre Đan Thô');
+
+  // Nâng cấp Lồng Cá từ Cấp 1 lên Cấp 2 (Tốn 30 Đồng Vàng)
+  const upRes = upgradeFishTrapWithGold(profile.player);
+  assert.equal(upRes.ok, true);
+  assert.equal(upRes.newLevel, 2);
+  assert.equal(upRes.player.carried.ancient_coin, 20);
+  assert.match(upRes.messageVi, /Lồng Lưới Bện Thừng/);
+
+  // Nâng tiếp lên Cấp 3 (Cần 75 Đồng Vàng, nhưng chỉ còn 20) -> Bị từ chối
+  const upFail = upgradeFishTrapWithGold(upRes.player);
+  assert.equal(upFail.ok, false);
+  assert.match(upFail.messageVi, /Chưa đủ Đồng Vàng Cổ/);
+
+  // Đặt Rọ Bắt Cá Cấp 2
+  const placeRes = placeTrap(upRes.player, 'fish_trap', HANOI_POS, NOW);
+  assert.equal(placeRes.ok, true);
+  assert.equal(placeRes.player.traps?.length, 1);
+  assert.equal(placeRes.player.traps?.[0].tier, 'water');
+  assert.equal(placeRes.trap?.readyAtMs, NOW + 6 * 60_000); // 6 phút cho cấp 2
+
+  // Chờ đủ 6 phút sập bẫy cá
+  const tickedTraps = tickTraps(placeRes.player.traps ?? [], NOW + 6 * 60_000, 2);
+  assert.ok(tickedTraps[0].caughtItem);
+  assert.ok(tickedTraps[0].caughtItem.qty > 0);
+
+  // Thu hồi rọ cá
+  const collected = collectTrap(
+    { ...placeRes.player, traps: tickedTraps },
+    tickedTraps[0].id,
+    HANOI_POS,
+    NOW + 6 * 60_000,
+  );
+  assert.equal(collected.ok, true);
+  assert.equal(collected.player.carried.fish_trap, 2); // Đã thu hồi lại rọ cá
+  assert.ok((collected.player.carried.raw_fish ?? 0) > 0 || (collected.player.carried.ancient_coin ?? 0) > 20);
 });

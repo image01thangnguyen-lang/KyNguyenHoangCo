@@ -54,7 +54,7 @@ class SpeechEngine {
       utter.lang = 'vi-VN';
     }
 
-    utter.rate = 0.95; // Tốc độ đĩnh đạc, ấm áp
+    utter.rate = 1.15; // Tăng tốc độ nói ~1.2 lần so với ban đầu (0.95 -> 1.15), vừa vặn và dễ nghe
     utter.pitch = 1.05; // Cao độ thân thiện của trợ lý Lạc Lạc
     utter.volume = 0.9;
 

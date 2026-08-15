@@ -2,20 +2,127 @@
  * Hệ thống đặt bẫy và thu bẫy theo toạ độ địa lý thực tế.
  * 
  * - Đặt bẫy tại chính toạ độ GPS của người chơi.
- * - Bẫy nhỏ (Thỏ), vừa (Hươu), lớn (Cự Thú).
- * - Sau thời gian chờ (10-20 phút), bẫy sập và bắt được thú.
- * - Người chơi phải đi tới gần toạ độ bẫy (<= 35m) mới thu hoạch được.
+ * - Bẫy Thỏ (Nhỏ), Hươu (Vừa), Cự Thú (Lớn) và Rọ Bắt Cá Tiền Sử (Dưới Nước).
+ * - Sau thời gian chờ, bẫy sập và bắt được thú/cá.
+ * - Người chơi đi tới gần toạ độ bẫy (<= 35m) để thu hoạch.
  */
 
 import { distanceMeters } from './world.ts';
 import { addItems, countOf, removeItems } from './inventory.ts';
 import type { ItemId, LatLon, PlacedTrap, PlayerState } from './types.ts';
 
+export interface FishTrapTier {
+  level: number;
+  nameVi: string;
+  waitMs: number;
+  fishQty: number;
+  upgradeCostGold: number;
+  bonusItem?: { itemId: ItemId; nameVi: string; qty: number };
+  descVi: string;
+}
+
+export const FISH_TRAP_TIERS: FishTrapTier[] = [
+  {
+    level: 1,
+    nameVi: 'Rọ Tre Đan Thô',
+    waitMs: 8 * 60 * 1000, // 8 phút
+    fishQty: 2,
+    upgradeCostGold: 0,
+    descVi: 'Bắt 2 cá tươi',
+  },
+  {
+    level: 2,
+    nameVi: 'Lồng Lưới Bện Thừng',
+    waitMs: 6 * 60 * 1000, // 6 phút
+    fishQty: 4,
+    upgradeCostGold: 30,
+    bonusItem: { itemId: 'ancient_coin', nameVi: 'Đồng tiền cổ dưới nước', qty: 1 },
+    descVi: 'Bắt 4 cá tươi + 1 Đồng Vàng Cổ',
+  },
+  {
+    level: 3,
+    nameVi: 'Rọ Đáy Sông Gia Cố',
+    waitMs: 4 * 60 * 1000, // 4 phút
+    fishQty: 7,
+    upgradeCostGold: 75,
+    bonusItem: { itemId: 'ancient_coin', nameVi: 'Đồng tiền cổ dưới nước', qty: 2 },
+    descVi: 'Bắt 7 cá tươi + 2 Đồng Vàng Cổ',
+  },
+  {
+    level: 4,
+    nameVi: 'Ngư Lồng Kim Khí',
+    waitMs: 2.5 * 60 * 1000, // 2.5 phút
+    fishQty: 10,
+    upgradeCostGold: 160,
+    bonusItem: { itemId: 'gold_ore', nameVi: 'Quặng vàng đáy sông', qty: 2 },
+    descVi: 'Bắt 10 cá tươi + 2 Quặng vàng',
+  },
+  {
+    level: 5,
+    nameVi: 'Long Ngư Thần Lồng',
+    waitMs: 90 * 1000, // 1.5 phút (Siêu tốc)
+    fishQty: 16,
+    upgradeCostGold: 350,
+    bonusItem: { itemId: 'upgrade_core', nameVi: 'Lõi nâng cấp cổ vật', qty: 1 },
+    descVi: 'Bắt 16 cá tươi + 1 Lõi nâng cấp trại',
+  },
+];
+
+export function getFishTrapTier(level = 1): FishTrapTier {
+  const safeLvl = Math.max(1, Math.min(FISH_TRAP_TIERS.length, level));
+  return FISH_TRAP_TIERS[safeLvl - 1];
+}
+
+/** Nâng cấp Lồng Bắt Cá bằng Đồng Vàng Cổ */
+export function upgradeFishTrapWithGold(player: PlayerState): {
+  ok: boolean;
+  messageVi: string;
+  player: PlayerState;
+  newLevel: number;
+} {
+  const currentLevel = Math.max(1, player.fishTrapLevel ?? 1);
+  if (currentLevel >= FISH_TRAP_TIERS.length) {
+    return {
+      ok: false,
+      messageVi: 'Lồng Bắt Cá đã đạt Cấp Tối Thượng — Long Ngư Thần Lồng!',
+      player,
+      newLevel: currentLevel,
+    };
+  }
+
+  const nextTier = FISH_TRAP_TIERS[currentLevel];
+  const cost = nextTier.upgradeCostGold;
+  const currentGold = countOf(player.carried, 'ancient_coin');
+
+  if (currentGold < cost) {
+    return {
+      ok: false,
+      messageVi: `Chưa đủ Đồng Vàng Cổ để nâng cấp lên "${nextTier.nameVi}" (Cần ${cost} 🪙, hiện có ${currentGold} 🪙).`,
+      player,
+      newLevel: currentLevel,
+    };
+  }
+
+  const updatedCarried = removeItems(player.carried, [{ itemId: 'ancient_coin', qty: cost }]);
+  const updatedPlayer: PlayerState = {
+    ...player,
+    carried: updatedCarried,
+    fishTrapLevel: currentLevel + 1,
+  };
+
+  return {
+    ok: true,
+    messageVi: `🎉 Nâng cấp Lồng Bắt Cá thành công! Đạt "${nextTier.nameVi}" (${nextTier.descVi}).`,
+    player: updatedPlayer,
+    newLevel: currentLevel + 1,
+  };
+}
+
 export const TRAP_CONFIG = {
   rabbit_trap: {
     tier: 'small' as const,
     nameVi: 'Bẫy Thỏ (Nhỏ)',
-    waitMs: 10 * 60 * 1000, // 10 phút
+    waitMs: 10 * 60 * 1000,
     catchItems: [
       { itemId: 'raw_meat' as ItemId, nameVi: 'Thịt tươi', qty: 1 },
       { itemId: 'leather' as ItemId, nameVi: 'Da thú dày', qty: 1 },
@@ -24,7 +131,7 @@ export const TRAP_CONFIG = {
   deer_trap: {
     tier: 'medium' as const,
     nameVi: 'Bẫy Hươu (Vừa)',
-    waitMs: 15 * 60 * 1000, // 15 phút
+    waitMs: 15 * 60 * 1000,
     catchItems: [
       { itemId: 'raw_meat' as ItemId, nameVi: 'Thịt tươi', qty: 3 },
       { itemId: 'leather' as ItemId, nameVi: 'Da thú dày', qty: 2 },
@@ -34,11 +141,20 @@ export const TRAP_CONFIG = {
   beast_trap: {
     tier: 'large' as const,
     nameVi: 'Bẫy Cự Thú (Lớn)',
-    waitMs: 20 * 60 * 1000, // 20 phút
+    waitMs: 20 * 60 * 1000,
     catchItems: [
       { itemId: 'raw_meat' as ItemId, nameVi: 'Thịt tươi', qty: 6 },
       { itemId: 'leather' as ItemId, nameVi: 'Da thú dày', qty: 4 },
       { itemId: 'gold_ore' as ItemId, nameVi: 'Quặng vàng', qty: 2 },
+    ],
+  },
+  fish_trap: {
+    tier: 'water' as const,
+    nameVi: 'Rọ Bắt Cá Tiền Sử',
+    waitMs: 8 * 60 * 1000,
+    catchItems: [
+      { itemId: 'raw_fish' as ItemId, nameVi: 'Cá tươi', qty: 2 },
+      { itemId: 'ancient_coin' as ItemId, nameVi: 'Đồng tiền cổ dưới nước', qty: 1 },
     ],
   },
 };
@@ -46,7 +162,7 @@ export const TRAP_CONFIG = {
 /** Đặt bẫy tại vị trí toạ độ địa lý hiện tại của người chơi. */
 export function placeTrap(
   player: PlayerState,
-  trapItemId: 'rabbit_trap' | 'deer_trap' | 'beast_trap',
+  trapItemId: 'rabbit_trap' | 'deer_trap' | 'beast_trap' | 'fish_trap',
   at: LatLon,
   nowMs: number,
 ): { ok: boolean; player: PlayerState; messageVi: string; trap?: PlacedTrap } {
@@ -55,23 +171,31 @@ export function placeTrap(
   }
 
   const currentTraps = player.traps ?? [];
-  const maxTraps = 5;
+  const maxTraps = 6;
   const activeTraps = currentTraps.filter((t) => !t.collected);
 
   if (activeTraps.length >= maxTraps) {
     return { ok: false, player, messageVi: `Bạn chỉ có thể đặt tối đa ${maxTraps} bẫy cùng lúc ngoài thế giới.` };
   }
 
-  const config = TRAP_CONFIG[trapItemId];
+  let waitDuration = TRAP_CONFIG[trapItemId].waitMs;
+  let trapName = TRAP_CONFIG[trapItemId].nameVi;
+
+  if (trapItemId === 'fish_trap') {
+    const fTier = getFishTrapTier(player.fishTrapLevel ?? 1);
+    waitDuration = fTier.waitMs;
+    trapName = `Rọ Cá (${fTier.nameVi})`;
+  }
+
   const newTrap: PlacedTrap = {
     id: `trap_${nowMs}_${Math.floor(Math.random() * 1000)}`,
     trapItemId,
-    nameVi: config.nameVi,
-    tier: config.tier,
+    nameVi: trapName,
+    tier: TRAP_CONFIG[trapItemId].tier,
     lat: at.lat,
     lon: at.lon,
     placedAtMs: nowMs,
-    readyAtMs: nowMs + config.waitMs,
+    readyAtMs: nowMs + waitDuration,
     caughtItem: null,
     collected: false,
   };
@@ -86,20 +210,30 @@ export function placeTrap(
   return {
     ok: true,
     player: updatedPlayer,
-    messageVi: `Đã đặt ${config.nameVi} tại đây! Hãy quay lại thu bẫy sau khi thú sập bẫy.`,
+    messageVi: `Đã đặt ${trapName} tại đây! Hãy quay lại thu hoạch sau khi bắt được mồi.`,
     trap: newTrap,
   };
 }
 
 /** Cập nhật trạng thái các bẫy (kiểm tra sập bẫy). */
-export function tickTraps(traps: PlacedTrap[], nowMs: number): PlacedTrap[] {
+export function tickTraps(traps: PlacedTrap[], nowMs: number, playerFishTrapLevel = 1): PlacedTrap[] {
   return traps.map((trap) => {
     if (trap.collected) return trap;
     if (trap.caughtItem) return trap;
 
     if (nowMs >= trap.readyAtMs) {
+      if (trap.trapItemId === 'fish_trap') {
+        const fTier = getFishTrapTier(playerFishTrapLevel);
+        const reward = fTier.bonusItem && Math.random() < 0.4
+          ? fTier.bonusItem
+          : { itemId: 'raw_fish' as ItemId, nameVi: 'Cá tươi béo ngậy', qty: fTier.fishQty };
+        return {
+          ...trap,
+          caughtItem: reward,
+        };
+      }
+
       const config = TRAP_CONFIG[trap.trapItemId];
-      // Chọn 1 phần thưởng từ danh sách
       const reward = config.catchItems[Math.floor(Math.random() * config.catchItems.length)] ?? config.catchItems[0];
       return {
         ...trap,
@@ -117,7 +251,7 @@ export function collectTrap(
   playerAt: LatLon,
   nowMs: number,
 ): { ok: boolean; player: PlayerState; messageVi: string; gained?: { itemId: ItemId; nameVi: string; qty: number } } {
-  const traps = tickTraps(player.traps ?? [], nowMs);
+  const traps = tickTraps(player.traps ?? [], nowMs, player.fishTrapLevel ?? 1);
   const trap = traps.find((t) => t.id === trapId);
 
   if (!trap) {
@@ -143,7 +277,7 @@ export function collectTrap(
     return {
       ok: false,
       player,
-      messageVi: `Bẫy đang rình mồi... Thú chưa sập bẫy. Còn khoảng ${min}p${sec}s!`,
+      messageVi: `Đang rình mồi... Chưa bắt được con nào. Còn khoảng ${min}p${sec}s!`,
     };
   }
 

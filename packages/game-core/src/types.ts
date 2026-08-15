@@ -169,9 +169,9 @@ export interface LifetimeStats {
 
 export interface PlacedTrap {
   id: string;
-  trapItemId: 'rabbit_trap' | 'deer_trap' | 'beast_trap';
+  trapItemId: 'rabbit_trap' | 'deer_trap' | 'beast_trap' | 'fish_trap';
   nameVi: string;
-  tier: 'small' | 'medium' | 'large';
+  tier: 'small' | 'medium' | 'large' | 'water';
   lat: number;
   lon: number;
   placedAtMs: number;
@@ -204,6 +204,10 @@ export interface PlayerState {
   pets?: any[];
   /** Cấp bậc thợ thủ công chế tác (1..4) */
   artisanLevel?: number;
+  /** Cấp độ mở rộng của Két An Toàn bằng Đồng Vàng Cổ (1..6) */
+  safeVaultLevel?: number;
+  /** Cấp độ nâng cấp Rọ Bắt Cá bằng Đồng Vàng Cổ (1..5) */
+  fishTrapLevel?: number;
   createdAtMs: number;
 }
 

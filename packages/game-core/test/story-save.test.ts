@@ -204,6 +204,16 @@ test('hai anh em dùng chung máy, mỗi người một hồ sơ độc lập', 
   assert.equal(save.activeSlot, 1);
 });
 
+test('xoá hồ sơ đưa khe trở về trạng thái trống (empty)', () => {
+  let save = createSaveFile(T0);
+  save = putProfile(save, 0, createProfile('Thợ Săn', T0));
+  assert.equal(slotSummaries(save)[0]!.empty, false);
+
+  save = putProfile(save, 0, null);
+  assert.equal(slotSummaries(save)[0]!.empty, true);
+  assert.equal(save.profiles[0], null);
+});
+
 test('khe hồ sơ ngoài phạm vi bị từ chối', () => {
   const save = createSaveFile(T0);
   assert.throws(() => putProfile(save, 5, createProfile('X', T0)), /Khe hồ sơ không hợp lệ/);

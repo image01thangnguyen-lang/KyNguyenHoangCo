@@ -46,6 +46,7 @@
     { "id": "rabbit_trap",      "nameVi": "Bẫy thỏ (Nhỏ)",     "kind": "deployable", "stack": 10, "weight": 2 },
     { "id": "deer_trap",        "nameVi": "Bẫy hươu (Vừa)",    "kind": "deployable", "stack": 5,  "weight": 4 },
     { "id": "beast_trap",       "nameVi": "Bẫy cự thú (Lớn)",  "kind": "deployable", "stack": 3,  "weight": 6 },
+    { "id": "fish_trap",        "nameVi": "Rọ Bắt Cá",         "kind": "deployable", "stack": 10, "weight": 2 },
     { "id": "spike_trap",       "nameVi": "Bẫy chông",         "kind": "deployable", "stack": 10, "weight": 3, "defense": 8 },
 
     { "id": "stone_spear",      "nameVi": "Giáo đá",           "kind": "weapon", "stack": 1, "weight": 3, "attack": 10, "durability": 50 },

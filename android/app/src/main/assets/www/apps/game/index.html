@@ -9,6 +9,11 @@
     />
     <meta name="theme-color" content="#12100d" />
     <meta name="description" content="Kỷ Nguyên Hoang Cổ — game sinh tồn đi bộ, chơi hoàn toàn offline." />
+    <!-- Hỗ trợ WebApp Fullscreen & Icon trên iOS (iPhone / iPad) -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Hoang Cổ" />
+    <link rel="apple-touch-icon" href="./icon.svg" />
     <title>Kỷ Nguyên Hoang Cổ</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -145,10 +150,14 @@
             <div id="camp-farming" class="camp-farming"></div>
             <div id="camp-upgrade" class="camp-upgrade"></div>
             <div id="camp-defense" class="camp-defense"></div>
-            <h3 class="section-title">Đồ đang mang</h3>
-            <div id="inv-carried" class="inventory"></div>
-            <h3 class="section-title">Két an toàn <span class="hint">không mất khi ngất hoặc thua đêm</span></h3>
+
+            <!-- Khu vực Quản lý & Nâng cấp Két An Toàn bằng Vàng -->
+            <div id="camp-safe-vault" class="camp-safe-vault"></div>
+            <h3 class="section-title">Vật Phẩm Trong Két An Toàn <span class="hint">không mất khi ngất hoặc thua đêm</span></h3>
             <div id="inv-safe" class="inventory"></div>
+
+            <h3 class="section-title" style="margin-top:18px;">Đồ đang mang trên người</h3>
+            <div id="inv-carried" class="inventory"></div>
           </div>
         </div>
 
@@ -174,13 +183,18 @@
           <div class="drawer-header">
             <div class="drawer-handle"></div>
             <div class="panel-head">
-              <h2>Túi đồ</h2>
+              <h2>Túi đồ &amp; Két An Toàn</h2>
               <button class="drawer-close" data-close="bag" title="Đóng">✕</button>
             </div>
           </div>
           <div class="drawer-content">
+            <div class="inventory-tabs">
+              <button id="btn-bag-tab-carried" class="inv-tab-btn is-active">🎒 Túi Đang Mang</button>
+              <button id="btn-bag-tab-safe" class="inv-tab-btn">🔒 Két An Toàn</button>
+            </div>
             <div class="bag-summary-bar">
               <span id="bag-item-count" class="chip">0 vật phẩm</span>
+              <button id="btn-bag-quick-safe" class="btn btn--tiny btn--primary" style="margin-left:auto;">⚡ Cất nhanh đồ quý</button>
             </div>
             <div id="inv-bag" class="inventory"></div>
           </div>
@@ -400,6 +414,21 @@
         <div class="card-actions">
           <button id="btn-create-submit" class="btn btn--primary">Bắt đầu sinh tồn</button>
           <button id="btn-create-cancel" class="btn btn--ghost">Huỷ</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lớp phủ: Xác nhận Xóa Hồ Sơ -->
+    <div id="overlay-delete-profile" class="overlay" hidden>
+      <div class="card card--delete-profile">
+        <div class="card__icon-badge" style="font-size:2.4rem;">⚠️</div>
+        <h2 style="color:#ef4444;margin-top:4px;">Xoá Hồ Sơ Này?</h2>
+        <p id="delete-profile-msg" style="margin:10px 0 16px 0;line-height:1.5;color:var(--bone);">
+          Bạn có chắc chắn muốn xoá hồ sơ này? Toàn bộ tiến trình sẽ bị xoá vĩnh viễn và không thể khôi phục nếu chưa xuất file sao lưu.
+        </p>
+        <div class="card-actions" style="display:flex;gap:10px;justify-content:center;">
+          <button id="btn-delete-confirm" class="btn btn--primary" style="background:#dc2626;border-color:#ef4444;">🗑️ Xoá Vĩnh Viễn</button>
+          <button id="btn-delete-cancel" class="btn btn--ghost">Huỷ Bỏ</button>
         </div>
       </div>
     </div>

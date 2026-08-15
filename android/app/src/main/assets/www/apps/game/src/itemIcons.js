@@ -179,8 +179,16 @@ export function itemIconSvg(id        , className = 'item-svg')         {
       );
 
     case 'rabbit_trap':
+    case 'deer_trap':
+    case 'beast_trap':
       return svg(
-        '<path d="M14 46 24 18h16l10 28Z" fill="#4d3725" stroke="#966d49" stroke-width="2.5"/><path d="M18 46V28h28v18M24 28v18M40 28v18M18 36h28" stroke="#cf9e6b" stroke-width="2"/>',
+        `<path d="M14 46 24 18h16l10 28Z" fill="${id === 'beast_trap' ? '#3d2b24' : '#4d3725'}" stroke="${id === 'beast_trap' ? '#d97706' : '#966d49'}" stroke-width="2.5"/><path d="M18 46V28h28v18M24 28v18M40 28v18M18 36h28" stroke="${id === 'beast_trap' ? '#fbbf24' : '#cf9e6b'}" stroke-width="2"/>`,
+        className,
+      );
+
+    case 'fish_trap':
+      return svg(
+        '<ellipse cx="32" cy="32" rx="20" ry="12" fill="#1e3a5f" stroke="#38bdf8" stroke-width="2.5"/><path d="M12 32c6-10 34-10 40 0M12 32c6 10 34 10 40 0M22 22v20M32 20v24M42 22v20" stroke="#7dd3fc" stroke-width="2"/><circle cx="46" cy="32" r="3" fill="#facc15"/><path d="M12 32 6 24v16Z" fill="#0284c7" stroke="#38bdf8" stroke-width="1.5"/>',
         className,
       );
 

@@ -59,15 +59,26 @@ body {
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
   user-select: none;
+  -webkit-user-select: none;
 }
 
-button {
+button,
+.btn,
+.chip,
+.slot,
+.slot-card,
+.tabbar__btn,
+.drawer-close,
+.map-ctrl-btn,
+.inv-tab-btn {
   font: inherit;
   color: inherit;
   cursor: pointer;
   border: none;
   background: none;
   user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
 }
 
 h1,
@@ -210,17 +221,32 @@ h3 {
 }
 
 .slot__del {
-  padding: 8px 10px;
-  background: transparent;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--line);
   border-radius: 8px;
   color: var(--ink-faint);
-  transition: color 0.2s;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .slot__del:hover {
-  color: var(--blood);
-  border-color: var(--blood);
+  color: #ef4444;
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.15);
+  transform: scale(1.1);
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.3);
+}
+
+.card--delete-profile {
+  max-width: 380px;
+  text-align: center;
+  border: 1.5px solid rgba(239, 68, 68, 0.35);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 20px rgba(239, 68, 68, 0.15);
 }
 
 .profile-actions {
@@ -846,15 +872,17 @@ h3 {
   box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.75);
   overflow: hidden;
   padding: 0;
+  transform: translateZ(0);
+  will-change: transform;
   animation: slideUpDrawer 0.28s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes slideUpDrawer {
   from {
-    transform: translateY(100%);
+    transform: translateY(100%) translateZ(0);
   }
   to {
-    transform: translateY(0);
+    transform: translateY(0) translateZ(0);
   }
 }
 
@@ -912,6 +940,7 @@ h3 {
   flex: 1;
   overflow-y: auto;
   overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding: 14px 14px calc(var(--safe-b) + 30px);
 }
 
@@ -2932,6 +2961,45 @@ h3 {
 /* ==========================================================================
    🎮 GIAO DIỆN TÚI ĐỒ & KHO DẠNG Ô VUÔNG RPG (INVENTORY SQUARE SLOT GRID)
    ========================================================================== */
+
+.inventory-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 4px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.inv-tab-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-dim);
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.inv-tab-btn.is-active {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(217, 119, 6, 0.1));
+  border-color: rgba(245, 158, 11, 0.5);
+  color: #fef08a;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), 0 0 10px rgba(245, 158, 11, 0.2);
+}
+
+.inv-tab-btn:hover:not(.is-active) {
+  color: var(--bone);
+  background: rgba(255, 255, 255, 0.05);
+}
 
 .inventory-grid {
   display: grid;

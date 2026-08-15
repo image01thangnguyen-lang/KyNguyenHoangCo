@@ -12,7 +12,15 @@ import {
   getArtisanRank,
   upgradeArtisanRankWithGold,
 } from '../src/crafting.js';
-import { dropFraction, moveToSafe, slotsUsed } from '../src/inventory.js';
+import {
+  dropFraction,
+  getSafeCapacity,
+  moveFromSafe,
+  moveToSafe,
+  SAFE_VAULT_TIERS,
+  slotsUsed,
+  upgradeSafeVault,
+} from '../src/inventory.js';
                                                               
 
 const T0 = Date.UTC(2026, 7, 14, 3, 0, 0);
@@ -327,6 +335,43 @@ test('CẤP BẬC THỢ: Tấn phong cấp bậc bằng Đồng Vàng Cổ (anci
   assert.equal(up2Ok.ok, true);
   assert.equal(up2Ok.newLevel, 3);
   assert.equal(up2Ok.player.carried.ancient_coin, 60);
+});
+
+test('KÉT AN TOÀN: Nâng cấp sức chứa bằng Đồng Vàng Cổ (ancient_coin)', () => {
+  const basePlayer              = {
+    id: 'p1',
+    displayName: 'Thợ Săn',
+    survival: { satiety: 100, hydration: 100, hp: 100, sickness: null, asleep: false, lastTickMs: T0 },
+    carried: { ancient_coin: 30, iron_ingot: 10 },
+    safeStorage: { blueprint: 2 },
+    camp: camp1(),
+    steps: { todaySteps: 0, lastStepMs: T0, history: {}, totalSteps: 0 },
+    lifetime: { steps: 0, daysPlayed: 1, craftCount: 0, nightDefenseWins: 0, bloodMoonWins: 0, totalGatherActions: 0 },
+    knownRecipes: [],
+    safeVaultLevel: 1,
+    createdAtMs: T0,
+  };
+
+  assert.equal(getSafeCapacity(1, 1), 6);
+
+  // Nâng từ Cấp 1 lên Cấp 2: Tốn 25 vàng -> Thành công
+  const up1 = upgradeSafeVault(basePlayer);
+  assert.equal(up1.ok, true);
+  assert.equal(up1.newLevel, 2);
+  assert.equal(up1.player.carried.ancient_coin, 5);
+  assert.equal(getSafeCapacity(1, 2), 12);
+  assert.match(up1.messageVi, /Hòm Gỗ Bọc Sắt/);
+
+  // Nâng tiếp từ Cấp 2 lên Cấp 3: Cần 60 vàng (chỉ có 5) -> Bị từ chối
+  const up2Fail = upgradeSafeVault(up1.player);
+  assert.equal(up2Fail.ok, false);
+  assert.match(up2Fail.messageVi, /Chưa đủ Đồng Vàng Cổ/);
+
+  // Rút đồ từ két an toàn ra balo
+  const withdraw = moveFromSafe(up1.player.carried, up1.player.safeStorage, [{ itemId: 'blueprint', qty: 1 }]);
+  assert.equal(withdraw.ok, true);
+  assert.equal(withdraw.safe.blueprint, 1);
+  assert.equal(withdraw.carried.blueprint, 1);
 });
 
 

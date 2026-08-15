@@ -22,6 +22,11 @@ import {
   countOf,
   getArtisanRank,
   ARTISAN_RANKS,
+  SAFE_VAULT_TIERS,
+  getSafeCapacity,
+  slotsUsed,
+  FISH_TRAP_TIERS,
+  getFishTrapTier,
 } from '../../../packages/game-core/src/index.js';
 import { actionIconSvg, itemIconSvg, zoneIconSvg, coinIconSvg } from './itemIcons.js';
 import { audio } from './audio.js';
@@ -45,12 +50,16 @@ export function el                       (id        )    {
                         
                                   
                                                  
+                                                     
+                              
+                                
                                                                 
                                               
                   
                          
                       
-                                                                            
+                                                                                          
+                             
                                            
                                                      
                                                        
@@ -564,8 +573,75 @@ export function renderCamp(view          , profile             , handlers       
   renderFarming(view, profile, handlers);
   renderUpgrade(view, profile, handlers);
   renderDefense(profile);
-  renderInventory('inv-carried', profile.player.carried, handlers, true);
+  renderSafeVaultSection(profile, handlers);
   renderInventory('inv-safe', profile.player.safeStorage, handlers, false);
+  renderInventory('inv-carried', profile.player.carried, handlers, true);
+}
+
+export function renderSafeVaultSection(profile             , handlers          )       {
+  const box = el('camp-safe-vault');
+  if (!box) return;
+
+  const currentLevel = Math.max(1, profile.player.safeVaultLevel ?? 1);
+  const currentTier = SAFE_VAULT_TIERS.find((t) => t.level === currentLevel) ?? SAFE_VAULT_TIERS[0];
+  const maxCapacity = getSafeCapacity(profile.player.camp.level, currentLevel);
+  const usedSlots = slotsUsed(profile.player.safeStorage ?? {});
+  const currentGold = countOf(profile.player.carried, 'ancient_coin');
+
+  const isMaxLevel = currentLevel >= SAFE_VAULT_TIERS.length;
+  const nextTier = !isMaxLevel ? SAFE_VAULT_TIERS[currentLevel] : null;
+
+  const ratio = Math.min(1, usedSlots / maxCapacity);
+  const percent = Math.round(ratio * 100);
+
+  box.innerHTML = `
+    <div class="safe-vault-card" style="background:linear-gradient(135deg, rgba(35,26,18,0.95), rgba(18,14,10,0.95));border:1.5px solid rgba(251,191,36,0.35);border-radius:12px;padding:12px 14px;margin-bottom:14px;box-shadow:0 6px 20px rgba(0,0,0,0.5);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:1.6rem;">🏛️</span>
+          <div>
+            <div style="font-weight:800;color:#fef08a;font-size:1.02rem;">KÉT AN TOÀN — ${currentTier.nameVi}</div>
+            <div style="font-size:0.78rem;color:var(--gold-faint);">Cấp ${currentLevel} · Vật phẩm trong két không bao giờ mất</div>
+          </div>
+        </div>
+        <span class="chip chip--warn" style="font-weight:700;">${usedSlots} / ${maxCapacity} ô</span>
+      </div>
+
+      <div class="bar__track" style="height:7px;margin:8px 0;background:rgba(0,0,0,0.5);">
+        <div class="bar__fill" style="width:${percent}%;background:${percent > 85 ? '#ef4444' : 'linear-gradient(90deg, #f59e0b, #fbbf24)'};"></div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+        ${
+          !isMaxLevel && nextTier
+            ? `
+          <button id="btn-upgrade-safe-vault" class="btn btn--primary" style="flex:1;font-size:0.85rem;padding:8px 12px;min-width:200px;">
+            ⬆️ Nâng lên ${nextTier.nameVi} (${nextTier.slots} ô) — ${nextTier.upgradeCostGold} 🪙
+          </button>
+        `
+            : `
+          <div class="chip" style="flex:1;text-align:center;color:#4ade80;background:rgba(74,222,128,0.1);border-color:rgba(74,222,128,0.3);padding:8px 10px;">
+            ✨ Đạt cấp tối thượng (Thần Kho Bất Diệt)
+          </div>
+        `
+        }
+        <button id="btn-quick-safe-transfer" class="btn btn--ghost" style="font-size:0.82rem;padding:8px 12px;" title="Tự động cất nguyên liệu quý, đồng vàng và bản vẽ vào két">
+          ⚡ Cất nhanh đồ quý
+        </button>
+      </div>
+    </div>
+  `;
+
+  const btnUp = box.querySelector                   ('#btn-upgrade-safe-vault');
+  if (btnUp && nextTier) {
+    btnUp.disabled = currentGold < nextTier.upgradeCostGold;
+    btnUp.onclick = () => handlers.onUpgradeSafeVault?.();
+  }
+
+  const btnQuick = box.querySelector                   ('#btn-quick-safe-transfer');
+  if (btnQuick) {
+    btnQuick.onclick = () => handlers.onQuickStorePrecious?.();
+  }
 }
 
 function renderUpgrade(view          , profile             , handlers          )       {
@@ -885,27 +961,81 @@ export function openItemInspector(
     actionsEl.append(useBtn);
   }
 
-  const isTrap = itemId === 'rabbit_trap' || itemId === 'deer_trap' || itemId === 'beast_trap';
+  const isTrap =
+    itemId === 'rabbit_trap' ||
+    itemId === 'deer_trap' ||
+    itemId === 'beast_trap' ||
+    itemId === 'fish_trap';
   if (isCarried && isTrap) {
     const trapBtn = document.createElement('button');
     trapBtn.className = 'btn btn--primary';
-    trapBtn.textContent = '🪤 Đặt Bẫy Tại Tọa Độ GPS Này';
+    trapBtn.textContent = itemId === 'fish_trap' ? '🐟 Thả Rọ Bắt Cá Tại Toạ Độ Này' : '🪤 Đặt Bẫy Tại Tọa Độ GPS Này';
     trapBtn.onclick = () => {
       handlers.onPlaceTrap(itemId       );
       overlay.hidden = true;
     };
     actionsEl.append(trapBtn);
+
+    if (itemId === 'fish_trap') {
+      const currentFishLvl = Math.max(1, (window       ).__khc?.app?.profile?.player?.fishTrapLevel ?? 1);
+      const fTier = getFishTrapTier(currentFishLvl);
+      const isMax = currentFishLvl >= FISH_TRAP_TIERS.length;
+      const nextFTier = !isMax ? FISH_TRAP_TIERS[currentFishLvl] : null;
+
+      const trapUpgradeBox = document.createElement('div');
+      trapUpgradeBox.style.marginTop = '10px';
+      trapUpgradeBox.style.padding = '8px 10px';
+      trapUpgradeBox.style.background = 'rgba(14,165,233,0.12)';
+      trapUpgradeBox.style.border = '1px solid rgba(56,189,248,0.3)';
+      trapUpgradeBox.style.borderRadius = '8px';
+      trapUpgradeBox.style.fontSize = '0.84rem';
+
+      trapUpgradeBox.innerHTML = `
+        <div style="font-weight:700;color:#38bdf8;margin-bottom:4px;display:flex;align-items:center;justify-content:space-between;">
+          <span>🐟 ${fTier.nameVi}</span>
+          <span class="chip" style="font-size:0.75rem;">Cấp ${currentFishLvl}</span>
+        </div>
+        <div style="color:var(--ink-muted);font-size:0.78rem;margin-bottom:8px;">${fTier.descVi} · Chờ ${(fTier.waitMs / 60000).toFixed(1)} phút</div>
+        ${
+          !isMax && nextFTier
+            ? `
+          <button id="btn-upgrade-fish-trap" class="btn btn--tiny btn--primary" style="width:100%;">
+            ⬆️ Nâng lên ${nextFTier.nameVi} (${nextFTier.upgradeCostGold} 🪙)
+          </button>
+        `
+            : `<div class="chip" style="color:#4ade80;text-align:center;width:100%;">✨ Đạt cấp tối thượng</div>`
+        }
+      `;
+
+      const btnUpFish = trapUpgradeBox.querySelector                   ('#btn-upgrade-fish-trap');
+      if (btnUpFish && nextFTier) {
+        btnUpFish.onclick = () => {
+          handlers.onUpgradeFishTrap?.();
+          overlay.hidden = true;
+        };
+      }
+      actionsEl.append(trapUpgradeBox);
+    }
   }
 
   if (isCarried) {
     const storeBtn = document.createElement('button');
     storeBtn.className = 'btn btn--ghost';
-    storeBtn.textContent = '📦 Cất Vào Két An Toàn';
+    storeBtn.textContent = '🔒 Cất Vào Két An Toàn';
     storeBtn.onclick = () => {
       handlers.onStoreSafe(itemId, qty);
       overlay.hidden = true;
     };
     actionsEl.append(storeBtn);
+  } else {
+    const withdrawBtn = document.createElement('button');
+    withdrawBtn.className = 'btn btn--primary';
+    withdrawBtn.textContent = '🎒 Lấy Ra Balo / Túi Đang Mang';
+    withdrawBtn.onclick = () => {
+      handlers.onWithdrawSafe?.(itemId, qty);
+      overlay.hidden = true;
+    };
+    actionsEl.append(withdrawBtn);
   }
 
   el('btn-inspect-close').onclick = () => {
@@ -952,12 +1082,38 @@ function renderInventory(
   }
 }
 
+let bagTabState                     = 'carried';
+
 export function renderBagPanel(profile             , handlers          )       {
+  const tabCarried = document.getElementById('btn-bag-tab-carried');
+  const tabSafe = document.getElementById('btn-bag-tab-safe');
+  const btnQuick = document.getElementById('btn-bag-quick-safe');
+
+  if (tabCarried && tabSafe) {
+    tabCarried.classList.toggle('is-active', bagTabState === 'carried');
+    tabSafe.classList.toggle('is-active', bagTabState === 'safe');
+
+    tabCarried.onclick = () => {
+      bagTabState = 'carried';
+      renderBagPanel(profile, handlers);
+    };
+
+    tabSafe.onclick = () => {
+      bagTabState = 'safe';
+      renderBagPanel(profile, handlers);
+    };
+  }
+
+  if (btnQuick) {
+    btnQuick.onclick = () => handlers.onQuickStorePrecious?.();
+  }
+
   const box = el('inv-bag');
   box.className = 'inventory-grid';
   box.replaceChildren();
 
-  const inventory = profile.player.carried ?? {};
+  const isSafeTab = bagTabState === 'safe';
+  const inventory = isSafeTab ? (profile.player.safeStorage ?? {}) : (profile.player.carried ?? {});
   const entries = Object.entries(inventory).filter(([, qty]) => qty > 0);
   entries.sort((a, b) => b[1] - a[1]);
 
@@ -966,7 +1122,13 @@ export function renderBagPanel(profile             , handlers          )       {
 
   const countBadge = document.getElementById('bag-item-count');
   if (countBadge) {
-    countBadge.textContent = `${totalTypes} loại (${totalCount} món)`;
+    if (isSafeTab) {
+      const maxCap = getSafeCapacity(profile.player.camp.level, profile.player.safeVaultLevel ?? 1);
+      const used = slotsUsed(inventory);
+      countBadge.innerHTML = `🔒 Két An Toàn: <strong>${used} / ${maxCap} ô</strong> (${totalTypes} loại)`;
+    } else {
+      countBadge.innerHTML = `🎒 Đang mang: <strong>${totalTypes} loại</strong> (${totalCount} món)`;
+    }
   }
 
   if (entries.length === 0) {
@@ -975,7 +1137,9 @@ export function renderBagPanel(profile             , handlers          )       {
     empty.style.gridColumn = '1 / -1';
     empty.style.textAlign = 'center';
     empty.style.padding = '24px 0';
-    empty.textContent = 'Túi đồ đang trống. Hãy đi bộ khám phá xung quanh để thu thập tài nguyên!';
+    empty.textContent = isSafeTab
+      ? 'Két an toàn đang trống. Hãy cất đồng vàng, bản vẽ và nguyên liệu quý vào đây!'
+      : 'Túi đồ đang trống. Hãy đi bộ khám phá xung quanh để thu thập tài nguyên!';
     box.append(empty);
     return;
   }
@@ -992,7 +1156,7 @@ export function renderBagPanel(profile             , handlers          )       {
       <div class="slot-card__icon">${itemIconSvg(itemId, 'slot-svg')}</div>
       <span class="slot-card__badge">×${qty}</span>
     `;
-    slot.onclick = () => openItemInspector(itemId, qty, true, handlers);
+    slot.onclick = () => openItemInspector(itemId, qty, !isSafeTab, handlers);
     box.append(slot);
   }
 

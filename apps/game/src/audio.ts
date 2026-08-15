@@ -56,11 +56,11 @@ class SoundSynthesizer {
       this.ctx = new AudioCtx();
 
       this.masterGain = this.ctx.createGain();
-      this.masterGain.gain.setValueAtTime(0.7, this.ctx.currentTime);
+      this.masterGain.gain.setValueAtTime(0.85, this.ctx.currentTime);
       this.masterGain.connect(this.ctx.destination);
 
       this.sfxGain = this.ctx.createGain();
-      this.sfxGain.gain.setValueAtTime(this.soundEnabled ? 0.85 : 0, this.ctx.currentTime);
+      this.sfxGain.gain.setValueAtTime(this.soundEnabled ? 1.0 : 0, this.ctx.currentTime);
       this.sfxGain.connect(this.masterGain);
 
       this.bgmGain = this.ctx.createGain();
@@ -81,7 +81,7 @@ class SoundSynthesizer {
       localStorage.setItem('khc_sound_enabled', String(enabled));
     } catch {}
     if (this.ctx && this.sfxGain) {
-      this.sfxGain.gain.setValueAtTime(enabled ? 0.85 : 0, this.ctx.currentTime);
+      this.sfxGain.gain.setValueAtTime(enabled ? 1.0 : 0, this.ctx.currentTime);
     }
   }
 
@@ -118,17 +118,30 @@ class SoundSynthesizer {
 
     switch (sfx) {
       case 'click': {
-        const osc = ctx.createOscillator();
+        // Tiếng click tương tác giòn giã, rõ nét (tăng âm lượng gấp đôi)
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
         const g = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(800, t);
-        osc.frequency.exponentialRampToValueAtTime(400, t + 0.04);
-        g.gain.setValueAtTime(0.3, t);
-        g.gain.exponentialRampToValueAtTime(0.01, t + 0.04);
-        osc.connect(g);
+
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(920, t);
+        osc1.frequency.exponentialRampToValueAtTime(360, t + 0.05);
+
+        osc2.type = 'triangle';
+        osc2.frequency.setValueAtTime(1450, t);
+        osc2.frequency.exponentialRampToValueAtTime(580, t + 0.038);
+
+        g.gain.setValueAtTime(0.68, t); // Tăng âm lượng gấp đôi (từ 0.3 lên 0.68)
+        g.gain.exponentialRampToValueAtTime(0.01, t + 0.05);
+
+        osc1.connect(g);
+        osc2.connect(g);
         g.connect(this.sfxGain);
-        osc.start(t);
-        osc.stop(t + 0.04);
+
+        osc1.start(t);
+        osc2.start(t);
+        osc1.stop(t + 0.05);
+        osc2.stop(t + 0.05);
         break;
       }
 

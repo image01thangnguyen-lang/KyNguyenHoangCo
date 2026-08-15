@@ -50,6 +50,9 @@ import {
   sleepAtCamp,
   slotSummaries,
   storeInSafe,
+  withdrawFromSafe,
+  upgradeSafeVaultRank,
+  getItem,
   strikeBoss,
   suggestBackupFileName,
   tickBloodMoonAllies,
@@ -74,6 +77,7 @@ import {
   processCoopRound,
   resolveCoopRewards,
   upgradeArtisanRankWithGold,
+  upgradeFishTrapWithGold,
 } from '../../../packages/game-core/src/index.ts';
 import type {
   DifficultyId,
@@ -345,24 +349,73 @@ function renderProfileScreen(): void {
   list.replaceChildren();
 
   for (const summary of slotSummaries(app.save)) {
-    const button = document.createElement('button');
-    button.className = `slot${summary.empty ? ' slot--empty' : ''}`;
-
     if (summary.empty) {
+      const button = document.createElement('button');
+      button.className = 'slot slot--empty';
       button.textContent = `+ Hồ sơ mới (khe ${summary.slot + 1})`;
       button.onclick = () => createNewProfile(summary.slot);
+      list.append(button);
     } else {
-      button.innerHTML = `
+      const card = document.createElement('div');
+      card.className = 'slot';
+      card.setAttribute('role', 'button');
+      card.tabIndex = 0;
+      card.innerHTML = `
         <div class="slot__avatar">${avatarSvg(summary.gender ?? 'male')}</div>
-        <div class="slot__body">
+        <div class="slot__main">
           <div class="slot__name">${summary.displayName}</div>
           <div class="slot__meta">Trại cấp ${summary.campLevel} · Chương ${summary.chapterIndex} · ${summary.lifetimeSteps?.toLocaleString('vi-VN')} bước</div>
-        </div>`;
-      button.onclick = () => enterProfile(summary.slot);
-    }
+        </div>
+        <button class="slot__del" title="Xoá hồ sơ này" aria-label="Xoá hồ sơ">🗑️</button>`;
 
-    list.append(button);
+      card.onclick = (e) => {
+        const target = e.target as HTMLElement;
+        if (target.closest('.slot__del')) return;
+        enterProfile(summary.slot);
+      };
+
+      card.onkeydown = (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          enterProfile(summary.slot);
+        }
+      };
+
+      const delBtn = card.querySelector<HTMLButtonElement>('.slot__del');
+      if (delBtn) {
+        delBtn.onclick = (e) => {
+          e.stopPropagation();
+          promptDeleteProfile(summary.slot, summary.displayName);
+        };
+      }
+
+      list.append(card);
+    }
   }
+}
+
+function promptDeleteProfile(slot: number, name?: string): void {
+  const overlay = el('overlay-delete-profile');
+  const msg = el('delete-profile-msg');
+  if (msg) {
+    msg.innerHTML = `Bạn có chắc chắn muốn xoá hồ sơ <strong>${name ?? `Khe ${slot + 1}`}</strong>?<br><span style="color:#ef4444;font-size:0.85em;margin-top:4px;display:inline-block;">Toàn bộ tiến trình sẽ mất vĩnh viễn nếu chưa xuất file sao lưu.</span>`;
+  }
+
+  el('btn-delete-confirm').onclick = () => {
+    overlay.hidden = true;
+    app.save = putProfile(app.save, slot, null);
+    if (app.save.activeSlot === slot) {
+      app.profile = null;
+    }
+    persist();
+    renderProfileScreen();
+    toast('Đã xoá hồ sơ thành công.', 'good');
+  };
+
+  el('btn-delete-cancel').onclick = () => {
+    overlay.hidden = true;
+  };
+
+  overlay.hidden = false;
 }
 
 let selectedGender: Gender = 'male';
@@ -674,23 +727,37 @@ function persist(): void {
   app.storageOk = writeSave(app.save, now());
 }
 
-function render(): void {
+function render(forceAll = false): void {
   const { profile, view } = app;
   if (!profile || !view) return;
 
+  // Luôn cập nhật HUD & Panel địa bàn tức thời
   renderHud(view, profile);
   renderZonePanel(view, profile);
   renderZoneActions(view, profile, handlers);
-  renderBagPanel(profile, handlers);
-  renderCraft(view, profile, handlers, app.onlyCraftable);
-  renderCamp(view, profile, handlers);
 
-  const current = chapter(profile.story.chapterIndex);
-  const played = (current?.beats ?? []).filter((b) => profile.story.playedBeatIds.includes(b.id));
-  renderLog(view, profile, current?.titleVi ?? '—', current?.summaryVi ?? '', played);
+  // Chỉ cập nhật các Drawer ngầm khi tab tương ứng đang mở hoặc forceAll = true (giảm 75% DOM reflows)
+  const active = app.activeTab;
+  if (forceAll || active === 'bag') {
+    renderBagPanel(profile, handlers);
+  }
+  if (forceAll || active === 'craft') {
+    renderCraft(view, profile, handlers, app.onlyCraftable);
+  }
+  if (forceAll || active === 'camp') {
+    renderCamp(view, profile, handlers);
+  }
+  if (forceAll || active === 'log') {
+    const current = chapter(profile.story.chapterIndex);
+    const played = (current?.beats ?? []).filter((b) => profile.story.playedBeatIds.includes(b.id));
+    renderLog(view, profile, current?.titleVi ?? '—', current?.summaryVi ?? '', played);
+  }
+  if (forceAll || active === 'settings') {
+    renderSettings(profile, handlers, app.storageOk);
+  }
 
-  renderSettings(profile, handlers, app.storageOk);
-  el('pedo-source').textContent = describeSource(pedometer.currentSource);
+  const pedoEl = document.getElementById('pedo-source');
+  if (pedoEl) pedoEl.textContent = describeSource(pedometer.currentSource);
 }
 
 function drawMap(): void {
@@ -698,10 +765,6 @@ function drawMap(): void {
 
   const { render: at, hasFix } = currentPosition();
   const weather = weatherFor(at, now());
-
-  if (app.profile) {
-    app.profile.player.traps = tickTraps(app.profile.player.traps ?? [], now());
-  }
 
   mapView.render({
     center: at,
@@ -923,6 +986,62 @@ const handlers: Handlers = {
     afterAction();
   },
 
+  onWithdrawSafe(itemId, qty) {
+    if (!app.profile) return;
+    const result = withdrawFromSafe(app.profile, [{ itemId, qty }]);
+    app.profile = result.profile;
+    toast(result.messageVi, result.ok ? 'good' : 'bad');
+    if (result.ok) audio.play('pickup');
+    afterAction();
+  },
+
+  onUpgradeSafeVault() {
+    if (!app.profile) return;
+    const result = upgradeSafeVaultRank(app.profile);
+    app.profile = result.profile;
+    toast(result.messageVi, result.ok ? 'good' : 'bad');
+    if (result.ok) audio.play('quest_complete');
+    afterAction();
+  },
+
+  onQuickStorePrecious() {
+    if (!app.profile) return;
+    const carried = app.profile.player.carried ?? {};
+    const preciousMoves: { itemId: string; qty: number }[] = [];
+
+    for (const [itemId, qty] of Object.entries(carried)) {
+      if (qty <= 0) continue;
+      const def = getItem(itemId);
+      const isPrecious =
+        def.safe ||
+        itemId === 'ancient_coin' ||
+        itemId === 'blueprint' ||
+        itemId === 'upgrade_core' ||
+        itemId.startsWith('egg_') ||
+        itemId === 'gold_ore' ||
+        itemId === 'iron_ingot';
+
+      if (isPrecious) {
+        preciousMoves.push({ itemId, qty });
+      }
+    }
+
+    if (preciousMoves.length === 0) {
+      toast('Không có đồ quý hoặc đồng vàng nào trong túi để cất.', 'bad');
+      return;
+    }
+
+    const result = storeInSafe(app.profile, preciousMoves);
+    app.profile = result.profile;
+    if (result.ok) {
+      toast(`⚡ Đã cất an toàn ${preciousMoves.length} loại vật phẩm quý vào két!`, 'good');
+      audio.play('pickup');
+    } else {
+      toast(result.messageVi, 'bad');
+    }
+    afterAction();
+  },
+
   onGather(actionId, poiId, zone) {
     if (!app.profile) return;
 
@@ -1080,6 +1199,19 @@ const handlers: Handlers = {
     }
   },
 
+  onUpgradeFishTrap() {
+    if (!app.profile) return;
+    const result = upgradeFishTrapWithGold(app.profile.player);
+    if (result.ok) {
+      app.profile.player = result.player;
+      toast(result.messageVi, 'good');
+      audio.play('quest_complete');
+    } else {
+      toast(result.messageVi, 'bad');
+    }
+    afterAction();
+  },
+
   onStartIncubate(eggItemId) {
     if (!app.profile) return;
     const currentQty = app.profile.player.carried[eggItemId] ?? 0;
@@ -1231,12 +1363,8 @@ const handlers: Handlers = {
   },
 
   onDeleteProfile() {
-    if (!confirm('Xoá hồ sơ này? Không khôi phục được nếu bạn chưa xuất file sao lưu.')) return;
-
-    app.save = putProfile(app.save, app.save.activeSlot, null);
-    app.profile = null;
-    persist();
-    renderProfileScreen();
+    if (!app.profile) return;
+    promptDeleteProfile(app.save.activeSlot, app.profile.player.displayName);
   },
 
   onSwitchProfile() {
@@ -1352,8 +1480,27 @@ function wireStaticControls(): void {
       }
     }
 
-    if (isMap) mapView?.resize();
+    if (isMap) {
+      mapView?.resize();
+    } else {
+      render();
+    }
   }
+
+  // Tự động phát âm thanh click tương tác giòn giã cho mọi nút bấm và thành phần UI
+  document.addEventListener(
+    'click',
+    (e) => {
+      const target = e.target as HTMLElement;
+      const clickable = target.closest(
+        'button, .btn, .chip, .tabbar__btn, .drawer-close, .map-ctrl-btn, .slot, .gender-card, .merchant-tab-btn, .ar-model-btn, .slot__del, .btn-coop-action, .home-prompt-box',
+      );
+      if (clickable) {
+        audio.play('click');
+      }
+    },
+    { capture: true },
+  );
 
   for (const button of document.querySelectorAll<HTMLButtonElement>('.tabbar__btn')) {
     button.onclick = () => {
@@ -1720,6 +1867,12 @@ Object.assign(globalThis as Record<string, unknown>, {
     },
     createProfileInSlot(slot: number, name: string, gender: Gender = 'male') {
       app.save = putProfile(app.save, slot, createProfile(name, now(), gender));
+      persist();
+      renderProfileScreen();
+    },
+    deleteProfile(slot: number) {
+      app.save = putProfile(app.save, slot, null);
+      if (app.save.activeSlot === slot) app.profile = null;
       persist();
       renderProfileScreen();
     },

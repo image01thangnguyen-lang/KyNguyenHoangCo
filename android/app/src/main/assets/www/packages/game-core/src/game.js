@@ -29,7 +29,16 @@ import {
   performGatherAction,
   syncSteps,
 } from './gathering.js';
-import { addItems, countOf, dropFraction, moveToSafe, removeItems, slotsUsed } from './inventory.js';
+import {
+  addItems,
+  countOf,
+  dropFraction,
+  moveFromSafe,
+  moveToSafe,
+  removeItems,
+  slotsUsed,
+  upgradeSafeVault,
+} from './inventory.js';
 import { forecastTonight, resolveNightDefense } from './nightDefense.js';
 import { createRng, hashSeed } from './rng.js';
 import { checkSpeed, createSpeedState, dueReminders } from './safety.js';
@@ -580,6 +589,7 @@ export function storeInSafe(profile             , moves             )           
     profile.player.safeStorage,
     moves,
     profile.player.camp.level,
+    profile.player.safeVaultLevel ?? 1,
   );
   if (!result.ok) return { profile, ok: false, messageVi: result.reasonVi ?? 'Không cất được.' };
 
@@ -590,6 +600,34 @@ export function storeInSafe(profile             , moves             )           
     },
     ok: true,
     messageVi: 'Đã cất vào két an toàn. Đêm nay có thua cũng không mất.',
+  };
+}
+
+export function withdrawFromSafe(profile             , moves             )                   {
+  const result = moveFromSafe(profile.player.carried, profile.player.safeStorage, moves);
+  if (!result.ok) return { profile, ok: false, messageVi: result.reasonVi ?? 'Không lấy ra được.' };
+
+  return {
+    profile: {
+      ...profile,
+      player: { ...profile.player, carried: result.carried, safeStorage: result.safe },
+    },
+    ok: true,
+    messageVi: 'Đã lấy vật phẩm ra balo / túi đồ đang mang.',
+  };
+}
+
+export function upgradeSafeVaultRank(profile             )                   {
+  const result = upgradeSafeVault(profile.player);
+  if (!result.ok) return { profile, ok: false, messageVi: result.messageVi };
+
+  return {
+    profile: {
+      ...profile,
+      player: result.player,
+    },
+    ok: true,
+    messageVi: result.messageVi,
   };
 }
 
