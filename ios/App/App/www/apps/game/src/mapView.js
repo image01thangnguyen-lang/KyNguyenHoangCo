@@ -1639,21 +1639,30 @@ export class MapView {
       }
     }
 
-    // 1. Vòng hào quang tương tác 2.5D và sóng radar khi nhân vật ở gần địa điểm
-    if (isActive) {
-      const pulse = 0.5 + 0.5 * Math.sin(this.tick / 8);
-      ctx.save();
-      ctx.strokeStyle = `rgba(245, 158, 11, ${0.5 + 0.45 * pulse})`;
-      ctx.lineWidth = 2.2 * this.dpr;
-      ctx.beginPath();
-      ctx.ellipse(x, y + r * 0.35, r + 6 * this.dpr, (r + 6 * this.dpr) * 0.68, 0, 0, Math.PI * 2);
-      ctx.stroke();
+    // 1. Vòng hào quang tương tác 2.5D và sóng radar khi nhân vật ở gần địa điểm (< 40m)
+    const distToPoi = distanceMeters(input.center, { lat: feature.lat, lon: feature.lon });
+    const isNearby = distToPoi <= Math.max(feature.radiusMeters || 0, 45);
 
-      const wave = ((this.tick * 0.8) % 36) / 36;
-      ctx.strokeStyle = `rgba(251, 191, 36, ${0.55 * (1 - wave)})`;
-      ctx.lineWidth = 1.4 * this.dpr;
+    if (isNearby || isActive) {
+      const pulse = 0.5 + 0.5 * Math.sin(this.tick / 6);
+      ctx.save();
+      
+      // Hào quang vàng hổ phách lan toả dưới chân
+      const glowGrad = ctx.createRadialGradient(x, y + r * 0.35, r * 0.3, x, y + r * 0.35, r * 1.4 + 14 * this.dpr);
+      glowGrad.addColorStop(0, `rgba(245, 158, 11, ${0.45 * pulse})`);
+      glowGrad.addColorStop(0.55, `rgba(234, 88, 12, ${0.16 * pulse})`);
+      glowGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = glowGrad;
       ctx.beginPath();
-      ctx.ellipse(x, y + r * 0.35, r + wave * 18 * this.dpr, (r + wave * 18 * this.dpr) * 0.68, 0, 0, Math.PI * 2);
+      ctx.ellipse(x, y + r * 0.35, r * 1.4 + 14 * this.dpr, (r * 1.4 + 14 * this.dpr) * 0.68, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Vòng sóng vàng mở rộng
+      const wave = ((this.tick * 0.6) % 30) / 30;
+      ctx.strokeStyle = `rgba(251, 191, 36, ${0.65 * (1 - wave)})`;
+      ctx.lineWidth = 1.6 * this.dpr;
+      ctx.beginPath();
+      ctx.ellipse(x, y + r * 0.35, r + wave * 22 * this.dpr, (r + wave * 22 * this.dpr) * 0.68, 0, 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
     }
@@ -1681,9 +1690,9 @@ export class MapView {
     ctx.shadowOffsetY = 1.5 * this.dpr;
 
     // Nền thẻ sáp cổ điển bo góc
-    ctx.fillStyle = isActive ? 'rgba(38, 26, 14, 0.96)' : 'rgba(20, 16, 12, 0.90)';
-    ctx.strokeStyle = isActive ? '#f59e0b' : 'rgba(217, 151, 91, 0.55)';
-    ctx.lineWidth = isActive ? 1.6 * this.dpr : 1.0 * this.dpr;
+    ctx.fillStyle = (isNearby || isActive) ? 'rgba(38, 26, 14, 0.96)' : 'rgba(20, 16, 12, 0.90)';
+    ctx.strokeStyle = (isNearby || isActive) ? '#f59e0b' : 'rgba(217, 151, 91, 0.55)';
+    ctx.lineWidth = (isNearby || isActive) ? 1.6 * this.dpr : 1.0 * this.dpr;
 
     ctx.beginPath();
     const rad = badgeH / 2;

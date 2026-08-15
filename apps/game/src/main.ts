@@ -12,6 +12,7 @@ import {
   GAME_VERSION,
   ZONES,
   activeProfile,
+  addItems,
   assertBalanceValid,
   beginBloodMoon,
   bloodMoonStatus,
@@ -885,19 +886,8 @@ function enterProfile(slot: number): void {
       }
     };
     mapView.onFeatureClick = (feat) => {
-      if (!app.profile) return;
-      const { render: playerAt } = currentPosition();
-      const dist = Math.round(distanceMeters(playerAt, { lat: feat.lat, lon: feat.lon }));
-      const radius = Math.max(feat.radiusMeters || 0, 60);
-
-      // Nếu đang trong phạm vi 60m: Mở ngay Tiệm Thương Nhân NPC
-      if (dist <= radius) {
-        audio.play('click');
-        openMerchantStore(feat.nameVi);
-        return;
-      }
-
-      toast(`📍 ${feat.nameVi} cách bạn ${dist}m. Hãy đi bộ tới gần (≤${radius}m) để gặp NPC mua bán & trao đổi!`);
+      audio.play('click');
+      openPoiExploreSheet(feat);
     };
     globalThis.addEventListener('resize', () => mapView?.resize());
   }
@@ -936,11 +926,174 @@ function enterProfile(slot: number): void {
     el('overlay-merchant-shop').hidden = true;
   };
 
+  // Nút đóng Thẻ Khám Phá Địa Danh 2.0
+  const btnClosePoi = document.getElementById('btn-poi-explore-close');
+  if (btnClosePoi) {
+    btnClosePoi.onclick = () => {
+      el('overlay-poi-explore').hidden = true;
+    };
+  }
+
+  // Nút Hành Động 1: Thu thập tài nguyên / Mở tiệm
+  const btnForage = document.getElementById('btn-poi-act-forage');
+  if (btnForage) {
+    btnForage.onclick = () => {
+      if (!app.profile || !currentExplorePoi) return;
+      const { render: playerAt } = currentPosition();
+      const dist = Math.round(distanceMeters(playerAt, { lat: currentExplorePoi.lat, lon: currentExplorePoi.lon }));
+      const radius = Math.max(currentExplorePoi.radiusMeters || 0, 60);
+
+      if (dist > radius) {
+        toast(`📍 Bạn đang ở cách ${dist}m. Hãy đi bộ lại gần (≤${radius}m) để tương tác!`, 'warn');
+        return;
+      }
+
+      const n = currentExplorePoi.nameVi;
+      if (n.includes('Highlands') || n.includes('Tiệm') || n.includes('WinMart') || n.includes('Phúc Long') || n.includes('Coffee')) {
+        el('overlay-poi-explore').hidden = true;
+        openMerchantStore(currentExplorePoi.nameVi);
+        return;
+      }
+
+      // Nhặt tài nguyên đặc trưng vùng địa danh
+      let itemId: string = 'sharp_stone';
+      let itemName = 'Đá nhọn cổ';
+      if (currentExplorePoi.zone === 'forest') { itemId = 'medicinal_herb'; itemName = 'Thảo dược rừng'; }
+      else if (currentExplorePoi.zone === 'water') { itemId = 'raw_water'; itemName = 'Nước suối ngọt'; }
+
+      app.profile.player.carried = addItems(app.profile.player.carried, [{ itemId, qty: 2 }]);
+      toast(`🌿 Đã khám phá ${currentExplorePoi.nameVi} và thu hoạch được 2× ${itemName}!`, 'good');
+      audio.play('pickup');
+      if (app.profile.settings.haptics) buzz(20);
+      persist();
+      render();
+    };
+  }
+
+  // Nút Hành Động 2: Nghỉ chân hồi phục HP & Khát
+  const btnRest = document.getElementById('btn-poi-act-rest');
+  if (btnRest) {
+    btnRest.onclick = () => {
+      if (!app.profile || !currentExplorePoi) return;
+      const { render: playerAt } = currentPosition();
+      const dist = Math.round(distanceMeters(playerAt, { lat: currentExplorePoi.lat, lon: currentExplorePoi.lon }));
+      const radius = Math.max(currentExplorePoi.radiusMeters || 0, 60);
+
+      if (dist > radius) {
+        toast(`📍 Bạn đang ở cách ${dist}m. Hãy đi bộ lại gần (≤${radius}m) để nghỉ chân!`, 'warn');
+        return;
+      }
+
+      app.profile.player.survival.hp = Math.min(100, (app.profile.player.survival.hp ?? 100) + 25);
+      app.profile.player.survival.hydration = Math.min(100, (app.profile.player.survival.hydration ?? 100) + 20);
+      toast(`🍵 Đã nghỉ chân tại ${currentExplorePoi.nameVi}! Hồi phục +25 HP và +20 Khát.`, 'good');
+      audio.play('water');
+      persist();
+      render();
+    };
+  }
+
+  // Nút Hành Động 3: Khắc bia đá lưu niệm
+  const btnMonument = document.getElementById('btn-poi-act-monument');
+  if (btnMonument) {
+    btnMonument.onclick = () => {
+      if (!app.profile || !currentExplorePoi) return;
+      const { render: playerAt } = currentPosition();
+      const dist = Math.round(distanceMeters(playerAt, { lat: currentExplorePoi.lat, lon: currentExplorePoi.lon }));
+      const radius = Math.max(currentExplorePoi.radiusMeters || 0, 60);
+
+      if (dist > radius) {
+        toast(`📍 Bạn đang ở cách ${dist}m. Hãy đi bộ lại gần (≤${radius}m) để khắc bia đá!`, 'warn');
+        return;
+      }
+
+      app.profile.player.carried = addItems(app.profile.player.carried, [{ itemId: 'ancient_coin', qty: 5 }]);
+      toast(`📜 Đã khắc tên lưu niệm vào Bia Đá ${currentExplorePoi.nameVi}! Bạn nhận được 5× Đồng Vàng Cổ.`, 'good');
+      audio.play('quest_complete');
+      persist();
+      render();
+    };
+  }
+
   const { render: at } = currentPosition();
   spawnSingleWorldDropNear(at, app.view?.location?.zone ?? 'wilderness');
 
   sync();
   startLoops();
+}
+
+let currentExplorePoi: MapFeature | null = null;
+
+function openPoiExploreSheet(feat: MapFeature): void {
+  if (!app.profile) return;
+  currentExplorePoi = feat;
+  const { render: playerAt } = currentPosition();
+  const dist = Math.round(distanceMeters(playerAt, { lat: feat.lat, lon: feat.lon }));
+  const radius = Math.max(feat.radiusMeters || 0, 60);
+  const inRange = dist <= radius;
+
+  const nameEl = el('poi-explore-name');
+  const tagEl = el('poi-explore-tag');
+  const iconEl = el('poi-explore-icon');
+  const distEl = el('poi-explore-dist');
+  const loreEl = el('poi-explore-lore');
+  const btnForage = el('btn-poi-act-forage');
+
+  nameEl.textContent = feat.nameVi;
+  
+  let icon = '🏛️';
+  let tag = 'DI TÍCH TIỀN SỬ';
+  let lore = 'Một địa danh cổ đại giàu linh khí thời hồng hoang, nơi thiên nhiên hoang sơ hòa quyện với những dấu tích sinh tồn nghìn năm trước.';
+
+  const n = feat.nameVi;
+
+  if (n.includes('Chùa') || n.includes('Đền') || n.includes('Một Cột') || n.includes('Trấn Quốc')) {
+    icon = '🪷';
+    tag = 'THÁNH ĐỊA TÂM LINH';
+    lore = 'Vùng đất phong thủy tụ khí bên hồ nước, nơi các bậc hiền nhân tiền sử lập đàn cầu quốc thái dân an và thuần dưỡng linh thú.';
+  } else if (n.includes('Hoàng Thành') || n.includes('Cổ Loa') || n.includes('Cột Cờ')) {
+    icon = '🏯';
+    tag = 'VƯƠNG THÀNH TIỀN SỬ';
+    lore = 'Thành trì đất nung cổ đại với nhiều vòng hào sâu, nơi lưu giữ bí thuật luyện đồng và chế tác nỏ thần của các bậc tiền nhân.';
+  } else if (n.includes('Văn Miếu') || n.includes('Thương Mại') || n.includes('Đại Học') || n.includes('Học Viện') || n.includes('Trường')) {
+    icon = '📜';
+    tag = 'BÍ CẢNH TRI THỨC';
+    lore = 'Thánh địa khắc ghi tri thức tiền sử, nơi truyền dạy bí quyết hái lượm thảo dược, rèn đúc công cụ và bản đồ sinh tồn.';
+  } else if (n.includes('Y Viện') || n.includes('Bệnh Viện') || n.includes('Thảo Dược') || n.includes('198') || n.includes('Bạch Mai')) {
+    icon = '🌿';
+    tag = 'Y QUÁN THẢO DƯỢC';
+    lore = 'Nơi tụ hội của những thầy thuốc bộ tộc tài ba, xung quanh mọc đầy những khóm thảo dược hồi sinh lực và giải độc dã thú.';
+  } else if (n.includes('Highlands') || n.includes('Phúc Long') || n.includes('Coffee') || n.includes('Trà') || n.includes('WinMart') || n.includes('Circle K') || n.includes('Tiệm') || n.includes('Quán')) {
+    icon = '🍵';
+    tag = 'TIỆM TRAO ĐỔI LỮ HÀNH';
+    lore = 'Điểm dừng chân sầm uất của các đoàn thương nhân du mục qua sông, nơi bạn có thể trao đổi bảo vật và nạp thêm lương thực.';
+  } else if (n.includes('Xe Buýt') || n.includes('Vịnh Xén') || n.includes('Bến Xe') || n.includes('Lữ Điểm')) {
+    icon = '🚌';
+    tag = 'CỘT MỐC LỮ KHÁCH';
+    lore = 'Cột mốc đá chỉ đường khắc hoa văn Trống Đồng, nơi các nhóm lữ hành tiền sử tập hợp trước mỗi chuyến hành trình thám hiểm.';
+  } else if (feat.zone === 'water' || n.includes('Hồ') || n.includes('Sông')) {
+    icon = '🌊';
+    tag = 'VÙNG NƯỚC THIÊNG';
+    lore = 'Dòng nước mát lành nuôi dưỡng vạn vật từ thuở sơ khai, nơi tôm cá trù phú và rêu tươi có thể thu hái quanh năm.';
+  }
+
+  iconEl.textContent = icon;
+  tagEl.textContent = tag;
+  loreEl.textContent = lore;
+
+  if (inRange) {
+    distEl.innerHTML = `🟢 <strong>Đang ở trong phạm vi (${dist}m)</strong> — Có thể tương tác ngay!`;
+    distEl.style.color = '#4ade80';
+    btnForage.textContent = n.includes('Highlands') || n.includes('Tiệm') || n.includes('WinMart') || n.includes('Phúc Long')
+      ? '🛒 Mở Tiệm Thương Nhân Trao Đổi' 
+      : '🌿 Khám Phá & Thu Thập Tài Nguyên';
+  } else {
+    distEl.innerHTML = `📍 Cách bạn <strong>${dist}m</strong> — Hãy đi lại gần (≤${radius}m) để kích hoạt!`;
+    distEl.style.color = '#f59e0b';
+    btnForage.textContent = `🚶 Hãy đi lại gần (${dist}m) để tương tác`;
+  }
+
+  el('overlay-poi-explore').hidden = false;
 }
 
 function openMerchantStore(poiName?: string): void {

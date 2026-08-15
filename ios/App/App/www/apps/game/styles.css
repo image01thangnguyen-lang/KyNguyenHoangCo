@@ -2886,6 +2886,131 @@ h3 {
   flex: 1;
 }
 
+/* ---------------------------------------------------------------- Thẻ Khám Phá Địa Danh 2.0 (POI Explore Card) */
+.overlay--poi-explore {
+  z-index: 85;
+}
+
+.card--poi-explore {
+  max-width: 440px;
+  width: 92%;
+  position: relative;
+  background: linear-gradient(180deg, rgba(28, 20, 14, 0.98), rgba(15, 11, 8, 0.98));
+  border: 1.5px solid rgba(245, 158, 11, 0.7);
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.9), 0 0 24px rgba(245, 158, 11, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: slideUpPoi 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUpPoi {
+  from { opacity: 0; transform: translateY(24px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.modal-close-corner {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  color: #d1d5db;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.modal-close-corner:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.poi-explore__hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-right: 32px;
+}
+
+.poi-explore__icon {
+  font-size: 38px;
+  width: 60px;
+  height: 60px;
+  flex: none;
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.25), rgba(0, 0, 0, 0.5));
+  border: 1.5px solid rgba(245, 158, 11, 0.5);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
+}
+
+.poi-explore__title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.poi-explore__name {
+  font-family: var(--font-title);
+  font-size: 19px;
+  font-weight: 800;
+  color: #fef08a;
+  line-height: 1.2;
+  margin: 0;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+.poi-explore__meta {
+  font-size: 12px;
+  color: #a3e635;
+  font-weight: 600;
+}
+
+.poi-explore__lore-box {
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px dashed rgba(245, 158, 11, 0.35);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.poi-explore__lore-head {
+  font-size: 11px;
+  font-weight: 800;
+  color: #38bdf8;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.poi-explore__lore {
+  font-size: 13px;
+  color: #e5e7eb;
+  line-height: 1.45;
+  margin: 0;
+  font-style: italic;
+}
+
+.poi-explore__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 /* ---------------------------------------------------------------- Tiệm Thương Nhân NPC */
 .card--merchant-shop {
   max-width: 520px;
