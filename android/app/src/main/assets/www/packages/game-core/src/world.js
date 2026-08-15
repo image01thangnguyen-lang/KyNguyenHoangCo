@@ -461,7 +461,17 @@ export function sampleHanoiPack()          {
       { id: 'phuclong_lythuongkiet', zone: 'merchant', nameVi: 'Trà Quán Phúc Long (Cổ Đạo Lý Thường Kiệt)',  lat: 21.0252, lon: 105.8505, radiusMeters: 25 },
       { id: 'phuclong_caugiay', zone: 'merchant', nameVi: 'Trà Quán Phúc Long (Cổ Lộ Cầu Giấy)',              lat: 21.0332, lon: 105.7945, radiusMeters: 25 },
       { id: 'cong_trieuvietvuong', zone: 'merchant', nameVi: 'Cộng Trà Quán (Lối Mòn Triệu Việt Vương)',      lat: 21.0125, lon: 105.8512, radiusMeters: 25 },
+      { id: 'cong_trangtien',   zone: 'merchant', nameVi: 'Cộng Cà Phê (Cổ Đạo Tràng Tiền)',                  lat: 21.0245, lon: 105.8568, radiusMeters: 25 },
       { id: 'trungnguyen_nhatho', zone: 'merchant', nameVi: 'Trung Nguyên Legend (Cổ Đạo Nhà Thờ)',          lat: 21.0282, lon: 105.8491, radiusMeters: 25 },
+      { id: 'aha_nhahatlon',    zone: 'merchant', nameVi: 'Aha Cafe (Lối Mòn Phan Chu Trinh)',                lat: 21.0238, lon: 105.8558, radiusMeters: 25 },
+
+      // --- Cà Phê Di Sản & Phố Cổ Hà Nội ---
+      { id: 'cafe_giang_trung', zone: 'merchant', nameVi: 'Cà Phê Trứng Giảng Cổ Điểm (Nguyễn Hữu Huân)',    lat: 21.0345, lon: 105.8540, radiusMeters: 30 },
+      { id: 'cafe_dinh_dinh',   zone: 'merchant', nameVi: 'Cà Phê Đinh (Bờ Hồ Gươm — Đinh Tiên Hoàng)',        lat: 21.0310, lon: 105.8525, radiusMeters: 25 },
+      { id: 'cafe_lam_nguyenhuuhuan', zone: 'merchant', nameVi: 'Cà Phê Lâm Hội Họa (Nguyễn Hữu Huân)',      lat: 21.0352, lon: 105.8545, radiusMeters: 25 },
+      { id: 'cafe_yen_quanthan',zone: 'merchant', nameVi: 'Cà Phê Yên Cổ Quán (Quán Thánh — Ba Đình)',        lat: 21.0425, lon: 105.8395, radiusMeters: 25 },
+      { id: 'all_day_coffee_quangtrung', zone: 'merchant', nameVi: 'All Day Coffee (Cổ Đạo Quang Trung)',     lat: 21.0210, lon: 105.8505, radiusMeters: 30 },
+
       { id: 'winmart_times',    zone: 'merchant', nameVi: 'Tiệm Trao Đổi WinMart (Times City)',               lat: 20.9962, lon: 105.8682, radiusMeters: 30 },
       { id: 'winmart_royal',    zone: 'merchant', nameVi: 'Tiệm Trao Đổi WinMart (Royal City)',               lat: 21.0031, lon: 105.8148, radiusMeters: 30 },
       { id: 'circlek_hangbac',  zone: 'merchant', nameVi: 'Tiệm Trao Đổi Circle K (Lối Mòn Hàng Bạc)',        lat: 21.0345, lon: 105.8512, radiusMeters: 25 },
@@ -577,15 +587,46 @@ export function sampleHanoiPack()          {
       { id: 'ho_giangvo',   zone: 'water', nameVi: 'Vũng Nước Trầm Giảng Võ',              lat: 21.0285, lon: 105.8225, radiusMeters: 85 },
       { id: 'ho_ngocthanh', zone: 'water', nameVi: 'Đầm Ngọc Khánh',                        lat: 21.0285, lon: 105.8115, radiusMeters: 75 },
 
-      // 8. Khu Vực Bắc Từ Liêm, Đông Anh, Sóc Sơn & Mê Linh
+      // 8. Khu Vực Bắc Từ Liêm, Đông Anh, Mê Linh & Sóc Sơn
       { id: 'cv_hoabinh',   zone: 'forest',   nameVi: 'Thung Lũng Cổ Bình Yên (Công Viên Hoà Bình)', lat: 21.0655, lon: 105.7865, radiusMeters: 140 },
       { id: 'dh_congnghiep',zone: 'merchant', nameVi: 'Đại Lò Rèn Khí Cụ (ĐH Công Nghiệp Hà Nội)', lat: 21.0535, lon: 105.7355, radiusMeters: 80 },
       { id: 'dh_mo_diachat',zone: 'merchant', nameVi: 'Thần Khai Khoáng Điện (ĐH Mỏ - Địa Chất)',   lat: 21.0725, lon: 105.7735, radiusMeters: 75 },
-      { id: 'thanh_coloa',  zone: 'forest',   nameVi: 'Kinh Đô Cổ Rùa Vàng (Thành Cổ Loa - Đông Anh)', lat: 21.1125, lon: 105.8715, radiusMeters: 220 },
+
+      // --- ĐÔNG ANH ---
+      { id: 'thanh_coloa',  zone: 'forest',   nameVi: 'Kinh Đô Cổ Rùa Vàng (Thành Cổ Loa - Đông Anh)', lat: 21.1125, lon: 105.8715, radiusMeters: 250 },
+      { id: 'gieng_ngoc_coloa', zone: 'water', nameVi: 'Giếng Ngọc Mỵ Châu Trọng Thủy (Cổ Loa)',       lat: 21.1145, lon: 105.8705, radiusMeters: 80 },
+      { id: 'ho_vantri',    zone: 'water',    nameVi: 'Đại Hồ Sinh Thái Vân Trì (Đông Anh)',          lat: 21.1340, lon: 105.7980, radiusMeters: 260 },
+      { id: 'cho_to_donganh',zone: 'merchant', nameVi: 'Chợ Cổ Nghìn Năm (Chợ Tó - Đông Anh)',         lat: 21.1310, lon: 105.8570, radiusMeters: 100 },
+      { id: 'lang_moc_vanha',zone: 'merchant', nameVi: 'Mộc Nghệ Thần Thôn (Làng Nghề Mộc Vân Hà)',     lat: 21.1350, lon: 105.9080, radiusMeters: 110 },
+      { id: 'bai_cat_nhattan',zone: 'water',  nameVi: 'Bãi Cát Phù Sa Bắc Sông Hồng (Cầu Nhật Tân)',  lat: 21.0920, lon: 105.8180, radiusMeters: 160 },
+      { id: 'cho_kimchung', zone: 'merchant', nameVi: 'Thương Hội Vùng Biên (Chợ Kim Chung - Đông Anh)',lat: 21.1210, lon: 105.7790, radiusMeters: 90 },
+      { id: 'lang_duc_dong_mailam', zone: 'merchant', nameVi: 'Lò Đúc Đồng Cổ Truyền (Mai Lâm - Đông Anh)', lat: 21.0880, lon: 105.8820, radiusMeters: 85 },
+      { id: 'highlands_donganh', zone: 'merchant', nameVi: 'Highlands Coffee (Lối Mòn Cao Lỗ — Đông Anh)', lat: 21.1380, lon: 105.8475, radiusMeters: 30 },
+      { id: 'tch_donganh',  zone: 'merchant', nameVi: 'The Coffee House (Cao Lỗ — Đông Anh)',         lat: 21.1392, lon: 105.8465, radiusMeters: 30 },
+      { id: 'cong_donganh', zone: 'merchant', nameVi: 'Cộng Cà Phê (Thị Trấn Đông Anh)',              lat: 21.1365, lon: 105.8490, radiusMeters: 30 },
+      { id: 'aha_donganh',  zone: 'merchant', nameVi: 'Aha Cafe (Khu Đô Thị Uy Nỗ — Đông Anh)',       lat: 21.1345, lon: 105.8530, radiusMeters: 30 },
+      { id: 'cafe_vantri_eco', zone: 'merchant', nameVi: 'Cà Phê View Thủy Tạ Hồ Vân Trì (Đông Anh)', lat: 21.1335, lon: 105.7995, radiusMeters: 35 },
+      { id: 'mixue_donganh',zone: 'merchant', nameVi: 'Mixue Trà Kem Tuyết (Cao Lỗ — Đông Anh)',     lat: 21.1370, lon: 105.8480, radiusMeters: 25 },
+
+      // --- MÊ LINH ---
+      { id: 'den_haibatrung',zone: 'forest',  nameVi: 'Nữ Vương Thần Miếu (Đền Hai Bà Trưng - Mê Linh)', lat: 21.1785, lon: 105.7235, radiusMeters: 180 },
+      { id: 'lang_hoa_melinh',zone: 'forest', nameVi: 'Vạn Sắc Bách Hoa Viên (Làng Hoa Mê Linh)',      lat: 21.1680, lon: 105.7480, radiusMeters: 200 },
+      { id: 'dam_trang_melinh',zone: 'water', nameVi: 'Đại Đầm Trắng Thần Thủy (Đầm Trắng - Mê Linh)', lat: 21.2050, lon: 105.7180, radiusMeters: 220 },
+      { id: 'cho_hoa_melinh',zone: 'merchant',nameVi: 'Chợ Hoa Đầu Mối Nông Sản Mê Linh',              lat: 21.1620, lon: 105.7380, radiusMeters: 100 },
+      { id: 'bai_boi_thachda',zone: 'water',  nameVi: 'Bãi Bồi Nông Phì Chu Phan - Thạch Đà (Mê Linh)',lat: 21.2150, lon: 105.6750, radiusMeters: 160 },
+      { id: 'doi_thong_melinh',zone: 'forest',nameVi: 'Đồi Thông Thần Cốc (Khu Đồi Sinh Thái Mê Linh)',lat: 21.2280, lon: 105.7350, radiusMeters: 150 },
+      { id: 'trung_tam_melinh',zone: 'merchant',nameVi: 'Thương Thành Cổ Phía Bắc (Mê Linh Plaza)',    lat: 21.1750, lon: 105.7580, radiusMeters: 120 },
+      { id: 'highlands_melinh',zone: 'merchant',nameVi: 'Highlands Coffee (Mê Linh Plaza)',            lat: 21.1755, lon: 105.7585, radiusMeters: 35 },
+      { id: 'tch_melinh',   zone: 'merchant', nameVi: 'The Coffee House (KĐT Hà Phong — Mê Linh)',     lat: 21.1720, lon: 105.7510, radiusMeters: 30 },
+      { id: 'cong_melinh',  zone: 'merchant', nameVi: 'Cộng Cà Phê (Đại Lộ Mê Linh)',                  lat: 21.1690, lon: 105.7540, radiusMeters: 30 },
+      { id: 'cafe_vuonhoa_melinh', zone: 'merchant', nameVi: 'Cà Phê Vườn Hoa Hồng (Làng Hoa Mê Linh)',lat: 21.1675, lon: 105.7460, radiusMeters: 35 },
+      { id: 'aha_melinh',   zone: 'merchant', nameVi: 'Aha Cafe (Cienco 5 Mê Linh)',                   lat: 21.1610, lon: 105.7610, radiusMeters: 30 },
+      { id: 'cafe_damtrang_view', zone: 'merchant', nameVi: 'Cà Phê Thủy Cảnh Đầm Trắng (Mê Linh)',   lat: 21.2040, lon: 105.7190, radiusMeters: 35 },
+
+      // --- SÓC SƠN ---
       { id: 'den_soc',      zone: 'forest',   nameVi: 'Thánh Địa Phù Đổng Thiên Vương (Đền Gióng Sóc Sơn)', lat: 21.2825, lon: 105.8235, radiusMeters: 180 },
       { id: 'ho_hamlon',    zone: 'water',    nameVi: 'Đại Đầm Thủy Quái Hàm Lợn (Sóc Sơn)',        lat: 21.3125, lon: 105.7935, radiusMeters: 200 },
       { id: 'ho_dongquan',  zone: 'water',    nameVi: 'Hồ Nước Thiêng Đồng Quan (Sóc Sơn)',         lat: 21.2955, lon: 105.8155, radiusMeters: 160 },
-      { id: 'den_haibatrung',zone: 'forest',  nameVi: 'Nữ Vương Thần Miếu (Đền Hai Bà Trưng Mê Linh)', lat: 21.1785, lon: 105.7235, radiusMeters: 130 },
 
       // 9. Khu Vực Long Biên & Gia Lâm (Phía Đông Sông Hồng)
       { id: 'aeon_longbien',zone: 'merchant', nameVi: 'Đông Cương Đại Thương Thị (Aeon Mall Long Biên)', lat: 21.0255, lon: 105.8985, radiusMeters: 110 },
