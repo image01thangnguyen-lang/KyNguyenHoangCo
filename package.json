@@ -9,7 +9,8 @@
     "test": "node --test --experimental-strip-types packages/game-core/test/*.test.ts",
     "balance:export": "node tools/export-balance.ts",
     "poi:pack": "node tools/build-poi-pack.ts",
-    "build:apk": "node tools/build-apk.ts"
+    "build:apk": "node tools/build-apk.ts",
+    "build:ios:assets": "node tools/build-ios-assets.ts"
   },
   "engines": {
     "node": ">=22.18.0"

@@ -1,0 +1,55 @@
+name: Build iOS IPA
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch: # Cho phép người dùng bấm nút "Run workflow" trên GitHub web để build bất cứ lúc nào
+
+jobs:
+  build-ios:
+    runs-on: macos-14
+    steps:
+      - name: 📥 Checkout mã nguồn
+        uses: actions/checkout@v4
+
+      - name: 🟢 Thiết lập Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: 🧪 Chạy kiểm thử tự động (Unit Tests)
+        run: npm test
+
+      - name: 📦 Đóng gói Web Assets cho iOS WKWebView
+        run: node tools/build-ios-assets.ts
+
+      - name: 🛠️ Biên dịch Native iOS App với Xcode
+        run: |
+          cd ios/App
+          xcodebuild clean build \
+            -project App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_ENTITLEMENTS="" \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: 📱 Đóng gói file KyNguyenHoangCo.ipa (Ad-Hoc / Sideload)
+        run: |
+          cd ios/App
+          mkdir -p Payload
+          cp -r build/Build/Products/Release-iphoneos/App.app Payload/KyNguyenHoangCo.app
+          zip -r -q KyNguyenHoangCo.ipa Payload
+          echo "✅ Đã tạo thành công KyNguyenHoangCo.ipa"
+
+      - name: 🚀 Xuất file cài đặt IPA lên GitHub Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ky-nguyen-hoang-co-ios-ipa
+          path: ios/App/KyNguyenHoangCo.ipa
+          retention-days: 14
