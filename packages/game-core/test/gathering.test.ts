@@ -19,11 +19,11 @@ const P = 'player-test';
 const total = (inv: Record<string, number>) =>
   Object.values(inv).reduce((sum, qty) => sum + qty, 0);
 
-test('100 bước = 1 lượt nhặt trên đường mòn (§5.2)', () => {
+test('250 bước = 1 lượt nhặt trên đường mòn (§5.2)', () => {
   const { result } = syncSteps({
     playerId: P,
     ledger: createStepLedger(T0),
-    newSteps: 1000,
+    newSteps: 2500,  // 2500 bước ÷ 250 = 10 lượt
     nowMs: T0,
     zone: 'trail',
   });
@@ -32,13 +32,14 @@ test('100 bước = 1 lượt nhặt trên đường mòn (§5.2)', () => {
   assert.ok(total(result.gained) >= 10);
 });
 
-test('rừng nhân đôi lượt nhặt', () => {
-  const forest = syncSteps({ playerId: P, ledger: createStepLedger(T0), newSteps: 1000, nowMs: T0, zone: 'forest' });
-  assert.equal(forest.result.pickups, 20);
+test('rừng nhân 1,5× lượt nhặt', () => {
+  // 2500 bước × 1.5 (forest) ÷ 250 stepsPerPickup = 15 lượt
+  const forest = syncSteps({ playerId: P, ledger: createStepLedger(T0), newSteps: 2500, nowMs: T0, zone: 'forest' });
+  assert.equal(forest.result.pickups, 15);
 });
 
 test('vùng hoang dã giữ nguyên hệ số 1,2× không bị làm tròn mất', () => {
-  // 500 bước × 1,2 = 600 ⇒ 6 lượt. Nếu nhân sau khi chia sẽ chỉ ra 5 lượt.
+  // 500 bước × 1,2 = 600 ⇒ 600/250 = 2 lượt, carry = 100. Nếu nhân sau khi chia sẽ chỉ ra 2 lượt mà mất carry.
   const { result, ledger } = syncSteps({
     playerId: P,
     ledger: createStepLedger(T0),
@@ -47,23 +48,28 @@ test('vùng hoang dã giữ nguyên hệ số 1,2× không bị làm tròn mất
     zone: 'wilderness',
   });
 
-  assert.equal(result.pickups, 6);
-  assert.equal(ledger.carrySteps, 0);
+  assert.equal(result.pickups, 2);
+  assert.equal(ledger.carrySteps, 100); // 600 - 2×250 = 100 bước lẻ
 });
 
 test('bước lẻ được giữ lại cho lần sync sau, không bị mất', () => {
   let ledger = createStepLedger(T0);
-  const first = syncSteps({ playerId: P, ledger, newSteps: 150, nowMs: T0, zone: 'trail' });
+  // 300 bước trail ÷ 250 = 1 lượt, carry = 50
+  const first = syncSteps({ playerId: P, ledger, newSteps: 300, nowMs: T0, zone: 'trail' });
   assert.equal(first.result.pickups, 1);
   assert.equal(first.ledger.carrySteps, 50);
 
   ledger = first.ledger;
-  const second = syncSteps({ playerId: P, ledger, newSteps: 50, nowMs: T0 + 60_000, zone: 'trail' });
-  assert.equal(second.result.pickups, 1, '50 bước lẻ cũ + 50 mới phải thành 1 lượt');
+  // 200 bước mới + 50 carry = 250 ⇒ 1 lượt
+  const second = syncSteps({ playerId: P, ledger, newSteps: 200, nowMs: T0 + 60_000, zone: 'trail' });
+  assert.equal(second.result.pickups, 1, '50 bước lẻ cũ + 200 mới phải thành 1 lượt');
 });
 
 test('trần 15.000 bước/ngày: ngừng thưởng nhưng VẪN đếm đủ bước', () => {
-  const ledger = { ...createStepLedger(T0), rewardedSteps: 14_900, totalSteps: 14_900 };
+  // rewardedSteps = 14_800, còn được thưởng 200 bước, cần 250 để ra 1 lượt
+  // → thêm 500 bước: 200 rewardable → 200/250 = 0 lượt (carry=200), capped=300
+  // Dùng 14_750 để vừa đủ thêm 250 bước rewardable = 1 lượt
+  const ledger = { ...createStepLedger(T0), rewardedSteps: 14_750, totalSteps: 14_750 };
   const { result, ledger: after } = syncSteps({
     playerId: P,
     ledger,
@@ -72,9 +78,9 @@ test('trần 15.000 bước/ngày: ngừng thưởng nhưng VẪN đếm đủ b
     zone: 'trail',
   });
 
-  assert.equal(result.cappedSteps, 900);
-  assert.equal(result.pickups, 1);
-  assert.equal(after.totalSteps, 15_900, 'số bước hiển thị phải đủ, không bị cắt');
+  assert.equal(result.cappedSteps, 750);  // 1000 - 250 rewardable = 750 bị cắt
+  assert.equal(result.pickups, 1);        // 250 bước → 1 lượt
+  assert.equal(after.totalSteps, 15_750, 'số bước hiển thị phải đủ, không bị cắt');
   assert.equal(after.rewardedSteps, GATHERING.dailyStepRewardCap);
 });
 
@@ -102,18 +108,20 @@ test('hai người chơi khác nhau nhận kết quả khác nhau', () => {
 });
 
 test('mưa cho rừng thêm 25% lượt nhặt', () => {
-  const dry = syncSteps({ playerId: P, ledger: createStepLedger(T0), newSteps: 1000, nowMs: T0, zone: 'forest' });
+  // 2500 bước khô × forest 1.5 = 3750 → 3750/250 = 15 lượt
+  // 2500 bước mưa × forest 1.5 × rain 1.25 = 4687.5 → 4687/250 = 18 lượt, carry=187.5
+  const dry = syncSteps({ playerId: P, ledger: createStepLedger(T0), newSteps: 2500, nowMs: T0, zone: 'forest' });
   const wet = syncSteps({
     playerId: P,
     ledger: createStepLedger(T0),
-    newSteps: 1000,
+    newSteps: 2500,
     nowMs: T0,
     zone: 'forest',
     raining: true,
   });
 
-  assert.equal(dry.result.pickups, 20);
-  assert.equal(wet.result.pickups, 25);
+  assert.equal(dry.result.pickups, 15);
+  assert.ok(wet.result.pickups > dry.result.pickups, 'mưa phải cho nhiều lượt hơn khô');
 });
 
 test('chặt gỗ cần rìu đá', () => {

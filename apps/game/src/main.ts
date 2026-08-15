@@ -224,28 +224,25 @@ const POOL_BY_ZONE: Record<string, { id: string; name: string }[]> = {
 
 let lastVibratedDropId: string | null = null;
 let currentDeviceHeading: number | null = null;
-let compassListenerInitialized = false;
 let lastCompassUpdateMs = 0;
+let compassListenerHandler: ((e: DeviceOrientationEvent) => void) | null = null;
+let compassActive = false;
 
 function initCompassListener(): void {
-  if (compassListenerInitialized) return;
-  compassListenerInitialized = true;
+  if (compassListenerHandler) return; // đã init
 
   const onOrientation = (event: DeviceOrientationEvent) => {
-    // Tiết kiệm pin tối đa: Không xử lý khi thanh radar không bật chế độ chỉ hướng
+    if (!compassActive) return; // tắt khi không ở tab map
     if (!lastActiveDrop || lastDropDist > 75 || lastDropDist <= 35) return;
 
     const t = performance.now();
-    // Giới hạn tần số la bàn tối đa 3 lần/giây (350ms/lần) thay vì 60-120Hz ép chip liên tục
     if (t - lastCompassUpdateMs < 350) return;
     lastCompassUpdateMs = t;
 
     let heading: number | null = null;
     if ((event as any).webkitCompassHeading !== undefined) {
-      // iOS Safari (0 là hướng Bắc thật)
       heading = (event as any).webkitCompassHeading;
     } else if (event.alpha !== null && event.alpha !== undefined) {
-      // Android WebView / Chrome
       heading = (360 - event.alpha) % 360;
     }
 
@@ -255,12 +252,26 @@ function initCompassListener(): void {
     }
   };
 
+  compassListenerHandler = onOrientation;
+
   if ('ondeviceorientationabsolute' in window) {
     window.addEventListener('deviceorientationabsolute', onOrientation, { passive: true });
   } else if ('ondeviceorientation' in window) {
     window.addEventListener('deviceorientation', onOrientation, { passive: true });
   }
 }
+
+/** Bật compass: chỉ gọi khi ở tab bản đồ. */
+function resumeCompass(): void {
+  initCompassListener();
+  compassActive = true;
+}
+
+/** Tắt compass: gọi khi rời tab bản đồ hoặc màn hình tắt — event vẫn đăng ký nhưng handler bỏ qua hoàn toàn. */
+function pauseCompass(): void {
+  compassActive = false;
+}
+
 
 export interface NavigationTurn {
   bearing: number;
@@ -594,7 +605,8 @@ function spawnSingleWorldDropNear(center: LatLon, zone: string): void {
 
     const pool = getDynamicDropPool(zone, campLevel, activePet?.petId);
     const item = pool[Math.floor(Math.random() * pool.length)] ?? { id: 'dry_branch', name: 'Cành khô' };
-    const qty = 2 + Math.floor(Math.random() * 3);
+    const isStarter = (app.profile?.player?.lifetime?.steps ?? 0) === 0;
+    const qty = isStarter ? 1 : (1 + Math.floor(Math.random() * 2)); // Tân thủ: 1 món; Đi bộ: 1-2 món
 
     worldDrops = [{
       id: `drop_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
@@ -1316,8 +1328,14 @@ export function bumpInteraction(): void {
 }
 
 function startLoops(): void {
-  if (syncTimer) clearInterval(syncTimer);
-  syncTimer = setInterval(() => sync(), 5000);
+  let syncIntervalMs = 5_000; // 5s khi app nổi bật
+
+  const scheduleSyncTimer = () => {
+    if (syncTimer) clearInterval(syncTimer);
+    syncTimer = setInterval(() => sync(), syncIntervalMs);
+  };
+
+  scheduleSyncTimer();
 
   let lastFrameTime = 0;
 
@@ -1347,12 +1365,24 @@ function startLoops(): void {
 
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
-      // Khi TẮT MÀN HÌNH / KHÓA MÁY: Tắt hoàn toàn GPS phần cứng để máy mát lạnh và không tốn pin!
-      geo?.stop();
+      // Màn hình tắt / khóa máy:
+      // 1. Tạm dừng GPS & Compass
+      geo?.pause();
+      pauseCompass();
+      // 2. Giãn nhịp sync lên 30s để CPU ngủ sâu, tiết kiệm pin
+      syncIntervalMs = 30_000;
+      scheduleSyncTimer();
     } else {
-      // Khi MỞ SÁNG MÀN HÌNH: Kích hoạt lại GPS để cập nhật toạ độ và đồng bộ bước chân
-      geo?.start();
+      // Mở sáng màn hình:
+      // 1. Khôi phục nhịp sync 5s và đồng bộ bước chân ngay
+      syncIntervalMs = 5_000;
+      scheduleSyncTimer();
       sync();
+      // 2. Chỉ bật lại GPS & Compass nếu đang ở tab bản đồ
+      if (app.activeTab === 'map') {
+        geo?.resume();
+        resumeCompass();
+      }
     }
   });
 }
@@ -1396,7 +1426,9 @@ function sync(): void {
     }
   }
 
-  if (steps.newSteps > 0 || worldDrops.length === 0) {
+  // Chỉ sinh đồ rơi khi người chơi thực sự đi bộ (newSteps > 0), hoặc đúng 1 lần đầu làm quen cho tân thủ 0 bước
+  const isFirstEverSpawn = worldDrops.length === 0 && (app.profile?.player?.lifetime?.steps ?? 0) === 0;
+  if (steps.newSteps > 0 || isFirstEverSpawn) {
     const { render: at } = currentPosition();
     spawnSingleWorldDropNear(at, app.view.location?.zone ?? 'wilderness');
   }
@@ -2293,41 +2325,50 @@ function afterAction(): void {
   render();
 }
 
-// ---------------------------------------------------------------- điều khiển tĩnh
+function switchTab(targetTab: string): void {
+  if (app.activeTab !== targetTab) {
+    audio.play('click');
+  }
+  app.activeTab = targetTab;
+  const isMap = targetTab === 'map';
+  const backdrop = el('drawer-backdrop');
+  backdrop.hidden = isMap;
 
-function wireStaticControls(): void {
-  function switchTab(targetTab: string): void {
-    if (app.activeTab !== targetTab) {
-      audio.play('click');
-    }
-    app.activeTab = targetTab;
-    const isMap = targetTab === 'map';
-    const backdrop = el('drawer-backdrop');
-    backdrop.hidden = isMap;
+  // Pause GPS & Compass khi rời tab bản đồ, resume khi quay lại — tiết kiệm pin tối đa
+  if (isMap) {
+    geo?.resume();
+    resumeCompass();
+  } else {
+    geo?.pause();
+    pauseCompass();
+  }
 
-    for (const sibling of document.querySelectorAll('.tabbar__btn')) {
-      sibling.classList.toggle('is-active', (sibling as HTMLElement).dataset.tab === targetTab);
-    }
+  for (const sibling of document.querySelectorAll('.tabbar__btn')) {
+    sibling.classList.toggle('is-active', (sibling as HTMLElement).dataset.tab === targetTab);
+  }
 
-    for (const tab of document.querySelectorAll<HTMLElement>('.tab')) {
-      if (tab.id === 'tab-map') {
-        tab.hidden = false; // Luôn hiển thị bản đồ toàn màn hình làm nền
-      } else if (tab.id === 'drawer-actions') {
-        tab.hidden = targetTab !== 'actions';
-      } else {
-        tab.hidden = tab.id !== `tab-${targetTab}`;
-      }
-    }
-
-    if (isMap) {
-      mapView?.resize();
+  for (const tab of document.querySelectorAll<HTMLElement>('.tab')) {
+    if (tab.id === 'tab-map') {
+      tab.hidden = false; // Luôn hiển thị bản đồ toàn màn hình làm nền
+    } else if (tab.id === 'drawer-actions') {
+      tab.hidden = targetTab !== 'actions';
     } else {
-      render();
+      tab.hidden = tab.id !== `tab-${targetTab}`;
     }
   }
 
-  // Kích hoạt cảm biến la bàn định hướng thời gian thực
-  initCompassListener();
+  if (isMap) {
+    mapView?.resize();
+  } else {
+    render();
+  }
+}
+
+// ---------------------------------------------------------------- điều khiển tĩnh
+
+function wireStaticControls(): void {
+  // Đăng ký compass lần đầu và bật active ngay (app khởi động ở tab map)
+  resumeCompass();
 
   // Bắt sự kiện tương tác để điều chỉnh nhịp FPS thích ứng (10 FPS idle / 18 FPS tương tác)
   window.addEventListener('pointerdown', bumpInteraction, { passive: true });

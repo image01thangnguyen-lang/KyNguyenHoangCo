@@ -90,8 +90,8 @@ test('bảng rơi đường mòn đúng tỉ lệ 50/30/20 của §5.2', () => {
   );
 });
 
-test('hệ số vùng đúng §5.2: rừng 2×, hoang dã 1,2×', () => {
-  assert.equal(ZONES.forest.pickupMultiplier, 2);
+test('hệ số vùng đúng §5.2: rừng 1,5×, hoang dã 1,2×', () => {
+  assert.equal(ZONES.forest.pickupMultiplier, 1.5);
   assert.equal(ZONES.wilderness.pickupMultiplier, 1.2);
   assert.equal(ZONES.trail.pickupMultiplier, 1);
 });

@@ -68,6 +68,7 @@ export class GeoWatcher {
   private nativePollTimer: ReturnType<typeof setInterval> | null = null;
   private state: GeoState = { position: null, accuracyMeters: null, deniedVi: null };
   private lastFixMs = 0;
+  private started = false;
   private readonly onUpdate: (state: GeoState) => void;
 
   // Gán tường minh thay vì dùng parameter property: parameter property là cú pháp TypeScript
@@ -103,7 +104,9 @@ export class GeoWatcher {
   }
 
   start(): void {
-    // 0. Đăng ký hàm nhận toạ độ trực tiếp từ Android Native Event (0ms latency)
+    this.started = true;
+
+    // 0. Đăng ký hàm nhận toạ độ push từ Android Native (0ms latency, 0 pin — Android chủ động gọi khi có fix)
     (globalThis as unknown as { __onNativeLocation?: (data: { lat: number; lon: number; accuracy: number; time: number }) => void }).__onNativeLocation = (data) => {
       if (data && typeof data.lat === 'number' && typeof data.lon === 'number') {
         this.lastFixMs = Date.now();
@@ -116,13 +119,16 @@ export class GeoWatcher {
       }
     };
 
-    // 1. Thử đọc GPS phần cứng trực tiếp từ Android Native Bridge (nhanh & chính xác 100%)
+    // 1. Android Native Bridge — poll 15 giây/lần (fallback khi push event không có).
+    //    Giảm 30× so với 500ms cũ. Người đi bộ 15s ~ 18m: đủ để xác định POI và spawn drop.
     this.pollNativeBridge();
     if (!this.nativePollTimer) {
-      this.nativePollTimer = setInterval(() => this.pollNativeBridge(), 500);
+      this.nativePollTimer = setInterval(() => this.pollNativeBridge(), 15_000);
     }
 
-    // 2. Chạy bộ theo dõi Geolocation thông minh theo chu kỳ (Interval Polling 6s)
+    // 2. Web Geolocation — getCurrentPosition mỗi 15 giây
+    //    maximumAge: 12000 → OS trả cache GPS cũ ≤12s, chip GPS không cần thức dậy hỏi vệ tinh.
+    //    Với người đi bộ 1,2m/s, 12s sai lệch ~14m — chấp nhận được cho game, pin tiết kiệm đáng kể.
     if (!('geolocation' in navigator)) {
       if (!this.state.position) {
         this.state = { ...this.state, deniedVi: 'Thiết bị không hỗ trợ định vị. Game vẫn chơi được ở vùng hoang dã.' };
@@ -154,20 +160,20 @@ export class GeoWatcher {
             this.onUpdate(this.state);
           }
         },
-        { enableHighAccuracy: true, maximumAge: 5000, timeout: 8000 },
+        { enableHighAccuracy: true, maximumAge: 12_000, timeout: 10_000 },
       );
     };
 
-    // Lấy toạ độ ngay lập tức khi bắt đầu
-    fetchLocation();
+    fetchLocation(); // Fix ngay lập tức lần đầu
 
-    // Chu kỳ 10 giây lấy toạ độ 1 lần (người đi bộ 10s ~ 12m): cho phép chip GPS của iPhone NGHỈ 95% thời gian, máy mát lạnh tuyệt đối!
+    // Chu kỳ 15 giây — khớp với Native Bridge, người đi bộ 15s ~ 18m, đủ xác định POI.
     if (!this.watchId) {
-      this.watchId = setInterval(fetchLocation, 10000) as unknown as number;
+      this.watchId = setInterval(fetchLocation, 15_000) as unknown as number;
     }
   }
 
-  stop(): void {
+  /** Tạm dừng cả 2 tầng GPS khi không ở tab bản đồ hoặc màn hình tắt. Toạ độ cache vẫn còn dùng được. */
+  pause(): void {
     if (this.watchId !== null) {
       clearInterval(this.watchId);
       this.watchId = null;
@@ -177,6 +183,18 @@ export class GeoWatcher {
       this.nativePollTimer = null;
     }
   }
+
+  /** Tiếp tục GPS sau pause() — chỉ khởi động lại nếu đã start() trước đó. */
+  resume(): void {
+    if (this.started) this.start();
+  }
+
+
+  stop(): void {
+    this.started = false;
+    this.pause();
+  }
+
 
   current(): GeoState {
     return this.state;

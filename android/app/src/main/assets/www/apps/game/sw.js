@@ -8,7 +8,7 @@
  * không có lý do gì phải đi hỏi mạng trước. Cập nhật diễn ra bằng cách đổi CACHE_VERSION.
  */
 
-const CACHE_VERSION = 'khc-v0.4.0';
+const CACHE_VERSION = 'khc-v0.6.5';
 
 const CORE = '/packages/game-core';
 
@@ -58,6 +58,7 @@ const PRECACHE = [
   `${CORE}/data/device-checks.json`,
   `${CORE}/data/weather.json`,
   `${CORE}/data/story.json`,
+  `${CORE}/data/osm-roads-hanoi.json`,
 ];
 
 self.addEventListener('install', (event) => {

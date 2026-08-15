@@ -78,14 +78,14 @@ test('đứng ở Hồ Gươm thì vùng là Vùng Nước Ngọt', () => {
   assert.equal(result.view.location .insidePoi .nameVi, 'Hồ Gươm');
 });
 
-test('đi bộ trong công viên ăn ít nhất gấp đôi so với vùng hệ số 1×', () => {
+test('đi bộ trong công viên nhặt nhiều hơn vùng nước (rừng 1,5× vs nước 1×)', () => {
   const park = open(newProfile(), MONDAY_8H + HOUR, 1000, CONG_VIEN);
   const lake = open(newProfile(), MONDAY_8H + HOUR, 1000, HO_GUOM);
 
   assert.equal(park.view.location .zone, 'forest');
   assert.equal(lake.view.location .zone, 'water');
-  // Rừng là 2×; hôm đó nếu trời mưa thì còn thêm 25% nữa, nên dùng "ít nhất".
-  assert.ok(park.pickups >= lake.pickups * 2, `rừng ${park.pickups} vs nước ${lake.pickups}`);
+  // Rừng 1,5× > nước 1×; nếu trời mưa rừng còn +25% nữa.
+  assert.ok(park.pickups > lake.pickups, `rừng ${park.pickups} phải lớn hơn nước ${lake.pickups}`);
 });
 
 test('VÒNG LẶP NGÀY 1: đi bộ → nhặt → dựng lửa trại → xong nhiệm vụ đầu tiên', () => {
