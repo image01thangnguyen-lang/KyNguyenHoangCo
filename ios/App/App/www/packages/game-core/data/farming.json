@@ -1,0 +1,31 @@
+{
+  "_note": "Hệ thống Trồng Trọt Tiền Sử Quanh Trại (Phụ lục B). Gieo hạt, tưới nước bằng mưa hoặc nước mang về, thu hoạch lương thực.",
+  "version": 1,
+  "crops": [
+    {
+      "id": "wild_berry_crop",
+      "seedItemId": "seed",
+      "nameVi": "Bụi Quả Mọng",
+      "growthHours": 4,
+      "waterNeeded": 2,
+      "harvestRewards": [
+        { "itemId": "wild_berry", "qty": 8 },
+        { "itemId": "seed", "qty": 2 }
+      ],
+      "descVi": "Bụi quả dại đỏ tươi mọng nước, giải cứu cơn đói nhanh chóng."
+    },
+    {
+      "id": "medicinal_plant_crop",
+      "seedItemId": "seed",
+      "nameVi": "Dược Thảo Cổ Sinh",
+      "growthHours": 8,
+      "waterNeeded": 3,
+      "harvestRewards": [
+        { "itemId": "red_mushroom", "qty": 4 },
+        { "itemId": "fiber", "qty": 6 },
+        { "itemId": "seed", "qty": 1 }
+      ],
+      "descVi": "Loài thảo mộc thần bí dùng để nấu cao giải độc và sắc thuốc hồi máu."
+    }
+  ]
+}

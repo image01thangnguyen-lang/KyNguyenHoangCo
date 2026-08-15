@@ -1,0 +1,120 @@
+{
+  "_note": "Doanh trại 3 cấp §5.3. Nhịp nâng cấp ăn khớp chu kỳ boss thứ Bảy: mỗi tuần có một mục tiêu xây dựng rõ ràng trước Trăng Máu.",
+  "version": 1,
+
+  "tiers": [
+    {
+      "level": 1,
+      "nameVi": "Túp Lều Tranh",
+      "eraVi": "Thời đồ đá",
+      "_baseDefenseNote": "Nâng từ 10 lên 18 sau khi mô phỏng: cấp 1 không có công trình phòng thủ nào để xây (tường gỗ và bẫy chông đều là cấp 2), nên 10 nghĩa là chắc chắn thua ngay đợt đầu. Nay cấp 1 có Hàng rào gai để xây.",
+      "baseDefense": 18,
+      "storageSlots": 40,
+      "safeStorageSlots": 6,
+      "maxDefenseStructures": 4,
+      "unlocksStations": [],
+      "upgradeToNext": {
+        "_costNote": "Quyết định cân bằng 14/08/2026: hạ từ 120 xuống 70 gỗ lớn để người chơi 4.000–6.000 bước vẫn có thể lên cấp 2 trong nhịp 3–4 ngày.",
+        "inputs": [
+          { "itemId": "log", "qty": 70 },
+          { "itemId": "sharp_stone", "qty": 40 },
+          { "itemId": "vine", "qty": 20 }
+        ],
+        "seconds": 1800,
+        "estimatedPlayDays": "3-4"
+      }
+    },
+    {
+      "level": 2,
+      "nameVi": "Nhà Sàn Gỗ",
+      "eraVi": "Thời đồ đá muộn",
+      "baseDefense": 30,
+      "storageSlots": 80,
+      "safeStorageSlots": 12,
+      "maxDefenseStructures": 8,
+      "unlocksStations": ["kiln"],
+      "upgradeToNext": {
+        "inputs": [
+          { "itemId": "log", "qty": 300 },
+          { "itemId": "sharp_stone", "qty": 200 },
+          { "itemId": "iron_ore", "qty": 30 }
+        ],
+        "seconds": 7200,
+        "estimatedPlayDays": "14"
+      }
+    },
+    {
+      "level": 3,
+      "nameVi": "Pháo Đài Đá Cổ",
+      "eraVi": "Thời đồ sắt",
+      "baseDefense": 70,
+      "storageSlots": 160,
+      "safeStorageSlots": 24,
+      "maxDefenseStructures": 14,
+      "unlocksStations": ["forge"],
+      "upgradeToNext": {
+        "inputs": [
+          { "itemId": "stone_block", "qty": 150 },
+          { "itemId": "log", "qty": 200 },
+          { "itemId": "iron_ingot", "qty": 25 },
+          { "itemId": "copper_ore", "qty": 30 }
+        ],
+        "seconds": 14400,
+        "estimatedPlayDays": "21"
+      }
+    },
+    {
+      "level": 4,
+      "nameVi": "Thành Cổ Đông Sơn",
+      "eraVi": "Thời đồ đồng - Đông Sơn",
+      "baseDefense": 120,
+      "storageSlots": 240,
+      "safeStorageSlots": 36,
+      "maxDefenseStructures": 20,
+      "unlocksStations": ["bronze_furnace"],
+      "upgradeToNext": {
+        "inputs": [
+          { "itemId": "bronze_ingot", "qty": 60 },
+          { "itemId": "stone_block", "qty": 300 },
+          { "itemId": "gold_ore", "qty": 20 },
+          { "itemId": "leather", "qty": 40 }
+        ],
+        "seconds": 28800,
+        "estimatedPlayDays": "35"
+      }
+    },
+    {
+      "level": 5,
+      "nameVi": "Cung Điện Thần Long",
+      "eraVi": "Kỷ nguyên Văn Lang thần thoại",
+      "baseDefense": 200,
+      "storageSlots": 360,
+      "safeStorageSlots": 50,
+      "maxDefenseStructures": 30,
+      "unlocksStations": ["altar_of_dragons"],
+      "upgradeToNext": null
+    }
+  ],
+
+  "defenseStructures": [
+    { "id": "thorn_fence",  "nameVi": "Hàng rào gai", "defense": 18, "maxCount": 4, "hp": 60 },
+    { "id": "spike_trap",   "nameVi": "Bẫy chông", "defense": 8,  "maxCount": 6, "consumedOnBreach": true },
+    { "id": "wooden_wall",  "nameVi": "Tường gỗ",  "defense": 15, "maxCount": 6, "hp": 120 },
+    { "id": "stone_wall",   "nameVi": "Tường đá",  "defense": 32, "maxCount": 6, "hp": 300 },
+    { "id": "watch_tower",  "nameVi": "Tháp canh", "defense": 40, "maxCount": 2, "hp": 250, "bloodMoonDps": 6 },
+    { "id": "ballista",     "nameVi": "Ballista",  "defense": 55, "maxCount": 2, "hp": 200, "bloodMoonDps": 14 },
+    { "id": "dong_son_drum", "nameVi": "Trống đồng Đông Sơn", "defense": 45, "maxCount": 2, "hp": 400, "bloodMoonDps": 18 },
+    { "id": "stone_fortress_wall", "nameVi": "Tường thành đá kiên cố", "defense": 50, "maxCount": 8, "hp": 500 },
+    { "id": "heavy_catapult", "nameVi": "Máy bắn đá cổ", "defense": 80, "maxCount": 2, "hp": 350, "bloodMoonDps": 26 },
+    { "id": "dragon_totem_bastion", "nameVi": "Pháo đài trấn cổ Thần Long", "defense": 120, "maxCount": 2, "hp": 800, "bloodMoonDps": 45 }
+  ],
+
+  "stations": [
+    { "id": "campfire",    "nameVi": "Lửa trại",      "requiresTier": 1 },
+    { "id": "drying_rack", "nameVi": "Giá phơi thịt", "requiresTier": 1 },
+    { "id": "kiln",        "nameVi": "Lò nung",       "requiresTier": 2 },
+    { "id": "forge",       "nameVi": "Lò rèn",        "requiresTier": 3 },
+    { "id": "bronze_furnace", "nameVi": "Lò luyện đồng Đông Sơn", "requiresTier": 4 },
+    { "id": "altar_of_dragons", "nameVi": "Đền thờ Thần Long", "requiresTier": 5 }
+  ]
+}

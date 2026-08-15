@@ -496,14 +496,65 @@ export function sampleHanoiPack(): PoiPack {
       { id: 'nethue_hangbong',      zone: 'merchant', nameVi: 'Ẩm Thực Cố Đô Nét Huế (Cổ Phố Hàng Bông)',     lat: 21.0305, lon: 105.8475, radiusMeters: 30 },
       { id: 'quan_an_ngon',         zone: 'merchant', nameVi: 'Đại Tửu Quán Ăn Ngon (Phan Bội Châu)',         lat: 21.0258, lon: 105.8442, radiusMeters: 40 },
 
-      // 3.2. Quán Ăn Cổ Truyền Danh Bất Hư Truyền Tại Hà Nội
-      { id: 'pho_thin_loduc',       zone: 'merchant', nameVi: 'Phở Thìn Lò Đúc (Cổ Quán Phở Tái Lăn)',        lat: 21.0158, lon: 105.8568, radiusMeters: 30 },
-      { id: 'pho_bat_dan',          zone: 'merchant', nameVi: 'Phở Gia Truyền Bát Đàn (Cổ Phố 36 Hàng)',      lat: 21.0338, lon: 105.8478, radiusMeters: 30 },
-      { id: 'buncha_huonglien',     zone: 'merchant', nameVi: 'Bún Chả Hương Liên (Bún Chả Obama - Lê Văn Hưu)',lat: 21.0182, lon: 105.8525, radiusMeters: 30 },
-      { id: 'banhcuon_bahoanh',     zone: 'merchant', nameVi: 'Bánh Cuốn Bà Hoành (Cổ Đạo Tô Hiến Thành)',    lat: 21.0142, lon: 105.8505, radiusMeters: 30 },
-      { id: 'chaca_lavong',         zone: 'merchant', nameVi: 'Chả Cá Lã Vọng Thiên Thu (Cổ Phố Chả Cá)',     lat: 21.0362, lon: 105.8488, radiusMeters: 30 },
-      { id: 'bundau_ngotram',       zone: 'merchant', nameVi: 'Bún Đậu Mắm Tôm Ngõ Trạm (Cổ Điểm)',          lat: 21.0322, lon: 105.8465, radiusMeters: 25 },
-      { id: 'chaca_thanglong',      zone: 'merchant', nameVi: 'Chả Cá Thăng Long (Cổ Đạo Đường Thành)',       lat: 21.0328, lon: 105.8468, radiusMeters: 30 },
+      // 3.2. Quán ăn cổ truyền & Đặc sản nổi tiếng toàn địa bàn Hà Nội
+      // --- Phở & Mì truyền thống ---
+      { id: 'pho_thin_loduc',       zone: 'merchant', nameVi: 'Phở Thìn Lò Đúc (Phở tái lăn gia truyền)',        lat: 21.0158, lon: 105.8568, radiusMeters: 30 },
+      { id: 'pho_bat_dan',          zone: 'merchant', nameVi: 'Phở gia truyền Bát Đàn (Phố cổ 36 hàng)',        lat: 21.0338, lon: 105.8478, radiusMeters: 30 },
+      { id: 'pho_10_lyquocsu',      zone: 'merchant', nameVi: 'Phở 10 Lý Quốc Sư (Hoàn Kiếm)',                  lat: 21.0302, lon: 105.8488, radiusMeters: 30 },
+      { id: 'pho_thin_boho',        zone: 'merchant', nameVi: 'Phở Thìn Bờ Hồ (Đinh Tiên Hoàng)',               lat: 21.0318, lon: 105.8528, radiusMeters: 25 },
+      { id: 'pho_suong_maihacde',   zone: 'merchant', nameVi: 'Phở Sướng (Mai Hắc Đế - Hai Bà Trưng)',          lat: 21.0118, lon: 105.8495, radiusMeters: 25 },
+      { id: 'pho_khoi_hoi',         zone: 'merchant', nameVi: 'Phở Khôi Hói (Hàng Vải)',                        lat: 21.0365, lon: 105.8482, radiusMeters: 25 },
+      { id: 'pho_ga_cham',          zone: 'merchant', nameVi: 'Phở gà Châm (Yên Ninh - Ba Đình)',               lat: 21.0415, lon: 105.8445, radiusMeters: 25 },
+      { id: 'pho_cu_cu_mydinh',     zone: 'merchant', nameVi: 'Phở bò Cụ Cử (Lê Đức Thọ - Mỹ Đình)',            lat: 21.0320, lon: 105.7725, radiusMeters: 25 },
+      { id: 'mi_van_than_duyanh',   zone: 'merchant', nameVi: 'Mì vằn thắn Duy Anh (Trần Hưng Đạo)',            lat: 21.0225, lon: 105.8495, radiusMeters: 25 },
+
+      // --- Bún chả, Bún thang, Bún ốc, Bún đậu & Bún riêu ---
+      { id: 'buncha_huonglien',     zone: 'merchant', nameVi: 'Bún chả Hương Liên (Bún chả Obama - Lê Văn Hưu)',lat: 21.0182, lon: 105.8525, radiusMeters: 30 },
+      { id: 'buncha_dackim',        zone: 'merchant', nameVi: 'Bún chả Đắc Kim (Hàng Mành)',                    lat: 21.0335, lon: 105.8492, radiusMeters: 30 },
+      { id: 'buncha_sinhtu',        zone: 'merchant', nameVi: 'Bún chả Sinh Từ (Nguyễn Khuyến)',                lat: 21.0275, lon: 105.8398, radiusMeters: 30 },
+      { id: 'buncha_hadong',        zone: 'merchant', nameVi: 'Bún chả Bà Cụ (Quang Trung - Hà Đông)',          lat: 20.9712, lon: 105.7745, radiusMeters: 30 },
+      { id: 'buncha_longbien',      zone: 'merchant', nameVi: 'Bún chả Ngọc Lâm (Long Biên)',                   lat: 21.0465, lon: 105.8685, radiusMeters: 30 },
+      { id: 'bunthang_baduc',       zone: 'merchant', nameVi: 'Bún thang bà Đức (Cầu Gỗ)',                      lat: 21.0325, lon: 105.8532, radiusMeters: 25 },
+      { id: 'bunoc_co_hue',         zone: 'merchant', nameVi: 'Bún ốc cô Huệ (Nguyễn Siêu)',                    lat: 21.0368, lon: 105.8515, radiusMeters: 25 },
+      { id: 'bunoc_phutayho',       zone: 'merchant', nameVi: 'Bún ốc Phủ Tây Hồ (Quảng An)',                   lat: 21.0685, lon: 105.8315, radiusMeters: 35 },
+      { id: 'bunoc_baluong',        zone: 'merchant', nameVi: 'Bún ốc bà Lương (Khương Thượng - Đống Đa)',      lat: 21.0065, lon: 105.8265, radiusMeters: 30 },
+      { id: 'bundau_ngotram',       zone: 'merchant', nameVi: 'Bún đậu mắm tôm Ngõ Trạm',                       lat: 21.0322, lon: 105.8465, radiusMeters: 25 },
+      { id: 'bundau_hangkhay',      zone: 'merchant', nameVi: 'Bún đậu mắm tôm Hàng Khay',                      lat: 21.0282, lon: 105.8522, radiusMeters: 25 },
+      { id: 'bundau_cayda',         zone: 'merchant', nameVi: 'Bún đậu Cây Đa (Thụy Khuê - Tây Hồ)',            lat: 21.0435, lon: 105.8285, radiusMeters: 25 },
+      { id: 'bunrieu_hangbac',      zone: 'merchant', nameVi: 'Bún riêu cua cô Hoàn (Hàng Bạc)',                lat: 21.0348, lon: 105.8518, radiusMeters: 25 },
+      { id: 'bunrieu_tohieu',       zone: 'merchant', nameVi: 'Bún riêu cua Tô Hiệu (Cầu Giấy)',                lat: 21.0412, lon: 105.7942, radiusMeters: 25 },
+      { id: 'bunca_cay_haiphong',   zone: 'merchant', nameVi: 'Bún cá cay Hải Phòng (Nguyễn Trãi - Thanh Xuân)',lat: 20.9985, lon: 105.8115, radiusMeters: 25 },
+      { id: 'bunbo_oxuan',          zone: 'merchant', nameVi: 'Bún bò Huế O Xuân (Quang Trung - Hoàn Kiếm)',    lat: 21.0162, lon: 105.8502, radiusMeters: 25 },
+
+      // --- Chả cá, Bánh tôm, Phở cuốn, Bánh cuốn & Bánh mì ---
+      { id: 'chaca_lavong',         zone: 'merchant', nameVi: 'Chả cá Lã Vọng (Chả Cá - Hoàn Kiếm)',            lat: 21.0362, lon: 105.8488, radiusMeters: 30 },
+      { id: 'chaca_thanglong',      zone: 'merchant', nameVi: 'Chả cá Thăng Long (Đường Thành)',                lat: 21.0328, lon: 105.8468, radiusMeters: 30 },
+      { id: 'banhtom_hotay',        zone: 'merchant', nameVi: 'Bánh tôm Hồ Tây (Đường Thanh Niên)',             lat: 21.0475, lon: 105.8368, radiusMeters: 40 },
+      { id: 'phocuon_chinhthang',   zone: 'merchant', nameVi: 'Phở cuốn Chinh Thắng (Ngũ Xã - Trúc Bạch)',       lat: 21.0445, lon: 105.8385, radiusMeters: 30 },
+      { id: 'phocuon_hungben',      zone: 'merchant', nameVi: 'Phở cuốn Hưng Bền (Ngũ Xã - Ba Đình)',           lat: 21.0448, lon: 105.8388, radiusMeters: 30 },
+      { id: 'banhcuon_bahoanh',     zone: 'merchant', nameVi: 'Bánh cuốn Bà Hoành (Tô Hiến Thành)',             lat: 21.0142, lon: 105.8505, radiusMeters: 30 },
+      { id: 'banhcuon_giaan_hadong',zone: 'merchant', nameVi: 'Bánh cuốn Gia An (Quang Trung - Hà Đông)',       lat: 20.9725, lon: 105.7758, radiusMeters: 25 },
+      { id: 'banhcuon_giaan_thanhxuan',zone: 'merchant',nameVi: 'Bánh cuốn Gia An (Nguyễn Trãi - Thanh Xuân)',  lat: 20.9995, lon: 105.8085, radiusMeters: 25 },
+      { id: 'banhmi_sotvang_dinhngang',zone: 'merchant',nameVi: 'Bánh mì sốt vang Đình Ngang (Cửa Nam)',       lat: 21.0298, lon: 105.8452, radiusMeters: 25 },
+      { id: 'banhmi_cay_longbien',  zone: 'merchant', nameVi: 'Bánh mì cay Hải Phòng (Ngọc Lâm - Long Biên)',   lat: 21.0455, lon: 105.8695, radiusMeters: 25 },
+
+      // --- Món ăn vặt & Đặc sản đường phố Hà Nội ---
+      { id: 'xoi_yen',              zone: 'merchant', nameVi: 'Xôi Yến (Nguyễn Hữu Huân - Hoàn Kiếm)',          lat: 21.0348, lon: 105.8542, radiusMeters: 30 },
+      { id: 'nom_longvidung',       zone: 'merchant', nameVi: 'Nộm bò khô Long Vi Dung (Hồ Hoàn Kiếm)',        lat: 21.0315, lon: 105.8538, radiusMeters: 25 },
+      { id: 'banhgoi_gocda',        zone: 'merchant', nameVi: 'Bánh gối Quán Gốc Đa (Lý Quốc Sư)',              lat: 21.0295, lon: 105.8485, radiusMeters: 25 },
+      { id: 'banhduc_lengoc han',   zone: 'merchant', nameVi: 'Bánh đúc nóng Lê Ngọc Hân (Hai Bà Trưng)',       lat: 21.0175, lon: 105.8535, radiusMeters: 25 },
+      { id: 'chaoson_hangdieu',     zone: 'merchant', nameVi: 'Cháo sườn sụn cô Là (Hàng Điếu)',                lat: 21.0328, lon: 105.8462, radiusMeters: 25 },
+      { id: 'nemchua_tamthuong',    zone: 'merchant', nameVi: 'Nem chua rán Tạm Thương (Hàng Bông)',            lat: 21.0308, lon: 105.8465, radiusMeters: 25 },
+      { id: 'che_bonmua_hangcan',   zone: 'merchant', nameVi: 'Chè Bốn Mùa (Hàng Cân - Hoàn Kiếm)',              lat: 21.0342, lon: 105.8498, radiusMeters: 25 },
+      { id: 'che_sen_tayho',        zone: 'merchant', nameVi: 'Chè sen Tây Hồ (Quảng Bá - Tây Hồ)',             lat: 21.0625, lon: 105.8285, radiusMeters: 30 },
+
+      // --- Lẩu, Nướng & Cơm đặc sản các quận ---
+      { id: 'lauech_nganbeo',       zone: 'merchant', nameVi: 'Lẩu ếch Ngân Béo (Trúc Bạch - Ba Đình)',          lat: 21.0452, lon: 105.8392, radiusMeters: 35 },
+      { id: 'lauech_dungha_mydinh', zone: 'merchant', nameVi: 'Lẩu ếch Dũng Hà (Mỹ Đình 2)',                    lat: 21.0272, lon: 105.7715, radiusMeters: 30 },
+      { id: 'laude_nhatly',         zone: 'merchant', nameVi: 'Lẩu dê Nhất Ly (Giải Phóng - Hoàng Mai)',        lat: 20.9855, lon: 105.8425, radiusMeters: 35 },
+      { id: 'vit_vandinh_linhdam',  zone: 'merchant', nameVi: 'Vịt cỏ Vân Đình (Bán đảo Linh Đàm - Hoàng Mai)',lat: 20.9685, lon: 105.8285, radiusMeters: 35 },
+      { id: 'comtam_sabichuong',    zone: 'merchant', nameVi: 'Cơm tấm Sà Bì Chưởng (Nguyễn Phong Sắc - Cầu Giấy)', lat: 21.0378, lon: 105.7905, radiusMeters: 30 },
+      { id: 'banhtrang_hoangbeo',   zone: 'merchant', nameVi: 'Bánh tráng cuốn thịt heo Hoàng Bèo (Duy Tân)',   lat: 21.0288, lon: 105.7872, radiusMeters: 25 },
 
       // 3.3. Chuỗi Cà Phê, Trà Sữa Cao Cấp & Trẻ Trung Lớn
       { id: 'starbucks_pressclub',  zone: 'merchant', nameVi: 'Starbucks Coffee (Press Club Lý Đạo Thành)',    lat: 21.0255, lon: 105.8562, radiusMeters: 35 },

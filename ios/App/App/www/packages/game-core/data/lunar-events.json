@@ -1,0 +1,50 @@
+{
+  "_note": "Hệ thống sự kiện Lịch Âm Hoang Cổ tính toán offline 100% bằng thuật toán thiên văn lịch Việt Nam (§Phụ lục B).",
+  "events": [
+    {
+      "id": "tet_nguyen_dan",
+      "nameVi": "Tết Nguyên Đán Hoang Cổ",
+      "descVi": "Cây Nêu Trừ Tà rực sáng doanh trại. Thu hái lộc xuân nhân đôi sản lượng nông trại & quả mọng.",
+      "startMonth": 1,
+      "startDay": 1,
+      "endMonth": 1,
+      "endDay": 7,
+      "campDecoration": "cay_neu",
+      "harvestMultiplier": 2.0,
+      "incubationMultiplier": 1.5,
+      "campDefenseBonus": 25,
+      "specialDropItemId": "wild_berry",
+      "specialDropQty": 5
+    },
+    {
+      "id": "le_hoi_than_lua",
+      "nameVi": "Lễ Hội Tế Thần Lửa (Tết Đoan Ngọ)",
+      "descVi": "Lửa trại thần long xua tan bóng tối đại ngàn. Tăng 30% sức mạnh chiến đấu và phòng thủ đêm.",
+      "startMonth": 5,
+      "startDay": 5,
+      "endMonth": 5,
+      "endDay": 7,
+      "campDecoration": "than_hoa",
+      "harvestMultiplier": 1.2,
+      "incubationMultiplier": 1.2,
+      "campDefenseBonus": 35,
+      "specialDropItemId": "dry_branch",
+      "specialDropQty": 10
+    },
+    {
+      "id": "tet_trung_thu",
+      "nameVi": "Tết Trung Thu Tiền Sử (Trăng Rằm Cổ Đại)",
+      "descVi": "Ánh trăng rằm huyền bí soi rọi thế giới hoang sơ. Thú cưng ấp nở nhanh gấp đôi!",
+      "startMonth": 8,
+      "startDay": 14,
+      "endMonth": 8,
+      "endDay": 16,
+      "campDecoration": "den_long_sao",
+      "harvestMultiplier": 1.5,
+      "incubationMultiplier": 2.0,
+      "campDefenseBonus": 20,
+      "specialDropItemId": "ancient_herb",
+      "specialDropQty": 4
+    }
+  ]
+}

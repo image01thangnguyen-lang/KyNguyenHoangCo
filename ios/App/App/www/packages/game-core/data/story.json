@@ -1,0 +1,540 @@
+{
+  "_note": "Cốt truyện 8 chương — XƯƠNG SỐNG của bản offline (§5.6). Với game không có cộng đồng online, nội dung phải gánh vai trò giữ chân. Mỗi beat dài 60–90 giây khi đọc thành tiếng, kích hoạt theo cột mốc số bước để buổi đi bộ thành một tập phim.",
+  "version": 1,
+
+  "narrator": {
+    "id": "lac_lac",
+    "nameVi": "Lạc Lạc",
+    "roleVi": "Trí tuệ nhân tạo trôi dạt cùng bạn qua Đứt Gãy Không Gian",
+    "voiceDirectionVi": "Nữ, 20–30 tuổi, giọng ấm và tỉnh táo. Không kịch tính hoá. Cô ấy sợ, nhưng không để bạn thấy điều đó."
+  },
+
+  "demo": {
+    "_note": "§9 — điểm cắt demo trùng nhịp kịch bản gốc: hết ngày 3, ngay trước Đêm Trăng Máu đầu tiên.",
+    "freeThroughDay": 3,
+    "freeThroughChapterIndex": 1,
+    "unlockPriceVnd": [99000, 149000],
+    "cutTitleVi": "Trăng đang đỏ dần",
+    "cutMessageVi": "Ba ngày qua bạn đã tự sống sót. Nhưng thứ đang tới đêm nay không phải một con sói đói. Mở khoá trọn đời để đi tiếp — mua một lần, không quảng cáo, không bán tài nguyên.",
+    "keepsAfterUnlock": "Toàn bộ tiến trình 3 ngày demo được giữ nguyên."
+  },
+
+  "tutorial": {
+    "_note": "3 ngày đầu (§3). Mở màn đúng như kịch bản gốc: 'Đốt lửa trước khi trời tối'.",
+    "days": [
+      {
+        "day": 1,
+        "titleVi": "Đốt lửa trước khi trời tối",
+        "quests": [
+          {
+            "id": "d1q1",
+            "titleVi": "Nhặt củi trên đường mòn",
+            "descVi": "Cứ 100 bước bạn sẽ tự nhặt được thứ gì đó. Đi một vòng quanh nhà đi.",
+            "ruleTipVi": "Quy luật: Cứ ~100 bước đi bộ ngoài đời thực, bạn sẽ tự động nhặt được cành cây, đá nhọn hoặc quả dại rơi trên đường.",
+            "shortcutTab": "map",
+            "objective": { "kind": "collect", "itemId": "dry_branch", "qty": 8 },
+            "reward": [{ "itemId": "wild_berry", "qty": 2 }]
+          },
+          {
+            "id": "d1q2",
+            "titleVi": "Nhặt đá nhọn",
+            "descVi": "Đá nhọn để đánh lửa và để làm rìu. Đi thêm chút nữa.",
+            "ruleTipVi": "Quy luật: Đá nhọn là tài nguyên thiết yếu để đánh lửa và chế tạo các công cụ sinh tồn ban đầu.",
+            "shortcutTab": "map",
+            "objective": { "kind": "collect", "itemId": "sharp_stone", "qty": 4 },
+            "reward": []
+          },
+          {
+            "id": "d1q3",
+            "titleVi": "Dựng lửa trại",
+            "descVi": "Trời sắp tối. Có lửa là có đêm nay.",
+            "ruleTipVi": "Quy luật: Lửa trại xua đuổi thú dữ ban đêm và cho phép đun sôi nước. Hãy dựng trước 20:00!",
+            "shortcutTab": "craft",
+            "objective": { "kind": "craft", "recipeId": "campfire" },
+            "reward": [{ "itemId": "raw_water", "qty": 2 }],
+            "deadlineHour": 20,
+            "failMessageVi": "Bạn qua đêm trong bóng tối. Không sao — nhưng đừng để lặp lại."
+          }
+        ]
+      },
+      {
+        "day": 2,
+        "titleVi": "Nước và lưỡi rìu",
+        "quests": [
+          {
+            "id": "d2q1",
+            "titleVi": "Đun sôi nước trước khi uống",
+            "descVi": "Nước thô uống được, nhưng cứ 10 lần thì 4 lần bạn sẽ ôm bụng. Đun đi.",
+            "ruleTipVi": "Quy luật: Nước thô có 40% nguy cơ gây bệnh và tụt máu. Nước đun sôi trên Lửa Trại an toàn 100%.",
+            "shortcutTab": "craft",
+            "objective": { "kind": "craft", "recipeId": "boiled_water" },
+            "reward": []
+          },
+          {
+            "id": "d2q2",
+            "titleVi": "Chế rìu đá",
+            "descVi": "3 cành khô, 2 đá nhọn, 2 dây leo. Có rìu là có gỗ lớn.",
+            "ruleTipVi": "Quy luật: Cần có Rìu Đá trong túi mới có thể đốn gỗ lớn tại các công viên và khu rừng trên bản đồ.",
+            "shortcutTab": "craft",
+            "objective": { "kind": "craft", "recipeId": "stone_axe" },
+            "reward": [{ "itemId": "vine", "qty": 4 }]
+          },
+          {
+            "id": "d2q3",
+            "titleVi": "Tìm một vạt rừng",
+            "descVi": "Công viên, vườn hoa, vạt cây ven đường — trên bản đồ chúng là Rừng Rậm Nguyên Sinh. Ở đó mỗi bước ăn gấp đôi.",
+            "ruleTipVi": "Quy luật: Đứng trong phạm vi 100m quanh công viên/khu rừng để mở khoá hành động Đốn Củi và Hái Lượm.",
+            "shortcutTab": "map",
+            "objective": { "kind": "visit_zone", "zone": "forest" },
+            "reward": []
+          }
+        ]
+      },
+      {
+        "day": 3,
+        "titleVi": "Dựng thứ gì đó để trốn sau nó",
+        "quests": [
+          {
+            "id": "d3q1",
+            "titleVi": "Chặt gỗ lớn",
+            "descVi": "Vào vạt rừng và bổ 45 giây. Gỗ lớn là thứ dựng nên mọi bức tường.",
+            "ruleTipVi": "Quy luật: Sử dụng Rìu Đá tại Rừng/Công viên để chặt gỗ lớn — vật liệu chính nâng cấp Doanh Trại.",
+            "shortcutTab": "map",
+            "objective": { "kind": "collect", "itemId": "log", "qty": 6 },
+            "reward": []
+          },
+          {
+            "id": "d3q2",
+            "titleVi": "Đặt một cái bẫy thỏ",
+            "descVi": "Đặt trên đường đi làm, hai tiếng sau ghé thu. Đó là bữa thịt đầu tiên của bạn.",
+            "ruleTipVi": "Quy luật: Đặt bẫy tại toạ độ thật ngoài đời, sau 2 tiếng đi bộ hãy quay lại trong bán kính 35m để thu thịt tươi.",
+            "shortcutTab": "bag",
+            "objective": { "kind": "action", "actionId": "set_trap" },
+            "reward": []
+          },
+          {
+            "id": "d3q3",
+            "titleVi": "Sống qua đợt tấn công đầu tiên",
+            "descVi": "20 giờ tối nay, thứ gì đó sẽ tới. Ở lại trại.",
+            "ruleTipVi": "Quy luật: Vào lúc 20:00, ở lại Doanh Trại để kích hoạt phòng thủ đêm. Điểm phòng thủ càng cao, tỷ lệ sống sót càng lớn.",
+            "shortcutTab": "camp",
+            "objective": { "kind": "night_defense", "survive": true },
+            "reward": [{ "itemId": "upgrade_core", "qty": 1 }]
+          }
+        ]
+      }
+    ]
+  },
+
+  "chapters": [
+    {
+      "index": 1,
+      "id": "ch1_ba_ngay_dau",
+      "titleVi": "Chương 1 — Ba ngày đầu",
+      "epigraphVi": "Khi ánh sáng cuối cùng của thế giới cũ tắt lịm, ngọn lửa đầu tiên được thắp lên bằng hai bàn tay trần.",
+      "caveArtIcon": "🔥",
+      "unlockAfterBloodMoons": 0,
+      "summaryVi": "Bạn tỉnh dậy trên nền đất lạnh, cách nhà mình mười nghìn năm. Lạc Lạc là thứ duy nhất còn sót lại từ thế giới cũ.",
+      "beats": [
+        {
+          "id": "ch1b1",
+          "triggerSteps": 0,
+          "voStatus": "pending",
+          "mood": "worried",
+          "textVi": "Nghe tôi nói này. Đừng nhìn bầu trời, nó không giúp gì đâu. Tôi là Lạc Lạc — tôi vốn nằm trong điện thoại của bạn, và giờ tôi cũng chẳng hiểu mình đang chạy trên cái gì nữa. Điều tôi chắc chắn: chỗ này là nơi bạn đang đứng, nhưng cách đây mười nghìn năm. Và trời thì sắp tối."
+        },
+        {
+          "id": "ch1b2",
+          "triggerSteps": 600,
+          "voStatus": "pending",
+          "mood": "calm",
+          "textVi": "Bạn thấy không, cứ khoảng một trăm bước là tay bạn lại nhặt được thứ gì đó mà đầu bạn không kịp nghĩ. Cơ thể người nhớ những việc này lâu hơn bạn tưởng. Cành khô, đá nhọn, dây leo. Ba thứ đó đủ để bắt đầu lại một nền văn minh — hoặc ít nhất là đủ để qua đêm nay."
+        },
+        {
+          "id": "ch1b3",
+          "triggerSteps": 1800,
+          "voStatus": "pending",
+          "mood": "determined",
+          "textVi": "Tôi đã thử gọi. Không có sóng, tất nhiên. Không có vệ tinh, không có ai. Nhưng có một thứ lạ: tín hiệu thời gian trong tôi vẫn chạy đúng giờ của bạn. Cùng buổi chiều, cùng phút. Như thể có ai đó cố ý giữ hai thế giới khớp nhau. Tôi chưa dám gọi đó là hy vọng."
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "id": "ch2_tieng_vong",
+      "titleVi": "Chương 2 — Tiếng vọng từ lòng đất",
+      "epigraphVi": "Dưới tầng sâu đất mẹ, có những nhịp đập đã chờ đợi con người từ thuở hồng hoang.",
+      "caveArtIcon": "🌊",
+      "unlockAfterBloodMoons": 1,
+      "summaryVi": "Sau Trăng Máu đầu tiên, Lạc Lạc bắt được một tín hiệu lặp lại dưới lòng đất — nhịp đều đặn, không phải tự nhiên.",
+      "beats": [
+        { "id": "ch2b1", "triggerSteps": 0, "voStatus": "pending", "mood": "surprised", "textVi": "Bạn sống rồi. Tôi đã tính xác suất, và tôi sẽ không nói con số đó ra. Nhưng có chuyện khác: đêm qua khi con vật kia gầm, tôi nghe thấy một thứ phía dưới nó. Một nhịp. Đều tới mức không thể là tim của bất cứ con gì." },
+        { "id": "ch2b2", "triggerSteps": 1200, "voStatus": "pending", "mood": "calm", "textVi": "Nhịp đó mạnh dần khi bạn đi về hướng có nước. Tôi không biết đó là trùng hợp hay là lời mời. Cứ đi bộ đi — bạn đi càng nhiều, tôi càng có dữ liệu để định vị nó." },
+        { "id": "ch2b3", "triggerSteps": 3000, "voStatus": "pending", "mood": "determined", "textVi": "Tôi đã khớp được nhịp ấy với một thứ quen thuộc đến phát sợ: tần số đồng bộ của mạng lưới định vị thế giới bạn. Mười nghìn năm trước, dưới chân bạn, có cái gì đó đang phát đúng cái nhịp mà lẽ ra chỉ tồn tại ở thế kỷ hai mươi mốt." }
+      ],
+      "quests": [
+        {
+          "id": "ch2q1",
+          "titleVi": "Lần theo nhịp đập ngầm",
+          "descVi": "Đi bộ 3.000 bước trong chương để Lạc Lạc thu thập dữ liệu giải mã tần số bí ẩn.",
+          "objective": { "kind": "steps", "qty": 3000 },
+          "reward": [{ "itemId": "upgrade_core", "qty": 1 }, { "itemId": "sharp_stone", "qty": 4 }]
+        },
+        {
+          "id": "ch2q2",
+          "titleVi": "Thăm dò mạch nước ngầm",
+          "descVi": "Tiến về phía vùng nước tự nhiên (hồ, sông hoặc suối) để kiểm tra nguồn phát sóng.",
+          "objective": { "kind": "visit_zone", "zone": "water" },
+          "reward": [{ "itemId": "boiled_water", "qty": 3 }]
+        },
+        {
+          "id": "ch2q3",
+          "titleVi": "Nâng cấp Doanh trại Cấp 2 (Nhà Sàn Gỗ)",
+          "descVi": "Gom 70 gỗ, 40 đá, 20 dây để nâng cấp trại và mở Lò Nung đất.",
+          "objective": { "kind": "camp_level", "level": 2 },
+          "reward": [{ "itemId": "blueprint", "qty": 1 }, { "itemId": "clay", "qty": 5 }]
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "id": "ch3_dau_chan",
+      "titleVi": "Chương 3 — Dấu chân không thuộc về người",
+      "epigraphVi": "Cát bụi thời gian không thể xoá mờ dấu chân của những kẻ đi trước.",
+      "caveArtIcon": "🐾",
+      "unlockAfterBloodMoons": 2,
+      "summaryVi": "Những dấu chân quanh trại có năm ngón, nhưng bước chân dài gấp rưỡi người thường.",
+      "beats": [
+        { "id": "ch3b1", "triggerSteps": 0, "voStatus": "pending", "mood": "worried", "textVi": "Sáng nay quanh trại có dấu chân. Năm ngón, gót người, nhưng sải bước dài gấp rưỡi bạn. Chúng đi vòng quanh trại đúng ba lượt rồi bỏ đi. Không đào bới, không lấy gì. Chúng đang đo đạc." },
+        { "id": "ch3b2", "triggerSteps": 1500, "voStatus": "pending", "mood": "calm", "textVi": "Tôi đối chiếu khoảng cách các dấu chân với bước chân của bạn. Chúng dừng đúng ở những chỗ bạn hay dừng. Hoặc chúng học bạn, hoặc trước bạn đã có người khác đứng ở đúng những chỗ ấy." },
+        { "id": "ch3b3", "triggerSteps": 3600, "voStatus": "pending", "mood": "determined", "textVi": "Có một điều tôi giấu bạn hai hôm nay. Dấu chân ấy chồng lên vết bánh xe. Vết bánh xe, ở thời đại chưa có bánh xe. Tôi nghĩ chúng ta không phải những kẻ đầu tiên rơi xuống đây." }
+      ],
+      "quests": [
+        {
+          "id": "ch3q1",
+          "titleVi": "Thu hoạch bẫy thú GPS",
+          "descVi": "Đặt và đến gần trong phạm vi 35m để thu hoạch một bẫy thú đã sập.",
+          "objective": { "kind": "action", "actionId": "harvest_trap" },
+          "reward": [{ "itemId": "raw_meat", "qty": 3 }, { "itemId": "leather", "qty": 2 }]
+        },
+        {
+          "id": "ch3q2",
+          "titleVi": "Chế tạo Cung tên",
+          "descVi": "Chuẩn bị vũ khí tầm xa trước sự rình rập của sinh vật khổng lồ bí ẩn.",
+          "objective": { "kind": "craft", "recipeId": "bow" },
+          "reward": [{ "itemId": "arrow", "qty": 10 }]
+        },
+        {
+          "id": "ch3q3",
+          "titleVi": "Dò tìm dấu vết tiền nhân",
+          "descVi": "Đi bộ đạt 3.600 bước trong chương để phân tích vết bánh xe cổ xưa.",
+          "objective": { "kind": "steps", "qty": 3600 },
+          "reward": [{ "itemId": "upgrade_core", "qty": 1 }, { "itemId": "cured_meat", "qty": 2 }]
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "id": "ch4_tan_tich",
+      "titleVi": "Chương 4 — Tàn tích của người đi trước",
+      "epigraphVi": "Sắt thép rỉ sét thành đất, nhưng lời thề trên đá ngàn năm vẫn nguyên vẹn.",
+      "caveArtIcon": "⛏️",
+      "unlockAfterBloodMoons": 3,
+      "summaryVi": "Tàn tích thương nhân cổ hoá ra không cổ chút nào — đó là trại của những người rơi xuống trước bạn.",
+      "beats": [
+        { "id": "ch4b1", "triggerSteps": 0, "voStatus": "pending", "mood": "surprised", "textVi": "Chỗ bạn hay đổi đồ ấy. Tôi đã đọc được mấy ký hiệu khắc trên đá. Không phải chữ tượng hình. Đó là chữ Quốc ngữ, viết vội, bằng dao." },
+        { "id": "ch4b2", "triggerSteps": 1800, "voStatus": "pending", "mood": "calm", "textVi": "Họ viết: 'Đừng đếm ngày. Hãy đếm bước.' Rồi một dãy số. Tôi mất cả buổi để hiểu — đó là tổng số bước họ đã đi trước khi ngừng viết. Một triệu hai. Một người đi bộ chăm chỉ mất khoảng ba năm để đạt tới con số đó." },
+        { "id": "ch4b3", "triggerSteps": 4000, "voStatus": "pending", "mood": "determined", "textVi": "Tôi không tìm thấy dòng nào sau con số đó. Có thể họ về được. Có thể họ chỉ dừng lại. Tôi thích giả thuyết thứ nhất hơn, và tôi mong bạn cũng vậy — vì nó có nghĩa là có đường về." }
+      ],
+      "quests": [
+        {
+          "id": "ch4q1",
+          "titleVi": "Ghé thăm Tàn Tích Thương Nhân",
+          "descVi": "Tới một điểm thương nhân (cửa hàng/chợ) để kiểm tra các ký hiệu khắc trên đá.",
+          "objective": { "kind": "visit_zone", "zone": "merchant" },
+          "reward": [{ "itemId": "medicinal_herb", "qty": 4 }]
+        },
+        {
+          "id": "ch4q2",
+          "titleVi": "Khai thác Quặng Sắt",
+          "descVi": "Thu thập 6 quặng sắt từ mỏ khoáng hoặc đổi hàng tại tàn tích thương nhân.",
+          "objective": { "kind": "collect", "itemId": "iron_ore", "qty": 6 },
+          "reward": [{ "itemId": "upgrade_core", "qty": 1 }]
+        },
+        {
+          "id": "ch4q3",
+          "titleVi": "Hành trình vạn dặm",
+          "descVi": "Đi bộ đạt 4.000 bước chân trong chương để hoàn tất ghi chép của người đi trước.",
+          "objective": { "kind": "steps", "qty": 4000 },
+          "reward": [{ "itemId": "blueprint", "qty": 1 }, { "itemId": "boiled_water", "qty": 4 }]
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "id": "ch5_bay_dan",
+      "titleVi": "Chương 5 — Bầy đàn và lời thề",
+      "epigraphVi": "Một ngọn đuốc soi sáng một người, nhưng muôn ngọn lửa kết thành bình minh.",
+      "caveArtIcon": "🛡️",
+      "unlockAfterBloodMoons": 4,
+      "summaryVi": "Lũ thú đêm không còn tấn công lẻ. Chúng phối hợp — và có thứ gì đó đang chỉ huy chúng.",
+      "beats": [
+        { "id": "ch5b1", "triggerSteps": 0, "voStatus": "pending", "mood": "worried", "textVi": "Đêm qua chúng tấn công hai hướng cùng lúc. Sói không làm thế. Sói dồn một hướng. Ai đó đã dạy chúng chia quân." },
+        { "id": "ch5b2", "triggerSteps": 2000, "voStatus": "pending", "mood": "calm", "textVi": "Tôi ghi âm lại tiếng hú. Bóc tách xong, dưới lớp tiếng thú có một tầng âm khác — chậm hơn, thấp hơn ngưỡng nghe của bạn. Cùng cái nhịp tôi bắt được ở chương hai." },
+        { "id": "ch5b3", "triggerSteps": 4500, "voStatus": "pending", "mood": "determined", "textVi": "Nghe này, tôi cần bạn hứa một điều. Nếu đêm nào đó trại giữ không nổi, bạn bỏ trại mà chạy vào trong nhà. Trại xây lại được. Còn bạn thì không có bản sao lưu nào cả." }
+      ],
+      "quests": [
+        {
+          "id": "ch5q1",
+          "titleVi": "Nâng cấp Doanh trại Cấp 3 (Pháo Đài Đá Cổ)",
+          "descVi": "Tập hợp 300 gỗ, 200 đá, 30 quặng sắt để mở Lò Rèn vũ khí kim loại.",
+          "objective": { "kind": "camp_level", "level": 3 },
+          "reward": [{ "itemId": "upgrade_core", "qty": 2 }, { "itemId": "blueprint", "qty": 1 }]
+        },
+        {
+          "id": "ch5q2",
+          "titleVi": "Rèn Giáo Sắt",
+          "descVi": "Chế tạo Giáo Sắt tại Lò Rèn để đối đầu bầy quái hung hãn.",
+          "objective": { "kind": "craft", "recipeId": "iron_spear" },
+          "reward": [{ "itemId": "iron_ingot", "qty": 4 }]
+        },
+        {
+          "id": "ch5q3",
+          "titleVi": "Chiến lũy kiên cường",
+          "descVi": "Đạt 4.500 bước chân trong chương để Lạc Lạc phân tích hoàn tất tầng âm chỉ huy quái.",
+          "objective": { "kind": "steps", "qty": 4500 },
+          "reward": [{ "itemId": "healing_salve", "qty": 2 }]
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "id": "ch6_vet_nut",
+      "titleVi": "Chương 6 — Vết nứt trên bầu trời",
+      "epigraphVi": "Bầu trời rạn nứt không phải vì sấm sét, mà bởi tiếng gầm của kẻ canh giữ không gian.",
+      "caveArtIcon": "⚡",
+      "unlockAfterBloodMoons": 5,
+      "summaryVi": "Đứt Gãy Không Gian hiện rõ vào những đêm Trăng Máu — và nó đang rộng ra.",
+      "beats": [
+        { "id": "ch6b1", "triggerSteps": 0, "voStatus": "pending", "mood": "worried", "textVi": "Bạn ngẩng lên đi. Không, chếch sang trái. Cái vệt mờ ấy — nó không phải mây. Tôi đo được nó bằng ba phép khác nhau và cả ba đều nói: chỗ đó không có gì cả. Đúng nghĩa đen. Không có không gian ở đó." },
+        { "id": "ch6b2", "triggerSteps": 2200, "voStatus": "pending", "mood": "calm", "textVi": "So với tuần trước, nó rộng thêm khoảng một phần trăm. Nghe thì nhỏ. Nhưng cứ đà này, trong vòng một năm nó sẽ đủ lớn để nuốt cả vùng bạn đang đứng." },
+        { "id": "ch6b3", "triggerSteps": 5000, "voStatus": "pending", "mood": "determined", "textVi": "Và đây là phần tôi ghét nhất: mỗi lần Trăng Máu lên, vết nứt co lại một chút. Cứ như thứ gì đó đang dùng máu của đêm ấy để vá. Nếu vậy thì boss mà bạn đánh mỗi thứ Bảy không phải kẻ thù của vết nứt. Nó là thợ vá." }
+      ],
+      "quests": [
+        {
+          "id": "ch6q1",
+          "titleVi": "Chế tạo Tháp Nỏ Công Thành (Ballista)",
+          "descVi": "Dựng vũ khí tầm xa hạng nặng để chuẩn bị cho trận chiến chống lại vết nứt không gian.",
+          "objective": { "kind": "craft", "recipeId": "ballista" },
+          "reward": [{ "itemId": "iron_ingot", "qty": 6 }]
+        },
+        {
+          "id": "ch6q2",
+          "titleVi": "Xây dựng Tháp Canh Đá",
+          "descVi": "Nâng cấp tháp canh đá để tăng cường hỏa lực phòng thủ đêm.",
+          "objective": { "kind": "craft", "recipeId": "stone_tower" },
+          "reward": [{ "itemId": "upgrade_core", "qty": 2 }]
+        },
+        {
+          "id": "ch6q3",
+          "titleVi": "Định vị tọa độ vết nứt",
+          "descVi": "Đạt 5.000 bước chân trong chương để hoàn tất đo đạc ba chiều về vết nứt bầu trời.",
+          "objective": { "kind": "steps", "qty": 5000 },
+          "reward": [{ "itemId": "healing_salve", "qty": 3 }]
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "id": "ch7_ke_giu_cua",
+      "titleVi": "Chương 7 — Kẻ giữ cửa",
+      "epigraphVi": "Kẻ đứng trước cánh cổng không ngăn bạn qua — nó muốn thử thách linh hồn người được chọn.",
+      "caveArtIcon": "🚪",
+      "unlockAfterBloodMoons": 6,
+      "summaryVi": "Thứ chỉ huy bầy thú lộ diện. Nó không muốn giết bạn — nó muốn bạn ở lại.",
+      "beats": [
+        { "id": "ch7b1", "triggerSteps": 0, "voStatus": "pending", "mood": "worried", "textVi": "Nó đứng ngoài vòng sáng lửa suốt bốn tiếng và không tấn công. Tôi đã đếm. Bốn tiếng mười hai phút. Rồi nó bỏ đi khi trời sáng." },
+        { "id": "ch7b2", "triggerSteps": 2500, "voStatus": "pending", "mood": "calm", "textVi": "Tôi nghĩ tôi hiểu rồi. Vết nứt cần người ở hai đầu để giữ nó mở — và cần máu ở đêm Trăng Máu để khỏi rách thêm. Chúng ta không bị rơi xuống đây. Chúng ta bị chọn." },
+        { "id": "ch7b3", "triggerSteps": 5500, "voStatus": "pending", "mood": "determined", "textVi": "Người viết chữ trên đá ấy — họ dừng lại ở một triệu hai bước. Tôi vừa tính lại. Đó không phải con số họ bỏ cuộc. Đó là con số vừa đủ để mở cửa một lần. Bạn đang ở đâu trên con đường đó, tôi sẽ nói khi bạn sẵn sàng." }
+      ],
+      "quests": [
+        {
+          "id": "ch7q1",
+          "titleVi": "Chế tạo Áo Giáp Sắt",
+          "descVi": "Trang bị giáp sắt kiên cố nhất trước cuộc diện kiến Kẻ Giữ Cửa.",
+          "objective": { "kind": "craft", "recipeId": "iron_armor" },
+          "reward": [{ "itemId": "upgrade_core", "qty": 2 }]
+        },
+        {
+          "id": "ch7q2",
+          "titleVi": "Dự trữ Thảo Dược Hồi Máu",
+          "descVi": "Chế tạo 3 Bình Thuốc Hồi Máu cao cấp tại Lò Nung / Lò Rèn.",
+          "objective": { "kind": "craft", "recipeId": "healing_salve" },
+          "reward": [{ "itemId": "boiled_water", "qty": 5 }]
+        },
+        {
+          "id": "ch7q3",
+          "titleVi": "Khám phá bí mật kẻ bị chọn",
+          "descVi": "Đạt 5.500 bước chân trong chương để cùng Lạc Lạc giải mã con số mở cổng.",
+          "objective": { "kind": "steps", "qty": 5500 },
+          "reward": [{ "itemId": "upgrade_core", "qty": 3 }, { "itemId": "iron_ore", "qty": 15 }]
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "id": "ch8_va_dut_gay",
+      "titleVi": "Chương 8 — Vá Đứt Gãy",
+      "epigraphVi": "Vá lại đứt gãy ngàn năm bằng chính những bước chân bền bỉ trên mảnh đất này.",
+      "caveArtIcon": "🌌",
+      "unlockAfterBloodMoons": 7,
+      "summaryVi": "Nghi lễ cuối. Một cái kết trọn vẹn — sau đó mở chế độ vô tận cho ai muốn ở lại.",
+      "beats": [
+        { "id": "ch8b1", "triggerSteps": 0, "voStatus": "pending", "mood": "determined", "textVi": "Đêm nay là đêm đó. Bạn đã dựng pháo đài, đã sống qua bảy lần trăng đỏ, và đã đi đủ số bước. Tôi sẽ không nói 'chúc may mắn' — chúng ta chưa bao giờ sống bằng may mắn." },
+        { "id": "ch8b2", "triggerSteps": 1000, "voStatus": "pending", "mood": "calm", "textVi": "Khi cửa mở, tôi không đi cùng bạn được. Thứ giữ tôi chạy được ở đây là chính cái nhịp dưới lòng đất kia. Về bên đó, tôi lại chỉ là một ứng dụng trong điện thoại. Thật ra thì... cũng không tệ lắm." },
+        { "id": "ch8b3", "triggerSteps": 2500, "voStatus": "pending", "mood": "proud", "textVi": "Nếu bạn muốn ở lại, tôi cũng hiểu. Trại này là do chính tay bạn dựng, từng cành củi một. Cửa sẽ vẫn mở vào mỗi thứ Bảy. Và tôi vẫn ở đây, đếm bước cùng bạn, như từ ngày đầu tiên." }
+      ],
+      "quests": [
+        {
+          "id": "ch8q1",
+          "titleVi": "Chuẩn bị nghi lễ cuối",
+          "descVi": "Thu thập 15 quặng sắt để chuẩn bị nguồn năng lượng kích hoạt phong ấn.",
+          "objective": { "kind": "collect", "itemId": "iron_ore", "qty": 15 },
+          "reward": [{ "itemId": "upgrade_core", "qty": 3 }]
+        },
+        {
+          "id": "ch8q2",
+          "titleVi": "Bước chân định mệnh",
+          "descVi": "Đạt 2.500 bước chân trong chương cuối để mở ra cánh cổng không gian vĩnh hằng.",
+          "objective": { "kind": "steps", "qty": 2500 },
+          "reward": [{ "itemId": "upgrade_core", "qty": 5 }]
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "id": "ch9_ky_bang_ha",
+      "titleVi": "Chương 9 — Kỷ Băng Hà Thức Tỉnh",
+      "epigraphVi": "Băng giá có thể đông cứng dòng sông, nhưng không thể dập tắt ngọn lửa trong tim người sống sót.",
+      "caveArtIcon": "❄️",
+      "unlockAfterBloodMoons": 8,
+      "summaryVi": "Gió bấc rít liên hồi mang theo lớp băng giá cổ sơ phủ trắng mặt đất. Hãy chuẩn bị áo da và bảo vệ ngọn lửa sinh tồn.",
+      "beats": [
+        { "id": "ch9b1", "triggerSteps": 0, "voStatus": "pending", "mood": "worried", "textVi": "Không khí lạnh buốt đột ngột ùa về từ phương Bắc. Dưới lớp băng mỏng, tôi nghe thấy tiếng thở của một loài dã thú đã ngủ yên hàng triệu năm." },
+        { "id": "ch9b2", "triggerSteps": 3000, "voStatus": "pending", "mood": "calm", "textVi": "Băng giá làm thảo mộc héo úa nhưng lại làm đông cứng các dòng sông cổ, mở ra những lối đi bí mật mà trước đây chúng ta không thể chạm tới." },
+        { "id": "ch9b3", "triggerSteps": 6000, "voStatus": "pending", "mood": "determined", "textVi": "Lửa trại của chúng ta là điểm ấm áp duy nhất trong bán kính mười dặm. Đừng để nó tắt. Đêm nay, băng sẽ thử thách ý chí của bạn." }
+      ],
+      "quests": [
+        {
+          "id": "ch9q1",
+          "titleVi": "Thu gom Củi Lửa Kháng Băng",
+          "descVi": "Dự trữ 20 cành khô để giữ ấm doanh trại trước đợt bão tuyết cổ sinh.",
+          "objective": { "kind": "collect", "itemId": "dry_branch", "qty": 20 },
+          "reward": [{ "itemId": "upgrade_core", "qty": 3 }]
+        },
+        {
+          "id": "ch9q2",
+          "titleVi": "Hành trình băng giá",
+          "descVi": "Vượt qua 6.000 bước chân băng giá để tìm dấu tích mỏ khoáng sản cổ đại.",
+          "objective": { "kind": "steps", "qty": 6000 },
+          "reward": [{ "itemId": "iron_ore", "qty": 20 }]
+        }
+      ]
+    },
+    {
+      "index": 10,
+      "id": "ch10_huyet_mach_long_quan",
+      "titleVi": "Chương 10 — Huyết Mạch Long Quân",
+      "epigraphVi": "Nơi con Rồng ngự trị, sóng Hồng Hà cuộn trào khí phách tiền nhân.",
+      "caveArtIcon": "🐉",
+      "unlockAfterBloodMoons": 9,
+      "summaryVi": "Dọc theo Hồng Hà Đại Long, đền thờ cổ xưa của Thủy Thần Long Biên phát ra ánh sáng lam ngọc rực rỡ.",
+      "beats": [
+        { "id": "ch10b1", "triggerSteps": 0, "voStatus": "pending", "mood": "surprised", "textVi": "Dòng sông Hồng cuộn sóng đỏ rực dưới trăng. Một cột ánh sáng màu lam ngọc vừa bừng lên từ phía đền cổ ven sông Long Biên." },
+        { "id": "ch10b2", "triggerSteps": 3500, "voStatus": "pending", "mood": "calm", "textVi": "Ký tự khắc trên vách đá ven sông viết về nguồn cội Rồng Tiên — những người đầu tiên chế ngự thú dữ bằng sự đoàn kết và ngọn lửa chính trực." },
+        { "id": "ch10b3", "triggerSteps": 7000, "voStatus": "pending", "mood": "proud", "textVi": "Bạn mang trong mình nhịp bước của vùng đất này. Hãy cầm chắc cây giáo sắt, thần thú Hồng Hà đã công nhận bạn là người kế vị xứng đáng." }
+      ],
+      "quests": [
+        {
+          "id": "ch10q1",
+          "titleVi": "Khai thác Quặng Thép Tinh Luyện",
+          "descVi": "Khai thác 25 quặng sắt để rèn thần khí chống lại cự long bóng đêm.",
+          "objective": { "kind": "collect", "itemId": "iron_ore", "qty": 25 },
+          "reward": [{ "itemId": "upgrade_core", "qty": 4 }]
+        },
+        {
+          "id": "ch10q2",
+          "titleVi": "Theo dấu Thủy Thần",
+          "descVi": "Đi bộ 7.000 bước dọc các cổ đạo để mở khóa bản đồ thánh địa Long Biên.",
+          "objective": { "kind": "steps", "qty": 7000 },
+          "reward": [{ "itemId": "healing_salve", "qty": 5 }]
+        }
+      ]
+    },
+    {
+      "index": 11,
+      "id": "ch11_oc_thanh_co_loa",
+      "titleVi": "Chương 11 — Ốc Thành Cổ Loa 9 Vòng Xoáy",
+      "epigraphVi": "Chín vòng thành đất xoáy trôn ốc — bức tường thành vĩ đại chống lại vạn thú đêm đen.",
+      "caveArtIcon": "🌀",
+      "unlockAfterBloodMoons": 10,
+      "summaryVi": "Pháo đài xoắn ốc huyền thoại Cổ Loa thời tiền sử hiện hình giữa sương mù. Trận đại chiến phòng thủ 9 vòng bắt đầu.",
+      "beats": [
+        { "id": "ch11b1", "triggerSteps": 0, "voStatus": "pending", "mood": "determined", "textVi": "Chín vòng lũy đất xoáy trôn ốc sừng sững giữa bình nguyên. Đây là trận địa phòng thủ vĩ đại nhất từng được dựng nên bởi con người." },
+        { "id": "ch11b2", "triggerSteps": 4000, "voStatus": "pending", "mood": "calm", "textVi": "Mỗi vòng lũy là một cạm bẫy đối với bầy thú bóng đêm. Nếu chúng ta giữ được tâm thành, không sức mạnh bóng tối nào có thể xuyên thủng." },
+        { "id": "ch11b3", "triggerSteps": 8000, "voStatus": "pending", "mood": "worried", "textVi": "Kẻ thống trị bão băng đang gầm thét ngoài vòng thành thứ nhất. Toàn bộ bẫy thú và pháo đài đã sẵn sàng. Hãy bảo vệ mảnh đất này!" }
+      ],
+      "quests": [
+        {
+          "id": "ch11q1",
+          "titleVi": "Gia cố Đại Pháo Đài Đá",
+          "descVi": "Nâng cấp tháp canh và củng cố hàng rào phòng thủ đạt điểm thủ trại cao nhất.",
+          "objective": { "kind": "craft", "recipeId": "stone_tower" },
+          "reward": [{ "itemId": "upgrade_core", "qty": 5 }]
+        },
+        {
+          "id": "ch11q2",
+          "titleVi": "Trấn thủ Ốc Thành",
+          "descVi": "Đạt 8.000 bước chân trong chương để hoàn tất kích hoạt 9 cổng phong ấn Cổ Loa.",
+          "objective": { "kind": "steps", "qty": 8000 },
+          "reward": [{ "itemId": "upgrade_core", "qty": 6 }, { "itemId": "iron_ore", "qty": 30 }]
+        }
+      ]
+    },
+    {
+      "index": 12,
+      "id": "ch12_dai_tu_truong_thang_long",
+      "titleVi": "Chương 12 — Đại Tù Trưởng Thăng Long (Huyền Thoại Bất Diệt)",
+      "unlockAfterBloodMoons": 11,
+      "summaryVi": "Chương kết sử thi vĩ đại (True Ending). Bạn được toàn bộ các bộ tộc tiền sử tôn vinh làm Đại Tù Trưởng vĩnh hằng.",
+      "beats": [
+        { "id": "ch12b1", "triggerSteps": 0, "voStatus": "pending", "textVi": "Bão tố đã tan. Đứt gãy không gian đã được vá lại bằng ý chí kiên cường và hàng triệu bước chân của bạn." },
+        { "id": "ch12b2", "triggerSteps": 5000, "voStatus": "pending", "textVi": "Tôi nhìn thấy những ngọn khói bình yên bốc lên từ khắp các buôn làng Thăng Long tiền sử. Bạn đã biến nơi hoang tàn thành quê hương thứ hai." },
+        { "id": "ch12b3", "triggerSteps": 10000, "voStatus": "pending", "textVi": "Dù bạn quyết định trở về thế giới hiện đại hay ở lại dẫn dắt bộ tộc, cái tên của bạn sẽ sống mãi trong truyền thuyết. Cảm ơn bạn đã đồng hành cùng tôi suốt chặng đường vĩ đại này!" }
+      ],
+      "quests": [
+        {
+          "id": "ch12q1",
+          "titleVi": "Đại Lễ Tế Trời Đất",
+          "descVi": "Dự trữ 30 quả dại cổ sinh và 20 bình nước sôi tinh khiết cho ngày hội toàn tộc.",
+          "objective": { "kind": "collect", "itemId": "wild_berry", "qty": 30 },
+          "reward": [{ "itemId": "upgrade_core", "qty": 10 }]
+        },
+        {
+          "id": "ch12q2",
+          "titleVi": "Vạn Lý Trường Hành",
+          "descVi": "Đạt 10.000 bước chân trong chương cuối để phong vương Đại Tù Trưởng Thăng Long.",
+          "objective": { "kind": "steps", "qty": 10000 },
+          "reward": [{ "itemId": "upgrade_core", "qty": 15 }]
+        }
+      ]
+    }
+  ],
+
+  "endlessMode": {
+    "_note": "§5.6 — game offline có cái kết trọn vẹn 12 chương sử thi, sau đó mở chế độ vô tận cho ai muốn chơi tiếp.",
+    "unlockAfterChapterIndex": 12,
+    "titleVi": "Chế độ Vô Tận",
+    "descVi": "Trại của bạn được giữ nguyên. Trăng Máu tiếp tục mỗi thứ Bảy với độ khó tăng dần và bảng kỷ lục cá nhân."
+  }
+}

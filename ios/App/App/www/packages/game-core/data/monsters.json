@@ -1,0 +1,105 @@
+{
+  "_note": "Quái phòng thủ đêm (§5.4) và boss Trăng Máu (§5.5). Cả hai đều diễn ra TRONG GAME, chơi tại nhà — không có cơ chế nào đòi người chơi ra đường ban đêm.",
+  "version": 1,
+
+  "nightDefense": {
+    "windowStartHour": 20,
+    "windowEndHour": 24,
+    "waveCount": 4,
+    "waveIntervalMinutes": 45,
+    "_offline": "§5.4: nếu offline, trại tự phòng thủ theo defensePower; thua chỉ mất tài nguyên NGOÀI két an toàn.",
+    "offlineDefenseEfficiency": 0.75,
+    "breachLossRatio": 0.25,
+    "victoryReward": [
+      { "itemId": "upgrade_core", "qty": 1, "chance": 0.25 },
+      { "itemId": "iron_ore", "qty": 2, "chance": 0.4 }
+    ],
+    "waves": [
+      { "wave": 1, "monsters": [{ "id": "night_rat", "count": 4 }] },
+      { "wave": 2, "monsters": [{ "id": "grey_wolf", "count": 3 }] },
+      { "wave": 3, "monsters": [{ "id": "night_hyena", "count": 3 }, { "id": "grey_wolf", "count": 2 }] },
+      { "wave": 4, "monsters": [{ "id": "cave_bear", "count": 1 }, { "id": "night_hyena", "count": 2 }] }
+    ]
+  },
+
+  "_threatNote": "Chỉ số threat được hạ so với bản nháp đầu sau khi tools/simulate.ts cho thấy trại cấp 1 THUA 26/30 đêm — kể cả khi người chơi đứng gác. Nhiệm vụ tutorial ngày 3 'sống qua đợt tấn công đầu tiên' khi đó là bất khả thi về mặt toán học. Độ khó nay do hệ số theo cấp trại gánh (waveThreat × (1 + 0,6 × (cấp − 1))), không do con số nền.",
+  "monsters": [
+    { "id": "night_rat",   "nameVi": "Chuột Hoang Đêm", "hp": 18,  "attack": 4,  "threat": 4 },
+    { "id": "grey_wolf",   "nameVi": "Sói Xám",         "hp": 40,  "attack": 9,  "threat": 9 },
+    { "id": "night_hyena", "nameVi": "Linh Cẩu Đêm",    "hp": 55,  "attack": 12, "threat": 13 },
+    { "id": "cave_bear",   "nameVi": "Gấu Hang",        "hp": 140, "attack": 22, "threat": 30 },
+    { "id": "saber_tiger", "nameVi": "Hổ Răng Kiếm",    "hp": 210, "attack": 30, "threat": 45 }
+  ],
+
+  "bloodMoon": {
+    "_note": "§5.5 bản 2.0 OFFLINE — trận boss CHƠI ĐƠN theo đồng hồ máy, thứ Bảy 19:00–22:00. Không server, không Tộc qua Internet. Co-op cục bộ Wi-Fi/Bluetooth để dành cho bản 1.1.",
+    "dayOfWeek": 6,
+    "startHour": 19,
+    "endHour": 22,
+
+    "hpBase": 3000,
+    "hpPerCampLevel": 0.8,
+    "_hpFormula": "hpBase × (1 + hpPerCampLevel × (cấp trại − 1)) × hệ số độ khó",
+
+    "difficulties": [
+      { "id": "de",     "nameVi": "Dễ",     "hpMultiplier": 0.7, "bossAttackMultiplier": 0.7, "rewardMultiplier": 0.8, "descVi": "Dành cho trẻ nhỏ và cho tuần bận rộn." },
+      { "id": "thuong", "nameVi": "Thường", "hpMultiplier": 1.0, "bossAttackMultiplier": 1.0, "rewardMultiplier": 1.0, "descVi": "Cân bằng theo cấp doanh trại của bạn." },
+      { "id": "kho",    "nameVi": "Khó",    "hpMultiplier": 1.5, "bossAttackMultiplier": 1.3, "rewardMultiplier": 1.3, "descVi": "Cần tường đá, tháp canh và một kế hoạch." }
+    ],
+    "defaultDifficulty": "thuong",
+
+    "allyStructures": {
+      "_note": "Công trình phòng thủ đóng vai 'đồng đội' — tự động góp sát thương suốt trận để người chơi có cảm giác chỉ huy một trận công thành, thay cho 5 người trong Tộc của bản online.",
+      "dpsRatio": 1.0,
+      "labelVi": "Đồng đội công trình"
+    },
+
+    "makeupFight": {
+      "_note": "§5.5 — bỏ lỡ khung giờ thì sáng Chủ nhật boss 'vây trại', cho đánh bù. Đời thật bận rộn, không phạt nặng.",
+      "dayOfWeek": 0,
+      "startHour": 6,
+      "endHour": 12,
+      "rewardMultiplier": 0.7,
+      "titleVi": "Boss vây trại",
+      "messageVi": "Đêm qua bạn không ra mặt. Sáng nay nó vẫn còn đó, đi vòng quanh trại. Đánh bù được, nhưng phần thưởng giảm 30%."
+    },
+
+    "bosses": [
+      { "id": "boss_night_wolf",    "nameVi": "Cự Lang Hắc Ám",        "attack": 32, "phases": 3, "weakTo": "stone_spear" },
+      { "id": "boss_cave_beast",    "nameVi": "Địa Ma Thú",             "attack": 36, "phases": 3, "weakTo": "torch" },
+      { "id": "boss_saber_lord",    "nameVi": "Hổ Răng Kiếm Chúa",     "attack": 40, "phases": 3, "weakTo": "bow" },
+      { "id": "boss_swamp_terror",  "nameVi": "Cá Sấu Cổ Đầm Lầy",     "attack": 42, "phases": 3, "weakTo": "stone_spear" },
+      { "id": "boss_mammoth",       "nameVi": "Ma Mút Cổ Đại",         "attack": 44, "phases": 3, "weakTo": "iron_spear" },
+      { "id": "boss_sky_pterosaur", "nameVi": "Dực Long Vết Nứt",      "attack": 48, "phases": 4, "weakTo": "bow" },
+      { "id": "boss_gatekeeper",    "nameVi": "Kẻ Giữ Cửa Thần Thú",    "attack": 52, "phases": 4, "weakTo": "iron_sword" },
+      { "id": "boss_shadow",        "nameVi": "Chúa Tể Bóng Đêm",      "attack": 58, "phases": 4, "weakTo": "torch" }
+    ],
+
+    "rewards": {
+      "victory": [
+        { "itemId": "blueprint", "qty": 1, "chance": 1.0 },
+        { "itemId": "upgrade_core", "qty": 2, "chance": 1.0 },
+        { "itemId": "iron_ore", "qty": 10, "chance": 1.0 }
+      ],
+      "participationOnly": [
+        { "itemId": "upgrade_core", "qty": 1, "chance": 0.5 },
+        { "itemId": "iron_ore", "qty": 3, "chance": 1.0 }
+      ]
+    },
+
+    "localCoop": {
+      "_note": "Bản 1.1 — 2–6 máy trong cùng nhà qua Nearby Connections (Android) / Multipeer Connectivity (iOS). Vẫn KHÔNG cần Internet. Ghi ở đây để thiết kế dữ liệu không chặn đường mở rộng.",
+      "plannedVersion": "1.1",
+      "maxDevices": 6,
+      "hpMultiplierPerExtraDevice": 0.8
+    }
+  },
+
+  "combat": {
+    "_note": "Công thức chiến đấu tối giản cho prototype: dmg = attack × (1 + 0.02 × campLevel) − monsterArmor. Đủ để test cân bằng, thay bằng hệ thống đầy đủ ở Vertical Slice.",
+    "playerBaseAttack": 6,
+    "campLevelAttackBonus": 0.02,
+    "defenseAbsorbRatio": 0.5,
+    "weakToDamageMultiplier": 1.5
+  }
+}
