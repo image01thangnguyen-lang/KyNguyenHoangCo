@@ -635,8 +635,11 @@ let devMockPosition                = null;
 export function isNativeApk()          {
   return (
     typeof (globalThis       ).AndroidBridge !== 'undefined' ||
+    typeof (globalThis       ).webkit?.messageHandlers !== 'undefined' ||
     navigator.userAgent.includes('KyNguyenHoangCo') ||
-    (globalThis       ).__IS_APK__ === true
+    (globalThis       ).__IS_APK__ === true ||
+    window.location.protocol === 'file:' ||
+    (typeof (navigator       ).standalone !== 'undefined' && (navigator       ).standalone === true)
   );
 }
 

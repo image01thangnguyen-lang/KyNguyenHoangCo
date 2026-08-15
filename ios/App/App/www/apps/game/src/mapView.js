@@ -565,8 +565,8 @@ export class MapView {
 
   resize()       {
     const rect = this.canvas.getBoundingClientRect();
-    // Tối ưu DPR 1.0 trên di động giúp giảm 75% tải GPU fill rate trên Retina màn hình iPhone
-    this.dpr = Math.min(globalThis.devicePixelRatio || 1, 1.0);
+    // Sử dụng chuẩn DPR Retina tự nhiên của màn hình iPhone (2.0x - 3.0x) cho đồ hoạ siêu nét và chi tiết
+    this.dpr = Math.min(globalThis.devicePixelRatio || 2, 3.0);
     this.canvas.width = Math.max(1, Math.round(rect.width * this.dpr));
     this.canvas.height = Math.max(1, Math.round(rect.height * this.dpr));
   }
@@ -576,6 +576,9 @@ export class MapView {
     const w = this.canvas.width;
     const h = this.canvas.height;
     if (w < 2 || h < 2) return;
+
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
 
     if (this.viewportDirty) {
       this.viewportDirty = false;

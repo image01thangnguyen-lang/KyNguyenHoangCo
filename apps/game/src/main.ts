@@ -635,8 +635,11 @@ let devMockPosition: LatLon | null = null;
 export function isNativeApk(): boolean {
   return (
     typeof (globalThis as any).AndroidBridge !== 'undefined' ||
+    typeof (globalThis as any).webkit?.messageHandlers !== 'undefined' ||
     navigator.userAgent.includes('KyNguyenHoangCo') ||
-    (globalThis as any).__IS_APK__ === true
+    (globalThis as any).__IS_APK__ === true ||
+    window.location.protocol === 'file:' ||
+    (typeof (navigator as any).standalone !== 'undefined' && (navigator as any).standalone === true)
   );
 }
 

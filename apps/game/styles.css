@@ -2843,7 +2843,7 @@ h3 {
 /* ---------------------------------------------------------------- Tutorial HUD Banner */
 .tutorial-hud-banner {
   position: absolute;
-  top: 10px;
+  top: calc(var(--safe-t) + 120px);
   left: 12px;
   right: 12px;
   max-width: 480px;
