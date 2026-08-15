@@ -92,6 +92,30 @@ export function itemIconSvg(id: string, className = 'item-svg'): string {
         className,
       );
 
+    case 'copper_ore':
+      return svg(
+        '<path d="M16 28 28 12l20 8 4 20-16 12-20-8Z" fill="#b45309" stroke="#fbbf24" stroke-width="2.5"/><path d="m28 12 6 22 18-6M28 34l-12 14" stroke="#fef08a" stroke-width="2"/>',
+        className,
+      );
+
+    case 'pearl':
+      return svg(
+        '<ellipse cx="32" cy="36" rx="20" ry="12" fill="#0f172a" stroke="#38bdf8" stroke-width="2"/><circle cx="32" cy="28" r="11" fill="#f8fafc" stroke="#e0f2fe" stroke-width="2"/><circle cx="28" cy="24" r="3" fill="#fff"/>',
+        className,
+      );
+
+    case 'ancient_pottery':
+      return svg(
+        '<path d="M20 18h24l-4 28H24l-4-28Z" fill="#78350f" stroke="#d97706" stroke-width="2.5"/><path d="M16 26l32 4M18 36l28-2M26 14v4M38 14v4" stroke="#fde047" stroke-width="2"/>',
+        className,
+      );
+
+    case 'ancient_chest':
+      return svg(
+        '<rect x="12" y="24" width="40" height="26" rx="4" fill="#78350f" stroke="#fbbf24" stroke-width="2.5"/><path d="M10 24c0-8 10-12 22-12s22 4 22 12Z" fill="#b45309" stroke="#fbbf24" stroke-width="2.5"/><circle cx="32" cy="34" r="4" fill="#fbbf24" stroke="#fef08a" stroke-width="1.5"/><path d="M22 24v26M42 24v26M12 32h40" stroke="#f59e0b" stroke-width="2"/>',
+        className,
+      );
+
     case 'seed':
     case 'seed_herb':
     case 'seed_corn':
@@ -130,8 +154,9 @@ export function itemIconSvg(id: string, className = 'item-svg'): string {
     case 'raw_meat':
     case 'grilled_meat':
     case 'dried_meat':
+    case 'spoiled_meat':
       return svg(
-        `<path d="M15 20c5-10 19-12 28-4 10 9 6 26-7 30-11 4-25-3-25-14 0-4 1-8 4-12Z" fill="${id === 'raw_meat' ? '#bc5d55' : id === 'grilled_meat' ? '#8d4e2d' : '#693822'}" stroke="${id === 'raw_meat' ? '#f0a196' : id === 'grilled_meat' ? '#d89a57' : '#9e623f'}" stroke-width="3"/><path d="M23 24c8 1 14 5 18 12M20 34c6 0 11 3 15 8" fill="none" stroke="${id === 'raw_meat' ? '#ffd8d3' : '#e9b170'}" stroke-width="2" opacity=".8"/>`,
+        `<path d="M15 20c5-10 19-12 28-4 10 9 6 26-7 30-11 4-25-3-25-14 0-4 1-8 4-12Z" fill="${id === 'raw_meat' ? '#bc5d55' : id === 'grilled_meat' ? '#8d4e2d' : id === 'spoiled_meat' ? '#4d5d3d' : '#693822'}" stroke="${id === 'raw_meat' ? '#f0a196' : id === 'grilled_meat' ? '#d89a57' : id === 'spoiled_meat' ? '#86a873' : '#9e623f'}" stroke-width="3"/><path d="M23 24c8 1 14 5 18 12M20 34c6 0 11 3 15 8" fill="none" stroke="${id === 'raw_meat' ? '#ffd8d3' : id === 'spoiled_meat' ? '#a3cf86' : '#e9b170'}" stroke-width="2" opacity=".8"/>`,
         className,
       );
 
@@ -230,6 +255,66 @@ export function itemIconSvg(id: string, className = 'item-svg'): string {
     case 'iron_shield':
       return svg(
         `<path d="M32 10c12 0 20 6 20 18 0 16-12 24-20 28-8-4-20-12-20-28 0-12 8-18 20-18Z" fill="${id === 'iron_shield' ? '#697b85' : '#7d5538'}" stroke="${id === 'iron_shield' ? '#c4d7e0' : '#c99163'}" stroke-width="3"/><circle cx="32" cy="28" r="7" fill="${id === 'iron_shield' ? '#8fa3ad' : '#4d3422'}" stroke="${id === 'iron_shield' ? '#e2ecf0' : '#dca678'}" stroke-width="2"/>`,
+        className,
+      );
+
+    case 'giant_backpack':
+      return svg(
+        '<path d="M20 18h24v30a4 4 0 0 1-4 4H24a4 4 0 0 1-4-4V18Z" fill="#7c4a27" stroke="#d98236" stroke-width="2.5"/><path d="M26 18v-6a6 6 0 0 1 12 0v6M20 28h24M28 28v12M36 28v12M14 26h6v18h-6a2 2 0 0 1-2-2V28a2 2 0 0 1 2-2Zm30 0h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6V26Z" fill="#5a3318" stroke="#f59e0b" stroke-width="2"/>',
+        className,
+      );
+
+    case 'mineral_salt':
+      return svg(
+        '<path d="M22 18h20l6 32H16l6-32Z" fill="#cbd5e1" stroke="#f8fafc" stroke-width="2.5"/><path d="M24 24l8 6 8-6M20 36l12 8 12-8" stroke="#94a3b8" stroke-width="2"/><circle cx="32" cy="22" r="2" fill="#38bdf8"/><circle cx="26" cy="38" r="2" fill="#38bdf8"/><circle cx="38" cy="38" r="2" fill="#38bdf8"/>',
+        className,
+      );
+
+    case 'rain_fur_cloak':
+      return svg(
+        '<path d="M32 10c8 0 18 10 20 38l-12-4-8 8-8-8-12 4c2-28 12-38 20-38Z" fill="#2d6a4f" stroke="#74c69d" stroke-width="2.5"/><path d="M32 10v38M20 22l12 8 12-8M18 34l14 8 14-8" stroke="#b7e4c7" stroke-width="2"/>',
+        className,
+      );
+
+    case 'sun_hat':
+      return svg(
+        '<ellipse cx="32" cy="40" rx="24" ry="10" fill="#d97706" stroke="#fef08a" stroke-width="2.5"/><path d="M20 40 32 14l12 26Z" fill="#b45309" stroke="#fef08a" stroke-width="2"/><circle cx="32" cy="14" r="3" fill="#facc15"/>',
+        className,
+      );
+
+    case 'ginger_tea':
+      return svg(
+        '<path d="M20 24h24v22a6 6 0 0 1-6 6H26a6 6 0 0 1-6-6V24Z" fill="#b45309" stroke="#fde047" stroke-width="2.5"/><path d="M44 28h6a4 4 0 0 1 4 4v4a4 4 0 0 1-4 4h-6M26 16c-2-4 2-6 0-8M32 16c-2-4 2-6 0-8M38 16c-2-4 2-6 0-8" stroke="#facc15" stroke-width="2" stroke-linecap="round"/>',
+        className,
+      );
+
+    case 'bamboo_scare_chime':
+      return svg(
+        '<path d="M14 16h36M32 12v6M22 16v28M32 16v32M42 16v24" stroke="#84cc16" stroke-width="3" stroke-linecap="round"/><circle cx="32" cy="52" r="3" fill="#bef264"/><circle cx="22" cy="48" r="2.5" fill="#bef264"/><circle cx="42" cy="44" r="2.5" fill="#bef264"/>',
+        className,
+      );
+
+    case 'traveler_bedroll':
+      return svg(
+        '<rect x="14" y="24" width="36" height="20" rx="6" fill="#854d0e" stroke="#fef08a" stroke-width="2.5"/><ellipse cx="20" cy="34" rx="4" ry="10" fill="#a16207" stroke="#fef08a" stroke-width="2"/><path d="M28 24v20M40 24v20" stroke="#ca8a04" stroke-width="2"/>',
+        className,
+      );
+
+    case 'divine_tea':
+      return svg(
+        '<path d="M22 22h20v24a6 6 0 0 1-6 6H28a6 6 0 0 1-6-6V22Z" fill="#065f46" stroke="#6ee7b7" stroke-width="2.5"/><path d="M42 26h5a3 3 0 0 1 3 3v4a3 3 0 0 1-3 3h-5M32 8l4 6-4 4-4-4Z" fill="#34d399" stroke="#a7f3d0" stroke-width="1.5"/><path d="M26 14c-1-3 2-5 0-7M38 14c-1-3 2-5 0-7" stroke="#6ee7b7" stroke-width="2" stroke-linecap="round"/>',
+        className,
+      );
+
+    case 'herb_scent_pouch':
+      return svg(
+        '<path d="M24 20c-8 6-6 26 8 28 14-2 16-22 8-28l-8-6-8 6Z" fill="#4d7c0f" stroke="#bef264" stroke-width="2.5"/><path d="M26 22h12M32 14v8" stroke="#fef08a" stroke-width="2"/><circle cx="32" cy="34" r="4" fill="#a3e635"/>',
+        className,
+      );
+
+    case 'beast_repellent_powder':
+      return svg(
+        '<path d="M24 16h16l4 10-2 24H22l-2-24 4-10Z" fill="#eab308" stroke="#fef08a" stroke-width="2.5"/><path d="M28 16V10h8v6M26 32h12M32 26v12" stroke="#ca8a04" stroke-width="2"/>',
         className,
       );
 

@@ -69,6 +69,7 @@ import {
   feedPet,
   plantInPlot,
   waterPlot,
+  fertilizePlot,
   harvestPlot,
   tickFarmPlots,
   createCoopRoom,
@@ -215,17 +216,114 @@ const POOL_BY_ZONE                                                 = {
 };
 
 let lastVibratedDropId                = null;
+let currentDeviceHeading                = null;
+let compassListenerInitialized = false;
 
-function getCompassDirection(from        , to        )                                                 {
+function initCompassListener()       {
+  if (compassListenerInitialized) return;
+  compassListenerInitialized = true;
+
+  const onOrientation = (event                        ) => {
+    let heading                = null;
+    if ((event       ).webkitCompassHeading !== undefined) {
+      // iOS Safari (0 là hướng Bắc thật)
+      heading = (event       ).webkitCompassHeading;
+    } else if (event.alpha !== null && event.alpha !== undefined) {
+      // Android WebView / Chrome
+      heading = (360 - event.alpha) % 360;
+    }
+
+    if (heading !== null && Number.isFinite(heading)) {
+      if (currentDeviceHeading === null) {
+        currentDeviceHeading = heading;
+      } else {
+        // Bộ lọc làm mượt chuyển động xoay (Low-Pass Filter) không giật lag
+        const diff = ((heading - currentDeviceHeading + 540) % 360) - 180;
+        currentDeviceHeading = (currentDeviceHeading + diff * 0.3 + 360) % 360;
+      }
+      // Cập nhật góc kim chỉ ngay lập tức với chi phí cực thấp (chỉ đổi CSS transform)
+      updateDropRadarPointerOnly();
+    }
+  };
+
+  if ('ondeviceorientationabsolute' in window) {
+    window.addEventListener('deviceorientationabsolute', onOrientation, { passive: true });
+  } else if ('ondeviceorientation' in window) {
+    window.addEventListener('deviceorientation', onOrientation, { passive: true });
+  }
+}
+
+                                 
+                  
+                        
+                        
+                
+                       
+ 
+
+function getNavigationDirection(from        , to        , deviceHeading               )                 {
   const lat1 = (from.lat * Math.PI) / 180;
   const lat2 = (to.lat * Math.PI) / 180;
   const dLon = ((to.lon - from.lon) * Math.PI) / 180;
 
   const y = Math.sin(dLon) * Math.cos(lat2);
   const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
-  let brng = (Math.atan2(y, x) * 180) / Math.PI;
-  brng = (brng + 360) % 360;
+  let bearing = (Math.atan2(y, x) * 180) / Math.PI;
+  bearing = (bearing + 360) % 360;
 
+  if (deviceHeading !== null) {
+    // Góc lệch tương đối so với hướng người chơi đang cầm điện thoại
+    let rel = (bearing - deviceHeading + 360) % 360;
+    if (rel > 180) rel -= 360;
+
+    let instructionVi = 'Đi Thẳng';
+    let arrow = '⬆️';
+    let turnAdviceVi = 'Đi thẳng về phía trước';
+
+    if (Math.abs(rel) <= 22.5) {
+      instructionVi = 'Đi Thẳng';
+      arrow = '⬆️';
+      turnAdviceVi = 'Phía trước mặt bạn';
+    } else if (rel > 22.5 && rel <= 67.5) {
+      instructionVi = 'Chếch Phải';
+      arrow = '↗️';
+      turnAdviceVi = 'Chếch nhẹ sang phải';
+    } else if (rel > 67.5 && rel <= 112.5) {
+      instructionVi = 'Quẹo Phải';
+      arrow = '➡️';
+      turnAdviceVi = 'Quẹo phải 90°';
+    } else if (rel > 112.5 && rel <= 157.5) {
+      instructionVi = 'Phía Sau Phải';
+      arrow = '↘️';
+      turnAdviceVi = 'Quay về sau bên phải';
+    } else if (Math.abs(rel) > 157.5) {
+      instructionVi = 'Quay Lại';
+      arrow = '⬇️';
+      turnAdviceVi = 'Quay lại phía sau';
+    } else if (rel < -22.5 && rel >= -67.5) {
+      instructionVi = 'Chếch Trái';
+      arrow = '↖️';
+      turnAdviceVi = 'Chếch nhẹ sang trái';
+    } else if (rel < -67.5 && rel >= -112.5) {
+      instructionVi = 'Quẹo Trái';
+      arrow = '⬅️';
+      turnAdviceVi = 'Quẹo trái 90°';
+    } else if (rel < -112.5 && rel >= -157.5) {
+      instructionVi = 'Phía Sau Trái';
+      arrow = '↙️';
+      turnAdviceVi = 'Quay về sau bên trái';
+    }
+
+    return {
+      bearing,
+      relativeAngle: rel,
+      instructionVi,
+      arrow,
+      turnAdviceVi,
+    };
+  }
+
+  // Fallback: Nếu máy không có cảm biến la bàn, phân loại theo 8 hướng địa lý
   const dirs = [
     { name: 'Bắc', arrow: '⬆️' },
     { name: 'Đông Bắc', arrow: '↗️' },
@@ -236,13 +334,38 @@ function getCompassDirection(from        , to        )                          
     { name: 'Tây', arrow: '⬅️' },
     { name: 'Tây Bắc', arrow: '↖️' },
   ];
-  const idx = Math.round(brng / 45) % 8;
-  return { angle: brng, name: dirs[idx].name, arrow: dirs[idx].arrow };
+  const idx = Math.round(bearing / 45) % 8;
+  return {
+    bearing,
+    relativeAngle: bearing,
+    instructionVi: `Hướng ${dirs[idx].name}`,
+    arrow: dirs[idx].arrow,
+    turnAdviceVi: `Tiến về hướng ${dirs[idx].name}`,
+  };
+}
+
+let lastActiveDrop                   = null;
+let lastDropDist = 0;
+let lastPlayerPos                = null;
+
+function updateDropRadarPointerOnly()       {
+  if (!lastActiveDrop || lastDropDist > 65 || lastDropDist <= 25 || !lastPlayerPos) return;
+  const pointer = document.getElementById('drop-radar-pointer-svg');
+  const textEl = document.getElementById('drop-radar-turn-text');
+  if (!pointer || !textEl) return;
+
+  const nav = getNavigationDirection(lastPlayerPos, { lat: lastActiveDrop.lat, lon: lastActiveDrop.lon }, currentDeviceHeading);
+  pointer.style.transform = `rotate(${Math.round(nav.relativeAngle)}deg) translateZ(0)`;
+  textEl.textContent = `${nav.arrow} ${nav.instructionVi}`;
 }
 
 function updateDropRadar(drop                  , dist         , playerPos         )       {
   const banner = document.getElementById('drop-radar-banner');
   if (!banner) return;
+
+  lastActiveDrop = drop;
+  lastDropDist = dist ?? 999;
+  lastPlayerPos = playerPos ?? null;
 
   if (!drop || dist === undefined || !playerPos) {
     banner.hidden = true;
@@ -250,19 +373,22 @@ function updateDropRadar(drop                  , dist         , playerPos       
   }
 
   banner.hidden = false;
-  const dir = getCompassDirection(playerPos, { lat: drop.lat, lon: drop.lon });
   const roundedDist = Math.round(dist);
 
   if (dist <= 25) {
     // Đã vào bán kính nhặt (<= 25m)
     banner.className = 'drop-radar-banner drop-radar-banner--ready';
     banner.innerHTML = `
-      <div class="drop-radar__icon">✨</div>
+      <div class="drop-radar__icon" style="font-size:1.6rem;">✨</div>
       <div class="drop-radar__info">
-        <strong>${drop.nameVi} (+${drop.qty})</strong> • Cách <strong>${roundedDist}m</strong>
-        <div class="drop-radar__sub" style="color:#86efac;font-weight:600;">Đã đủ gần! Chạm để nhặt ngay</div>
+        <div style="font-weight:800;font-size:0.95rem;color:#86efac;">
+          🖐️ ĐÃ ĐẾN GẦN! (Cách ${roundedDist}m)
+        </div>
+        <div class="drop-radar__sub" style="color:#d1fae5;font-size:0.8rem;margin-top:2px;">
+          Đã trong tầm với! Bấm nhặt ngay
+        </div>
       </div>
-      <button id="btn-radar-collect" class="btn btn--tiny btn--primary" style="background:#16a34a;border-color:#4ade80;font-weight:800;padding:6px 12px;font-size:0.85rem;white-space:nowrap;">🖐️ Nhặt (+${drop.qty})</button>
+      <button id="btn-radar-collect" class="btn btn--tiny btn--primary" style="background:#16a34a;border-color:#4ade80;font-weight:800;padding:7px 14px;font-size:0.88rem;white-space:nowrap;box-shadow:0 0 12px rgba(74,222,128,0.5);">🖐️ Nhặt (${drop.qty})</button>
     `;
     const btn = document.getElementById('btn-radar-collect');
     if (btn) {
@@ -272,13 +398,24 @@ function updateDropRadar(drop                  , dist         , playerPos       
       };
     }
   } else {
-    // Đang ở khoảng cách phát hiện (~26m - 65m): hiển thị la bàn chỉ hướng
+    // Đang ở khoảng cách phát hiện (~26m - 65m): hiển thị la bàn cảm biến chỉ quẹo trái/quẹo phải
     banner.className = 'drop-radar-banner';
+    const nav = getNavigationDirection(playerPos, { lat: drop.lat, lon: drop.lon }, currentDeviceHeading);
+    
     banner.innerHTML = `
-      <div class="drop-radar__compass" style="transform: rotate(${dir.angle}deg); font-size:1.25rem;">🧭</div>
+      <div class="drop-radar__compass-box">
+        <svg id="drop-radar-pointer-svg" class="drop-radar__pointer" viewBox="0 0 32 32" width="28" height="28" style="transform: rotate(${Math.round(nav.relativeAngle)}deg) translateZ(0);">
+          <polygon points="16,3 26,26 16,20 6,26" fill="#f59e0b" stroke="#fef08a" stroke-width="1.8" stroke-linejoin="round"/>
+        </svg>
+      </div>
       <div class="drop-radar__info">
-        <strong>${drop.nameVi} (+${drop.qty})</strong> • Cách <strong>${roundedDist}m</strong> (${dir.arrow} Hướng ${dir.name})
-        <div class="drop-radar__sub">Tiến lại gần &le; 25m để nhặt</div>
+        <div style="font-weight:800; font-size:0.95rem; color:#fef08a; display:flex; align-items:center; gap:6px;">
+          <span id="drop-radar-turn-text">${nav.arrow} ${nav.instructionVi}</span>
+          <span style="font-size:0.82rem; color:var(--bone); font-weight:normal;">• Cách <strong>${roundedDist}m</strong></span>
+        </div>
+        <div class="drop-radar__sub" style="color:#e5e7eb; font-size:0.8rem; margin-top:2px;">
+          📦 <strong>${drop.nameVi} (+${drop.qty})</strong> — ${nav.turnAdviceVi}
+        </div>
       </div>
     `;
   }
@@ -309,13 +446,105 @@ function checkDropProximityAndAlert()       {
 }
 
 /**
- * Sinh DUY NHẤT 1 cụm vật phẩm quanh người chơi trong tầm phát hiện ~20m - 48m.
+ * Bảng tài nguyên rơi động theo Cấp Doanh Trại, Hệ sinh thái & Linh thú đi cùng
+ */
+function getDynamicDropPool(zone        , campLevel        , activePetId         )                                 {
+  const pool                                 = [];
+
+  // 1. Tầng 1: Đồ Đá Cũ (Mọi cấp)
+  if (zone === 'forest') {
+    pool.push(
+      { id: 'dry_branch', name: 'Cành khô' },
+      { id: 'sharp_stone', name: 'Đá nhọn' },
+      { id: 'wild_berry', name: 'Quả dại' },
+      { id: 'red_mushroom', name: 'Nấm đỏ' },
+      { id: 'fiber', name: 'Sợi thực vật' },
+    );
+  } else if (zone === 'water') {
+    pool.push(
+      { id: 'raw_water', name: 'Nước thô' },
+      { id: 'fiber', name: 'Sợi thực vật' },
+      { id: 'clay', name: 'Đất sét' },
+      { id: 'raw_fish', name: 'Cá tươi' },
+    );
+  } else if (zone === 'merchant' || zone === 'ruins') {
+    pool.push(
+      { id: 'sharp_stone', name: 'Đá nhọn' },
+      { id: 'clay', name: 'Đất sét' },
+      { id: 'fiber', name: 'Sợi thực vật' },
+      { id: 'ancient_pottery', name: 'Mảnh Gốm Đông Sơn' },
+    );
+  } else {
+    // Wilderness & Trail
+    pool.push(
+      { id: 'dry_branch', name: 'Cành khô' },
+      { id: 'sharp_stone', name: 'Đá nhọn' },
+      { id: 'clay', name: 'Đất sét' },
+      { id: 'wild_berry', name: 'Quả dại' },
+      { id: 'fiber', name: 'Sợi thực vật' },
+    );
+  }
+
+  // 2. Tầng 2: Nhà Sàn Gỗ (Cấp 2+)
+  if (campLevel >= 2) {
+    pool.push(
+      { id: 'log', name: 'Khúc gỗ lớn' },
+      { id: 'rope', name: 'Dây thừng' },
+      { id: 'seed_corn', name: 'Hạt Giống Ngô Rừng' },
+      { id: 'copper_ore', name: 'Quặng Đồng Cổ' },
+      { id: 'coal', name: 'Than đá' },
+    );
+  }
+
+  // 3. Tầng 3: Pháo Đài Đá Cổ (Cấp 3+)
+  if (campLevel >= 3) {
+    pool.push(
+      { id: 'stone_block', name: 'Khối đá xẻ' },
+      { id: 'iron_ore', name: 'Quặng sắt' },
+      { id: 'leather', name: 'Da thú dày' },
+      { id: 'seed_herb', name: 'Hạt Giống Dược Thảo' },
+      { id: 'arrow', name: 'Bó Mũi Tên' },
+    );
+    if (zone === 'water') {
+      pool.push({ id: 'pearl', name: 'Ngọc Trai Sông' });
+    }
+  }
+
+  // 4. Tầng 4+: Thành Cổ Thần Thoại (Cấp 4+)
+  if (campLevel >= 4) {
+    pool.push(
+      { id: 'gold_ore', name: 'Quặng vàng quý' },
+      { id: 'ancient_coin', name: 'Đồng Vàng Cổ' },
+      { id: 'iron_ingot', name: 'Thanh sắt' },
+    );
+  }
+
+  // 5. Bonus từ Linh Thú xuất chiến đi cùng:
+  if (activePetId === 'otter') {
+    pool.push({ id: 'pearl', name: 'Ngọc Trai Sông' }, { id: 'raw_fish', name: 'Cá tươi béo ngậy' });
+  } else if (activePetId === 'hound') {
+    pool.push({ id: 'leather', name: 'Da thú dày' }, { id: 'raw_meat', name: 'Thịt tươi' });
+  } else if (activePetId === 'fox') {
+    pool.push({ id: 'seed_herb', name: 'Hạt Giống Dược Thảo' }, { id: 'red_mushroom', name: 'Nấm đỏ' });
+  } else if (activePetId === 'mammoth') {
+    pool.push({ id: 'gold_ore', name: 'Quặng vàng quý' }, { id: 'log', name: 'Khúc gỗ lớn' });
+  }
+
+  return pool;
+}
+
+/**
+ * Sinh DUY NHẤT 1 cụm vật phẩm quanh người chơi trong tầm phát hiện ~18m - 46m.
+ * Tích hợp sự kiện Rương Báu 8.000 Bước chân mỗi ngày!
  */
 function spawnSingleWorldDropNear(center        , zone        )       {
   if (worldDrops.length > 0) return;
 
-  const pool = POOL_BY_ZONE[zone] ?? POOL_BY_ZONE.wilderness;
-  const item = pool[Math.floor(Math.random() * pool.length)];
+  const campLevel = app.profile?.player.camp.level ?? 1;
+  const activePet = app.profile?.player.pets?.find((p) => p.isActive);
+  const todayKey = toLocalTime(now()).day;
+  const totalStepsToday = app.profile?.player.steps.totalSteps ?? 0;
+  const last8kChestDay = (app.profile?.player       )?.last8kChestDay;
 
   // Sinh toạ độ ngẫu nhiên xung quanh người chơi ở bán kính 18m - 46m
   const dist = 18 + Math.random() * 28;
@@ -323,6 +552,23 @@ function spawnSingleWorldDropNear(center        , zone        )       {
   const dLat = (dist * Math.cos(angle)) * metersToLatDegrees(1);
   const dLon = (dist * Math.sin(angle)) * metersToLonDegrees(1, center.lat);
 
+  // Kiểm tra mốc 8.000 bước chân: Thả Rương Báu Tiền Sử nếu chưa nhận hôm nay
+  if (totalStepsToday >= 8000 && last8kChestDay !== todayKey) {
+    worldDrops = [{
+      id: `milestone_8k_${todayKey}`,
+      itemId: 'ancient_chest',
+      nameVi: '🎁 Rương Báu 8.000 Bước (Tiền Sử)',
+      qty: 1,
+      lat: center.lat + dLat,
+      lon: center.lon + dLon,
+      spawnedAtMs: now(),
+    }];
+    checkDropProximityAndAlert();
+    return;
+  }
+
+  const pool = getDynamicDropPool(zone, campLevel, activePet?.petId);
+  const item = pool[Math.floor(Math.random() * pool.length)] ?? { id: 'dry_branch', name: 'Cành khô' };
   const qty = 2 + Math.floor(Math.random() * 3);
 
   worldDrops = [{
@@ -346,11 +592,42 @@ function collectWorldDrop(drop           )       {
   const dist = distanceMeters(playerPos, { lat: drop.lat, lon: drop.lon });
 
   if (dist > 25) {
-    toast(`Vật phẩm ở cách ~${Math.round(dist)}m. Hãy đi lại gần hơn (&le; 25m) để nhặt!`, 'warn');
+    toast(`Vật phẩm ở cách ~${Math.round(dist)}m. Hãy đi lại gần hơn (dưới 25m) để nhặt!`, 'warn');
     return;
   }
 
-  // Thêm đồ vào carried inventory
+  // Xử lý nhặt Rương Báu 8.000 Bước Chân Hoành Tráng
+  if (drop.itemId === 'ancient_chest') {
+    const todayKey = toLocalTime(now()).day;
+    (app.profile.player       ).last8kChestDay = todayKey;
+
+    // Phần thưởng Rương Báu 8.000 Bước
+    const coins = 20;
+    const potionCount = 2;
+    const ironCount = 3;
+    const goldOreCount = 2;
+    const hasSpecial = Math.random() < 0.5;
+    const specialItem = hasSpecial ? 'egg_forest' : 'blueprint';
+    const specialName = hasSpecial ? '1 Trứng Linh Thú Rừng' : '1 Bản Vẽ Chế Tạo Cổ';
+
+    app.profile.player.carried['ancient_coin'] = (app.profile.player.carried['ancient_coin'] ?? 0) + coins;
+    app.profile.player.carried['greater_potion'] = (app.profile.player.carried['greater_potion'] ?? 0) + potionCount;
+    app.profile.player.carried['iron_ore'] = (app.profile.player.carried['iron_ore'] ?? 0) + ironCount;
+    app.profile.player.carried['gold_ore'] = (app.profile.player.carried['gold_ore'] ?? 0) + goldOreCount;
+    app.profile.player.carried[specialItem] = (app.profile.player.carried[specialItem] ?? 0) + 1;
+
+    worldDrops = [];
+    lastVibratedDropId = null;
+    updateDropRadar(null);
+
+    buzz([0, 100, 80, 200, 100, 300]);
+    audio.play('quest_complete');
+    toast(`🎉 MỞ RƯƠNG 8.000 BƯỚC: +${coins} 🪙, +2 Bình Máu Lớn, +${specialName}, +3 Quặng Sắt & +2 Quặng Vàng!`, 'good');
+    afterAction();
+    return;
+  }
+
+  // Thêm đồ thông thường vào carried inventory
   const currentQty = app.profile.player.carried[drop.itemId] ?? 0;
   app.profile.player.carried[drop.itemId] = currentQty + drop.qty;
 
@@ -1212,11 +1489,21 @@ const handlers           = {
 
   onSleep() {
     if (!app.profile) return;
-    const result = app.profile.player.survival.asleep
-      ? wakeUp(app.profile, now())
-      : sleepAtCamp(app.profile, now());
-    app.profile = result.profile;
-    toast(result.messageVi);
+    const isAsleep = app.profile.player.survival.asleep;
+    if (isAsleep) {
+      const result = wakeUp(app.profile, now());
+      app.profile = result.profile;
+      toast(result.messageVi);
+    } else {
+      const hasBedroll = (app.profile.player.carried['traveler_bedroll'] ?? 0) > 0;
+      const result = sleepAtCamp(app.profile, now());
+      app.profile = result.profile;
+      if (hasBedroll) {
+        toast('⛺ Bạn trải Túi Ngủ Dã Ngoại nghỉ ngơi. Giấc ngủ hồi phục thể lực và xoá tan kiệt sức!', 'good');
+      } else {
+        toast(result.messageVi, 'good');
+      }
+    }
     afterAction();
   },
 
@@ -1391,6 +1678,27 @@ const handlers           = {
       app.profile.player.camp.farmPlots = result.plots;
       persist();
       audio.play('drink');
+      toast(result.messageVi, 'good');
+      afterAction();
+    } else {
+      toast(result.messageVi, 'bad');
+    }
+  },
+
+  onFertilizePlot(plotIndex) {
+    if (!app.profile) return;
+    const spoiledMeat = app.profile.player.carried['spoiled_meat'] ?? 0;
+    if (spoiledMeat <= 0) {
+      toast('Cần có 1 Thịt ôi / Phân hữu cơ trong túi để bón phân!', 'bad');
+      return;
+    }
+    app.profile.player.carried['spoiled_meat'] = spoiledMeat - 1;
+    const plots = app.profile.player.camp.farmPlots ?? createInitialFarmPlots(app.profile.player.camp.level);
+    const result = fertilizePlot(plots, plotIndex);
+    if (result.ok) {
+      app.profile.player.camp.farmPlots = result.plots;
+      persist();
+      audio.play('craft');
       toast(result.messageVi, 'good');
       afterAction();
     } else {
@@ -1616,6 +1924,9 @@ function wireStaticControls()       {
       render();
     }
   }
+
+  // Kích hoạt cảm biến la bàn định hướng thời gian thực
+  initCompassListener();
 
   // Tự động phát âm thanh click tương tác giòn giã cho mọi nút bấm và thành phần UI
   document.addEventListener(

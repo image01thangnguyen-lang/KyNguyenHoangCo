@@ -25,6 +25,10 @@ export interface FarmPlot {
   waterLevel: number; // 0..3
   lastWateredMs: number | null;
   readyToHarvest: boolean;
+  /** true nếu cây đã chín nhưng bị để quá 48 tiếng và bị héo rũ */
+  wilted?: boolean;
+  /** true nếu luống đất đã được bón phân hữu cơ (thịt ôi/phân bón) giúp tăng tốc lớn 35% */
+  fertilized?: boolean;
 }
 
 export const CROPS = FARMING_DATA.crops as CropDef[];
@@ -60,6 +64,8 @@ export function createInitialFarmPlots(campLevel: number): FarmPlot[] {
       waterLevel: 1,
       lastWateredMs: null,
       readyToHarvest: false,
+      wilted: false,
+      fertilized: false,
     });
   }
   return plots;
@@ -85,6 +91,8 @@ export function tickFarmPlots(
         waterLevel: isRaining ? 3 : 1,
         lastWateredMs: isRaining ? nowMs : null,
         readyToHarvest: false,
+        wilted: false,
+        fertilized: false,
       });
       continue;
     }
@@ -103,19 +111,54 @@ export function tickFarmPlots(
       water = Math.max(water, crop.waterNeeded);
     }
 
-    const growthDurationMs = crop.growthHours * 3600_000;
+    let growthDurationMs = crop.growthHours * 3600_000;
+    if (existing.fertilized) {
+      growthDurationMs = Math.round(growthDurationMs * 0.65); // Bón phân hữu cơ lớn nhanh hơn 35%
+    }
+
     const elapsed = nowMs - existing.plantedAtMs;
     const hasEnoughWater = water >= crop.waterNeeded;
     const isReady = elapsed >= growthDurationMs && hasEnoughWater;
+
+    // Phạt cây héo nếu đã chín quá 48 tiếng mà không thu hoạch
+    let isWilted = existing.wilted ?? false;
+    if (isReady && !isWilted) {
+      const overTimeMs = elapsed - growthDurationMs;
+      if (overTimeMs > 48 * 3600_000) {
+        isWilted = true;
+      }
+    }
 
     updated.push({
       ...existing,
       waterLevel: water,
       readyToHarvest: isReady,
+      wilted: isWilted,
     });
   }
 
   return updated;
+}
+
+/** Bón phân hữu cơ (từ thịt ôi/phân bón) cho luống cây giúp lớn nhanh hơn 35%. */
+export function fertilizePlot(
+  plots: FarmPlot[],
+  plotIndex: number,
+): { plots: FarmPlot[]; ok: boolean; messageVi: string } {
+  const plot = plots.find((p) => p.index === plotIndex);
+  if (!plot) return { plots, ok: false, messageVi: 'Luống đất không tồn tại.' };
+  if (!plot.cropId) return { plots, ok: false, messageVi: 'Chưa có cây trồng trên luống này để bón phân.' };
+  if (plot.fertilized) return { plots, ok: false, messageVi: 'Luống này đã được bón phân hữu cơ rồi.' };
+
+  const updated = plots.map((p) =>
+    p.index === plotIndex ? { ...p, fertilized: true } : p,
+  );
+
+  return {
+    plots: updated,
+    ok: true,
+    messageVi: `🌱 Đã bón phân hữu cơ cho luống số ${plotIndex + 1}! Tốc độ sinh trưởng tăng +35%.`,
+  };
 }
 
 /** Gieo hạt vào một luống đất trống. */
@@ -139,6 +182,8 @@ export function plantInPlot(
           waterLevel: 1,
           lastWateredMs: nowMs,
           readyToHarvest: false,
+          wilted: false,
+          fertilized: false,
         }
       : p,
   );
@@ -150,7 +195,7 @@ export function plantInPlot(
   };
 }
 
-/** Tưới nước cho một luống cây. */
+/** Tưới nước cho một luống cây (đồng thời hồi sinh cây bị héo). */
 export function waterPlot(
   plots: FarmPlot[],
   plotIndex: number,
@@ -159,24 +204,30 @@ export function waterPlot(
   const plot = plots.find((p) => p.index === plotIndex);
   if (!plot) return { plots, ok: false, messageVi: 'Luống đất không tồn tại.' };
 
+  const wasWilted = plot.wilted ?? false;
   const updated = plots.map((p) =>
     p.index === plotIndex
       ? {
           ...p,
           waterLevel: Math.min(3, p.waterLevel + 1),
           lastWateredMs: nowMs,
+          wilted: false, // Tưới nước hồi sinh lại cây héo
         }
       : p,
   );
 
+  const messageVi = wasWilted
+    ? `💧 Đã tưới nước và hồi sinh cây trồng bị héo trên luống ${plotIndex + 1}!`
+    : `💧 Đã tưới nước cho luống số ${plotIndex + 1}! Đất đã đủ ẩm.`;
+
   return {
     plots: updated,
     ok: true,
-    messageVi: `💧 Đã tưới nước cho luống số ${plotIndex + 1}! Đất đã đủ ẩm.`,
+    messageVi,
   };
 }
 
-/** Thu hoạch nông sản từ luống đã chín. */
+/** Thu hoạch nông sản từ luống đã chín (giảm 50% nếu cây bị héo). */
 export function harvestPlot(
   plots: FarmPlot[],
   plotIndex: number,
@@ -195,9 +246,12 @@ export function harvestPlot(
   }
 
   const crop = getCropDef(plot.cropId);
+  const isWilted = plot.wilted ?? false;
   const rewards: Record<string, number> = {};
+
   for (const r of crop.harvestRewards) {
-    rewards[r.itemId] = (rewards[r.itemId] ?? 0) + r.qty;
+    const qty = isWilted ? Math.max(1, Math.floor(r.qty * 0.5)) : r.qty;
+    rewards[r.itemId] = (rewards[r.itemId] ?? 0) + qty;
   }
 
   const updated = plots.map((p) =>
@@ -207,15 +261,21 @@ export function harvestPlot(
           cropId: null,
           plantedAtMs: null,
           readyToHarvest: false,
+          wilted: false,
+          fertilized: false,
           waterLevel: 1,
         }
       : p,
   );
 
+  const messageVi = isWilted
+    ? `🌾 Đã thu hoạch ${crop.nameVi} (sản lượng giảm 50% do cây bị héo quá hạn)!`
+    : `🌾 Thu hoạch thành công ${crop.nameVi}! Nông trại tươi tốt đầy ắp lương thực.`;
+
   return {
     plots: updated,
     ok: true,
     rewards,
-    messageVi: `🌾 Thu hoạch thành công ${crop.nameVi}! Nông trại tươi tốt đầy ắp lương thực.`,
+    messageVi,
   };
 }

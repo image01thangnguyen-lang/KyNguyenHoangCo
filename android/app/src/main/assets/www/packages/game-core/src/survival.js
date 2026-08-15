@@ -33,6 +33,12 @@ export function createSurvivalState(nowMs        )                {
                                                                                             
                                   
                                     
+                                                            
+                           
+                                        
+                        
+                                           
+                       
                                                                       
                    
  
@@ -71,10 +77,24 @@ export function tickSurvival(
   const subTicks = Math.floor(simulatedMs / SUB_TICK_MS);
   const stepsPerSubTick = subTicks > 0 ? (options.steps ?? 0) / subTicks : 0;
 
-  let { satiety, hydration, hp, sickUntilMs } = state;
+  let { satiety, hydration, hp, sickUntilMs, hypothermiaUntilMs, heatstrokeUntilMs, fatiguedUntilMs, lastSleepMs } = state;
   const asleep = state.asleep;
   const hpBefore = hp;
   let knockedOut = false;
+
+  // Nếu ngủ tại doanh trại: chữa lành cảm lạnh, say nắng và giải tỏa kiệt sức
+  if (asleep && options.atCamp) {
+    hypothermiaUntilMs = null;
+    heatstrokeUntilMs = null;
+    fatiguedUntilMs = null;
+    lastSleepMs = nowMs;
+  } else {
+    // Kiểm tra nếu không ngủ quá 36 giờ (game time) thì dính kiệt sức
+    const timeSinceSleepMs = nowMs - (lastSleepMs ?? state.lastTickMs);
+    if (timeSinceSleepMs > 36 * HOUR_MS) {
+      fatiguedUntilMs = nowMs + 4 * HOUR_MS;
+    }
+  }
 
   for (let i = 0; i < subTicks; i++) {
     const tickEndMs = state.lastTickMs + (i + 1) * SUB_TICK_MS;
@@ -89,11 +109,24 @@ export function tickSurvival(
       ? SURVIVAL.hydration.decayPerHourAsleep
       : SURVIVAL.hydration.decayPerHourAwake;
 
-    const satietyWeather = options.satietyDecayMultiplier ?? 1;
-    const hydrationWeather = options.hydrationDecayMultiplier ?? 1;
+    let satietyWeather = options.satietyDecayMultiplier ?? 1;
+    let hydrationWeather = options.hydrationDecayMultiplier ?? 1;
+
+    // Cảm lạnh do dầm mưa: đói nhanh hơn 30%
+    if (hypothermiaUntilMs && tickEndMs < hypothermiaUntilMs) {
+      satietyWeather *= 1.3;
+    }
+
+    // Say nắng trưa hè: khát nhanh hơn 100%
+    if (heatstrokeUntilMs && tickEndMs < heatstrokeUntilMs) {
+      hydrationWeather *= 2.0;
+    }
+
+    // Quá tải trọng lượng: đi bộ tốn gấp đôi độ Đói (-2 điểm/1000 bước)
+    const stepDecayMultiplier = options.isOverburdened ? 2.0 : 1.0;
 
     satiety -= satietyRate * hoursFraction * sickMul * satietyWeather;
-    satiety -= (stepsPerSubTick / 1000) * SURVIVAL.satiety.decayPer1000Steps;
+    satiety -= (stepsPerSubTick / 1000) * SURVIVAL.satiety.decayPer1000Steps * stepDecayMultiplier;
     hydration -= hydrationRate * hoursFraction * sickMul * hydrationWeather;
     hydration -= (stepsPerSubTick / 1000) * SURVIVAL.hydration.decayPer1000Steps;
 
@@ -120,13 +153,11 @@ export function tickSurvival(
   }
 
   if (sickUntilMs !== null && nowMs >= sickUntilMs) sickUntilMs = null;
+  if (hypothermiaUntilMs && nowMs >= hypothermiaUntilMs) hypothermiaUntilMs = null;
+  if (heatstrokeUntilMs && nowMs >= heatstrokeUntilMs) heatstrokeUntilMs = null;
+  if (fatiguedUntilMs && nowMs >= fatiguedUntilMs) fatiguedUntilMs = null;
 
   if (cappedByOfflineLimit) {
-    // Người chơi vắng nhiều ngày: đóng băng ở mức sàn thay vì để chết ngay lúc mở app.
-    //
-    // Sàn này cũng HUỶ luôn trạng thái ngất. Đi công tác một tuần rồi mở app ra là mất 30%
-    // đồ đang mang thì đó là trừng phạt người chơi vì có cuộc sống ngoài game — đúng thứ mà
-    // trụ cột thiết kế không cho phép. Ngất vẫn xảy ra bình thường với quãng vắng dưới 24 giờ.
     satiety = Math.max(satiety, SURVIVAL.offlineCatchUp.floorSatiety);
     hydration = Math.max(hydration, SURVIVAL.offlineCatchUp.floorHydration);
     hp = Math.max(hp, SURVIVAL.offlineCatchUp.floorHp);
@@ -139,9 +170,11 @@ export function tickSurvival(
     hp: round1(hp),
     sickUntilMs,
     asleep,
-    // Luôn nhảy tới nowMs, kể cả khi bị cắt bởi trần 24h — nếu không sẽ mô phỏng lại
-    // cùng khoảng thời gian ở lần sync sau.
     lastTickMs: nowMs,
+    hypothermiaUntilMs,
+    heatstrokeUntilMs,
+    fatiguedUntilMs,
+    lastSleepMs: lastSleepMs ?? state.lastTickMs,
   };
 
   return {
@@ -180,12 +213,17 @@ export function consumeItem(
     return { ok: false, reasonVi: `${item.nameVi} không dùng để ăn hoặc uống.`, survival, gotSick: false };
   }
 
-  let { satiety, hydration, hp, sickUntilMs } = survival;
+  let { satiety, hydration, hp, sickUntilMs, hypothermiaUntilMs, heatstrokeUntilMs, fatiguedUntilMs, lastSleepMs } = survival;
   satiety = clamp(satiety + (item.satiety ?? 0), 0, SURVIVAL.satiety.max);
   hydration = clamp(hydration + (item.hydration ?? 0), 0, SURVIVAL.hydration.max);
   hp = clamp(hp + (item.hp ?? 0), 0, SURVIVAL.hp.max);
 
   if (item.curesSickness) sickUntilMs = null;
+  if ((item       ).curesHypothermia) hypothermiaUntilMs = null;
+  if ((item       ).curesFatigue) {
+    fatiguedUntilMs = null;
+    lastSleepMs = nowMs;
+  }
 
   let gotSick = false;
   let messageVi                    ;
@@ -199,7 +237,17 @@ export function consumeItem(
 
   return {
     ok: true,
-    survival: { ...survival, satiety: round1(satiety), hydration: round1(hydration), hp: round1(hp), sickUntilMs },
+    survival: {
+      ...survival,
+      satiety: round1(satiety),
+      hydration: round1(hydration),
+      hp: round1(hp),
+      sickUntilMs,
+      hypothermiaUntilMs,
+      heatstrokeUntilMs,
+      fatiguedUntilMs,
+      lastSleepMs,
+    },
     gotSick,
     messageVi,
   };
@@ -236,15 +284,121 @@ export function projectDailyDrain(
   };
 }
 
-/** Gợi ý cho HUD: chỉ số nào đang nguy hiểm nhất. */
-export function survivalWarnings(survival               )           {
+/** Tính tổng trọng lượng (kg) của các vật phẩm trong túi đồ. */
+export function calculateCarriedWeight(carried           )         {
+  let total = 0;
+  for (const [itemId, qty] of Object.entries(carried)) {
+    if (qty <= 0) continue;
+    const def = getItem(itemId);
+    total += (def.weight ?? 1) * qty;
+  }
+  return round1(total);
+}
+
+/** Tải trọng tối đa của ba lô (chuẩn 45kg, +30kg nếu có Ba Lô Da Voi, +25kg nếu có linh thú thồ hàng xuất chiến). */
+export function maxWeightCapacity(pets        , carried            )         {
+  let capacity = 45;
+  if (carried && (carried['giant_backpack'] ?? 0) > 0) {
+    capacity += 30;
+  }
+  const activePet = pets?.find((p) => p.isActive);
+  if (activePet && (activePet.petId === 'mammoth' || activePet.petId === 'horse' || activePet.petId === 'rhino')) {
+    capacity += 25;
+  }
+  return capacity;
+}
+
+/** Kiểm tra túi đồ có bị quá tải trọng lượng không. */
+export function isOverburdened(carried           , maxWeight = 45)          {
+  return calculateCarriedWeight(carried) > maxWeight;
+}
+
+/**
+ * Kiểm tra thức ăn tươi sống (thịt tươi, cá tươi) bị ôi thiu theo thời gian.
+ * Mặc định: quá 36h bị ôi thiu.
+ * Nếu có Muối Mỏ (mineral_salt): kéo dài thời gian tươi ngon lên 7 ngày (168h)!
+ */
+export function checkFoodSpoilage(
+  carried           ,
+  elapsedHours        ,
+)                                                                   {
+  const maxFreshHours = (carried['mineral_salt'] ?? 0) > 0 ? 168 : 36;
+  if (elapsedHours < maxFreshHours) {
+    return { carried, spoiledCount: 0 };
+  }
+
+  let spoiledCount = 0;
+  const updated = { ...carried };
+
+  const rawMeat = updated['raw_meat'] ?? 0;
+  if (rawMeat > 0) {
+    spoiledCount += rawMeat;
+    delete updated['raw_meat'];
+  }
+
+  const rawFish = updated['raw_fish'] ?? 0;
+  if (rawFish > 0) {
+    spoiledCount += rawFish;
+    delete updated['raw_fish'];
+  }
+
+  if (spoiledCount > 0) {
+    updated['spoiled_meat'] = (updated['spoiled_meat'] ?? 0) + spoiledCount;
+    return {
+      carried: updated,
+      spoiledCount,
+      messageVi: `⚠️ ${spoiledCount} miếng thịt/cá tươi đã bị ôi thiu do để lâu! Có thể dùng làm phân bón luống đất.`,
+    };
+  }
+
+  return { carried, spoiledCount: 0 };
+}
+
+/** Gợi ý cho HUD: chỉ số nào đang nguy hiểm nhất hoặc trạng thái bất lợi. */
+export function survivalWarnings(
+  survival               ,
+  carried            ,
+  pets        ,
+  nowMs         ,
+)           {
   const warnings           = [];
+  const currentTime = nowMs ?? Date.now();
+
   if (survival.hydration <= 15) warnings.push('Khát cháy cổ — cần nước ngay.');
   else if (survival.hydration <= 35) warnings.push('Bạn đang khát.');
   if (survival.satiety <= 15) warnings.push('Đói rã rời — cần ăn ngay.');
   else if (survival.satiety <= 35) warnings.push('Bạn đang đói.');
   if (survival.hp <= 30) warnings.push('Thể lực rất thấp — hãy về trại nghỉ.');
-  if (survival.sickUntilMs !== null) warnings.push('Bạn đang bị bệnh: chỉ số tụt nhanh hơn 50%.');
+  if (survival.sickUntilMs !== null && currentTime < survival.sickUntilMs) {
+    warnings.push('Bạn đang bị bệnh: chỉ số tụt nhanh hơn 50%.');
+  }
+  if (survival.hypothermiaUntilMs && currentTime < survival.hypothermiaUntilMs) {
+    if (!carried || (carried['rain_fur_cloak'] ?? 0) <= 0) {
+      warnings.push('❄️ Đang bị cảm lạnh do dầm mưa: Đói nhanh hơn 30%. Về trại sưởi ấm!');
+    }
+  }
+  if (survival.heatstrokeUntilMs && currentTime < survival.heatstrokeUntilMs) {
+    if (!carried || (carried['sun_hat'] ?? 0) <= 0) {
+      warnings.push('☀️ Đang bị say nắng trưa hè: Khát nhanh gấp đôi. Cần uống nước!');
+    }
+  }
+  if (survival.fatiguedUntilMs && currentTime < survival.fatiguedUntilMs) {
+    warnings.push('💤 Đang bị kiệt sức do thức đêm > 36h: Giảm 30% sức đánh. Hãy về trại ngủ!');
+  }
+
+  if (carried) {
+    const totalW = calculateCarriedWeight(carried);
+    const maxW = maxWeightCapacity(pets, carried);
+    if (totalW > maxW) {
+      warnings.push(`⚖️ Ba lô quá tải (${totalW}/${maxW}kg): Đi bộ tiêu hao Đói gấp đôi!`);
+    }
+    const hasHerbPouch = (carried['herb_scent_pouch'] ?? 0) > 0;
+    const rawCount = (carried['raw_meat'] ?? 0) + (carried['raw_fish'] ?? 0);
+    if (rawCount >= 10 && !hasHerbPouch) {
+      warnings.push(`🩸 Mang ${rawCount} thịt tươi: Mùi máu sẽ thu hút bầy quái đêm lúc 20:00!`);
+    }
+  }
+
   return warnings;
 }
 

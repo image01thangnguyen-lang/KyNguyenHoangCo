@@ -28,8 +28,19 @@ export function campDefensePower(camp: CampState): number {
   return power;
 }
 
+/** Kiểm tra xem túi đồ có mùi máu tươi nồng nặc (>= 10 thịt/cá sống) thu hút thú dữ hay không (trừ khi có Túi Hương Ngải Cứu). */
+export function hasBloodScent(carried: Inventory): boolean {
+  if ((carried['herb_scent_pouch'] ?? 0) > 0) return false;
+  const rawCount = (carried['raw_meat'] ?? 0) + (carried['raw_fish'] ?? 0);
+  return rawCount >= 10;
+}
+
 /** Sát thương người chơi góp thêm khi trực tiếp thủ trại (vũ khí + khiên đang mang). */
-export function playerCombatPower(carried: Inventory, campLevel: number): number {
+export function playerCombatPower(
+  carried: Inventory,
+  campLevel: number,
+  isFatigued = false,
+): number {
   let best = COMBAT.playerBaseAttack;
   let defense = 0;
 
@@ -40,18 +51,22 @@ export function playerCombatPower(carried: Inventory, campLevel: number): number
     if (item.defense) defense += item.defense;
   }
 
-  return (best + defense) * (1 + COMBAT.campLevelAttackBonus * campLevel);
+  let total = (best + defense) * (1 + COMBAT.campLevelAttackBonus * campLevel);
+  if (isFatigued) {
+    total *= 0.7; // Giảm 30% sức đánh khi bị kiệt sức do thức đêm > 36h
+  }
+  return total;
 }
 
 /** Đợt quái mạnh dần theo cấp trại để đêm nào cũng còn là thử thách. */
-function waveThreat(waveIndex: number, campLevel: number): number {
+function waveThreat(waveIndex: number, campLevel: number, bloodScentMultiplier = 1, repellentReduction = 0): number {
   const wave = NIGHT_DEFENSE.waves[waveIndex];
   if (!wave) return 0;
   const raw = wave.monsters.reduce(
     (sum, entry) => sum + getMonster(entry.id).threat * entry.count,
     0,
   );
-  return raw * (1 + 0.6 * (campLevel - 1));
+  return raw * (1 + 0.6 * (campLevel - 1)) * bloodScentMultiplier * (1 - repellentReduction);
 }
 
 export function waveRosterVi(waveIndex: number): string {
@@ -69,6 +84,10 @@ export interface DefenseContext {
   online: boolean;
   /** Điểm chơi 0..1 khi online: bố trí bẫy, canh nhịp phản công. */
   playerPerformance?: number;
+  /** Trạng thái kiệt sức do thức trắng đêm */
+  isFatigued?: boolean;
+  /** Trạng thái mùi máu tươi thu hút quái vật */
+  bloodScent?: boolean;
   rng: () => number;
   /** Bỏ qua kiểm tra khung giờ — dùng cho test và cho chế độ mô phỏng của designer. */
   ignoreWindow?: boolean;
@@ -101,7 +120,9 @@ export function resolveNightDefense(ctx: DefenseContext): DefenseOutcome {
   const performance = clamp01(ctx.playerPerformance ?? 0.5);
   const structural = campDefensePower(ctx.camp);
   const efficiency = ctx.online ? 1 : NIGHT_DEFENSE.offlineDefenseEfficiency;
-  const active = ctx.online ? playerCombatPower(ctx.carried, ctx.camp.level) * (0.5 + performance) : 0;
+  const active = ctx.online
+    ? playerCombatPower(ctx.carried, ctx.camp.level, ctx.isFatigued ?? false) * (0.5 + performance)
+    : 0;
 
   let pool = structural * efficiency + active;
   const playerPower = pool;
@@ -112,6 +133,13 @@ export function resolveNightDefense(ctx: DefenseContext): DefenseOutcome {
   let totalThreat = 0;
   let survived = true;
 
+  const hasScent = ctx.bloodScent ?? hasBloodScent(ctx.carried);
+  const scentMul = hasScent ? 1.4 : 1.0;
+
+  if (hasScent) {
+    logVi.push('🩸 Mùi máu tươi nồng nặc trong ba lô đã thu hút thêm dã thú khát máu (+40% đe doạ)!');
+  }
+
   logVi.push(
     ctx.online
       ? `Bạn thắp đuốc, đứng sau tường. Sức phòng thủ ${Math.round(pool)}.`
@@ -119,7 +147,7 @@ export function resolveNightDefense(ctx: DefenseContext): DefenseOutcome {
   );
 
   for (let i = 0; i < NIGHT_DEFENSE.waves.length; i++) {
-    const threat = waveThreat(i, ctx.camp.level);
+    const threat = waveThreat(i, ctx.camp.level, scentMul);
     totalThreat += threat;
     logVi.push(`Đợt ${i + 1}: ${waveRosterVi(i)} lao ra từ bóng tối (đe doạ ${Math.round(threat)}).`);
 

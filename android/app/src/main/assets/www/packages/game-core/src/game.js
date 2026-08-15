@@ -48,6 +48,9 @@ import {
   consumeItem,
   survivalWarnings,
   tickSurvival,
+  isOverburdened,
+  maxWeightCapacity,
+  checkFoodSpoilage,
 } from './survival.js';
 import { dayKey, isNightDefenseWindow, outdoorPolicy, phaseOf, toLocalTime } from './time.js';
 import {
@@ -172,14 +175,25 @@ export function openApp(input              )                {
   const mods = modifiersOf(finalWeather);
 
   // 4. Sinh tồn cho quãng vắng mặt
+  const maxW = maxWeightCapacity(profile.player.pets);
+  const isOver = isOverburdened(profile.player.carried, maxW);
+
   const tick = tickSurvival(profile.player.survival, nowMs, {
     steps: filtered.accepted,
     atCamp: profile.player.survival.asleep,
     satietyDecayMultiplier: mods.satietyDecayMultiplier,
     hydrationDecayMultiplier: mods.hydrationDecayMultiplier,
+    isOverburdened: isOver,
     frozen: clock.survivalFrozen,
   });
   let player = { ...profile.player, survival: tick.survival };
+
+  // Kiểm tra thịt/cá tươi sống bị ôi thiu khi mở app sau nhiều giờ
+  const spoilage = checkFoodSpoilage(player.carried, tick.hoursSimulated);
+  if (spoilage.spoiledCount > 0) {
+    player = { ...player, carried: spoilage.carried };
+    if (spoilage.messageVi) eventsVi.push(spoilage.messageVi);
+  }
 
   if (tick.hoursSimulated >= 1) {
     eventsVi.push(`Bạn vắng mặt ${formatHours(tick.hoursSimulated)}.`);
@@ -327,7 +341,7 @@ export function buildView(
     weather,
     location: position ? locationAt(position, visible) : null,
     mapFeatures: scanArea(at, 700, visible),
-    survivalWarningsVi: survivalWarnings(profile.player.survival),
+    survivalWarningsVi: survivalWarnings(profile.player.survival, profile.player.carried, profile.player.pets, nowMs),
     recipes: recipeBoard(profile.player.camp, profile.player.carried, profile.player.knownRecipes),
     upgrade: upgradeProgress(profile.player.camp, profile.player.carried),
     quests: questBoard(profile.story, snapshotOf(profile)),
@@ -637,11 +651,19 @@ export function sleepAtCamp(profile             , nowMs        )                
       ...profile,
       player: {
         ...profile.player,
-        survival: { ...profile.player.survival, asleep: true, lastTickMs: nowMs },
+        survival: {
+          ...profile.player.survival,
+          asleep: true,
+          lastTickMs: nowMs,
+          hypothermiaUntilMs: null,
+          heatstrokeUntilMs: null,
+          fatiguedUntilMs: null,
+          lastSleepMs: nowMs,
+        },
       },
     },
     ok: true,
-    messageVi: 'Bạn cuộn mình cạnh đống lửa. Ngủ tại trại hồi thể lực.',
+    messageVi: '🔥 Bạn cuộn mình bên Lửa Trại ấm áp. Giấc ngủ hồi phục thể lực, xoá tan kiệt sức và cảm lạnh!',
   };
 }
 

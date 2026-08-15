@@ -20,6 +20,10 @@
     { "id": "seed_berry",       "nameVi": "Hạt Giống Quả Mọng",    "kind": "material", "stack": 30,  "weight": 1 },
 
     { "id": "ancient_coin",     "nameVi": "Đồng Vàng Cổ",      "kind": "material", "stack": 999, "weight": 0, "safe": true },
+    { "id": "copper_ore",       "nameVi": "Quặng Đồng Cổ",     "kind": "material", "stack": 100, "weight": 3 },
+    { "id": "pearl",            "nameVi": "Ngọc Trai Sông",    "kind": "material", "stack": 50,  "weight": 1, "safe": true },
+    { "id": "ancient_pottery",  "nameVi": "Mảnh Gốm Đông Sơn", "kind": "material", "stack": 50,  "weight": 1, "safe": true },
+    { "id": "ancient_chest",    "nameVi": "Rương Báu Tiền Sử 8.000 Bước", "kind": "consumable", "stack": 10, "weight": 4, "safe": true },
     { "id": "leather",          "nameVi": "Da thú dày",        "kind": "material", "stack": 100, "weight": 2 },
     { "id": "coal",             "nameVi": "Than đá",           "kind": "material", "stack": 200, "weight": 2 },
     { "id": "gold_ore",         "nameVi": "Quặng vàng",        "kind": "material", "stack": 100, "weight": 4, "safe": true },
@@ -34,6 +38,7 @@
     { "id": "grilled_fish",     "nameVi": "Cá nướng",          "kind": "food", "stack": 30, "weight": 2, "satiety": 30 },
     { "id": "grilled_meat",     "nameVi": "Thịt nướng",        "kind": "food", "stack": 30, "weight": 2, "satiety": 40 },
     { "id": "dried_meat",       "nameVi": "Thịt khô",          "kind": "food", "stack": 60, "weight": 1, "satiety": 25, "shelfStable": true },
+    { "id": "spoiled_meat",     "nameVi": "Thịt ôi / Phân bón hữu cơ", "kind": "material", "stack": 50, "weight": 1, "satiety": -15, "infectionRisk": true },
 
     { "id": "raw_water",        "nameVi": "Nước thô",          "kind": "drink", "stack": 20, "weight": 2, "hydration": 20, "infectionRisk": true },
     { "id": "boiled_water",     "nameVi": "Nước sôi",          "kind": "drink", "stack": 20, "weight": 2, "hydration": 50 },
@@ -60,6 +65,17 @@
     { "id": "iron_sword",       "nameVi": "Kiếm sắt",          "kind": "weapon", "stack": 1, "weight": 4, "attack": 28, "durability": 180 },
 
     { "id": "wooden_shield",    "nameVi": "Khiên gỗ",          "kind": "armor", "stack": 1, "weight": 3, "defense": 8,  "durability": 70 },
-    { "id": "iron_shield",      "nameVi": "Khiên sắt",         "kind": "armor", "stack": 1, "weight": 5, "defense": 16, "durability": 150 }
+    { "id": "iron_shield",      "nameVi": "Khiên sắt",         "kind": "armor", "stack": 1, "weight": 5, "defense": 16, "durability": 150 },
+
+    { "id": "giant_backpack",   "nameVi": "Ba Lô Da Voi Thượng Hạng", "kind": "tool", "stack": 1, "weight": 1, "safe": true, "capacityBonus": 30 },
+    { "id": "mineral_salt",     "nameVi": "Túi Muối Mỏ Cổ Đại",       "kind": "consumable", "stack": 20, "weight": 1, "safe": true },
+    { "id": "rain_fur_cloak",   "nameVi": "Áo Tơi Lá Cọ Cổ Điển",     "kind": "armor", "stack": 1, "weight": 2, "safe": true },
+    { "id": "sun_hat",          "nameVi": "Nón Lá Rừng Rậm",          "kind": "armor", "stack": 1, "weight": 1, "safe": true },
+    { "id": "ginger_tea",       "nameVi": "Trà Gừng Nóng Giữ Nhiệt",  "kind": "drink", "stack": 20, "weight": 1, "hydration": 35, "curesHypothermia": true },
+    { "id": "bamboo_scare_chime", "nameVi": "Chuông Tre Đuổi Quạ",    "kind": "tool", "stack": 5, "weight": 1, "safe": true },
+    { "id": "traveler_bedroll", "nameVi": "Túi Ngủ Dã Ngoại Gấp Gọn", "kind": "tool", "stack": 1, "weight": 2, "safe": true, "allowOutdoorSleep": true },
+    { "id": "divine_tea",       "nameVi": "Trà Cổ Thụ Thần Nông",     "kind": "drink", "stack": 10, "weight": 1, "hydration": 40, "curesFatigue": true },
+    { "id": "herb_scent_pouch", "nameVi": "Túi Hương Ngải Cứu",      "kind": "tool", "stack": 1, "weight": 1, "safe": true, "masksBloodScent": true },
+    { "id": "beast_repellent_powder", "nameVi": "Bột Lưu Huỳnh Xua Quái", "kind": "consumable", "stack": 10, "weight": 1, "safe": true }
   ]
 }

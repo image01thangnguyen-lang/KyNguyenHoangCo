@@ -29,6 +29,9 @@ import {
   getFishTrapTier,
   getWeekendQuestBoard,
   isWeekend,
+  calculateCarriedWeight,
+  maxWeightCapacity,
+  isOverburdened,
 } from '../../../packages/game-core/src/index.js';
 import { actionIconSvg, itemIconSvg, zoneIconSvg, coinIconSvg } from './itemIcons.js';
 import { audio } from './audio.js';
@@ -66,6 +69,7 @@ export function el                       (id        )    {
                                                      
                                                        
                                        
+                                            
                                          
                             
                     
@@ -854,25 +858,50 @@ function renderFarming(view          , profile             , handlers          )
     if (plot.cropId) {
       const crop = getCropDef(plot.cropId);
       const isReady = plot.readyToHarvest;
+      const isWilted = plot.wilted ?? false;
+      const isFertilized = plot.fertilized ?? false;
+      const hasSpoiledMeat = (profile.player.carried['spoiled_meat'] ?? 0) > 0;
+
       plotCard.innerHTML = `
-        <strong style="color:var(--bone);font-size:0.88rem;display:block;">${crop.nameVi}</strong>
-        <div style="font-size:0.78rem;color:var(--ink-muted);margin:4px 0;">Độ ẩm: ${'💧'.repeat(plot.waterLevel || 1)}</div>
+        <strong style="color:${isWilted ? '#f87171' : 'var(--bone)'};font-size:0.88rem;display:block;">
+          ${crop.nameVi} ${isWilted ? '🥀 (Héo)' : ''}
+        </strong>
+        <div style="font-size:0.78rem;color:var(--ink-muted);margin:3px 0;">
+          Độ ẩm: ${'💧'.repeat(plot.waterLevel || 1)} ${isFertilized ? '· <span style="color:#86efac;font-weight:700;">🌱 Đã bón phân</span>' : ''}
+        </div>
       `;
 
       if (isReady) {
         const harvestBtn = document.createElement('button');
         harvestBtn.className = 'btn btn--tiny';
-        harvestBtn.style.cssText = 'background:#15803d;color:#fff;width:100%;margin-top:4px;';
-        harvestBtn.textContent = '🌾 Thu hoạch';
+        harvestBtn.style.cssText = isWilted
+          ? 'background:#b45309;color:#fff;width:100%;margin-top:4px;'
+          : 'background:#15803d;color:#fff;width:100%;margin-top:4px;';
+        harvestBtn.textContent = isWilted ? '🌾 Thu hoạch (-50%)' : '🌾 Thu hoạch';
         harvestBtn.onclick = () => handlers.onHarvestPlot(plot.index);
         plotCard.append(harvestBtn);
       } else {
+        const actionRow = document.createElement('div');
+        actionRow.style.cssText = 'display:flex;gap:4px;margin-top:4px;';
+
         const waterBtn = document.createElement('button');
         waterBtn.className = 'btn btn--tiny';
-        waterBtn.style.cssText = 'width:100%;margin-top:4px;';
-        waterBtn.textContent = '💧 Tưới nước';
+        waterBtn.style.cssText = 'flex:1;';
+        waterBtn.textContent = isWilted ? '💧 Cứu cây' : '💧 Tưới nước';
         waterBtn.onclick = () => handlers.onWaterPlot(plot.index);
-        plotCard.append(waterBtn);
+        actionRow.append(waterBtn);
+
+        if (!isFertilized && hasSpoiledMeat) {
+          const fertBtn = document.createElement('button');
+          fertBtn.className = 'btn btn--tiny btn--primary';
+          fertBtn.style.cssText = 'flex:1;background:#78350f;border-color:#b45309;font-size:0.72rem;padding:2px 4px;';
+          fertBtn.title = 'Bón phân hữu cơ (thịt ôi) giúp cây lớn nhanh hơn 35%';
+          fertBtn.textContent = '🌱 Bón phân';
+          fertBtn.onclick = () => handlers.onFertilizePlot?.(plot.index);
+          actionRow.append(fertBtn);
+        }
+
+        plotCard.append(actionRow);
       }
     } else {
       plotCard.innerHTML = `
@@ -931,8 +960,19 @@ export function openItemInspector(
   descEl.textContent = (item       ).descVi || 'Vật phẩm sinh tồn trong Kỷ Nguyên Hoang Cổ.';
   qtyEl.textContent = `${qty.toLocaleString('vi-VN')} món`;
 
-  // Thống kê
+  // Thống kê & Công dụng đặc biệt
   const statsList           = [];
+  if ((item       ).capacityBonus) statsList.push(`🎒 Tải trọng ba lô: +${(item       ).capacityBonus} kg`);
+  if ((item       ).curesHypothermia) statsList.push(`🍵 Giải sạch Cảm Lạnh do dầm mưa & giữ ấm 6h`);
+  if ((item       ).curesFatigue) statsList.push(`☕ Đập tan Kiệt Sức do thức đêm ngay tức khắc`);
+  if ((item       ).allowOutdoorSleep) statsList.push(`⛺ Ngủ hồi phục thể lực & giải kiệt sức mọi nơi`);
+  if ((item       ).masksBloodScent) statsList.push(`🌿 Triệt tiêu Mùi Máu tươi (không hút quái đêm)`);
+  if (itemId === 'rain_fur_cloak') statsList.push(`🌧️ Miễn nhiễm 100% Cảm Lạnh khi đi mưa to`);
+  if (itemId === 'sun_hat') statsList.push(`☀️ Miễn nhiễm 100% Say Nắng trưa hè (11h-14h)`);
+  if (itemId === 'bamboo_scare_chime') statsList.push(`🔔 Bảo vệ bẫy thú 100% không bị ăn vụng`);
+  if (itemId === 'mineral_salt') statsList.push(`🧂 Ướp thịt & cá tươi lâu 7 ngày không ôi thiu`);
+  if (itemId === 'beast_repellent_powder') statsList.push(`🔥 Giảm 30% sức tấn công của bầy quái đêm`);
+
   if (item.satiety) statsList.push(`🍖 Hồi độ no: +${item.satiety}`);
   if (item.hydration) statsList.push(`💧 Hồi độ khát: +${item.hydration}`);
   if (item.hp) statsList.push(`❤️ Hồi thể lực: +${item.hp} HP`);
@@ -946,7 +986,7 @@ export function openItemInspector(
   if (item.safe) statsList.push(`🔒 Bảo hộ: Không rơi khi ngất/thua đêm!`);
 
   statsEl.innerHTML = statsList.length
-    ? statsList.map((s) => `<div class="inspect-stat-badge">${s}</div>`).join('')
+    ? statsList.map((s) => `<div class="inspect-stat-badge" style="display:inline-block;margin:3px 4px 3px 0;background:rgba(234,179,8,0.15);border:1px solid rgba(251,191,36,0.3);border-radius:6px;padding:3px 8px;font-size:0.8rem;color:#fef08a;">${s}</div>`).join('')
     : '';
 
   // Hành động
@@ -1130,7 +1170,10 @@ export function renderBagPanel(profile             , handlers          )       {
       const used = slotsUsed(inventory);
       countBadge.innerHTML = `🔒 Két An Toàn: <strong>${used} / ${maxCap} ô</strong> (${totalTypes} loại)`;
     } else {
-      countBadge.innerHTML = `🎒 Đang mang: <strong>${totalTypes} loại</strong> (${totalCount} món)`;
+      const totalW = calculateCarriedWeight(profile.player.carried ?? {});
+      const maxW = maxWeightCapacity(profile.player.pets);
+      const isOver = totalW > maxW;
+      countBadge.innerHTML = `🎒 Đang mang: <strong>${totalTypes} loại</strong> (${totalCount} món) · <span style="color:${isOver ? '#f87171' : '#fef08a'};font-weight:700;">⚖️ ${totalW.toFixed(1)} / ${maxW} kg</span>${isOver ? ' <span class="chip" style="color:#f87171;background:rgba(239,68,68,0.2);border-color:#ef4444;font-size:0.7rem;padding:1px 5px;margin-left:4px;">⚠️ QUÁ TẢI (Đói x2)</span>' : ''}`;
     }
   }
 
@@ -1522,7 +1565,7 @@ export function formatDuration(seconds        )         {
 }
 
 export function openTradeConfirm(
-  item                                                                                                       ,
+  item                                                                                                                       ,
   onSubmit                       ,
 )       {
   const overlay = el('overlay-merchant-trade-confirm');
@@ -1545,7 +1588,10 @@ export function openTradeConfirm(
   titleEl.textContent = item.isBuy ? '🛒 Mua Hàng Hoá' : '💰 Bán Vật Phẩm';
   iconEl.innerHTML = itemIconSvg(item.itemId       , 'inspect-svg');
   nameEl.textContent = item.nameVi;
-  descEl.textContent = item.descVi;
+  descEl.innerHTML = `
+    ${item.tagVi ? `<div style="display:inline-block;margin-bottom:8px;padding:3px 8px;background:rgba(251,191,36,0.18);border:1px solid rgba(251,191,36,0.35);border-radius:6px;font-size:0.8rem;font-weight:800;color:#fef08a;">${item.tagVi}</div><br/>` : ''}
+    ${item.descVi}
+  `;
   unitPriceEl.innerHTML = `${item.unitPrice} ${coinIconSvg(15)}`;
 
   function updateTradeCalc() {
@@ -1626,6 +1672,7 @@ export function renderMerchantShop(
       openTradeConfirm(
         {
           nameVi: `${item.qty > 1 ? `${item.qty}x ` : ''}${item.nameVi}`,
+          tagVi: item.tagVi,
           descVi: item.descVi,
           itemId: item.itemId,
           unitPrice: item.priceGold,

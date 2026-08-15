@@ -216,31 +216,44 @@ export function placeTrap(
 }
 
 /** Cập nhật trạng thái các bẫy (kiểm tra sập bẫy). */
-export function tickTraps(traps              , nowMs        , playerFishTrapLevel = 1)               {
+export function tickTraps(
+  traps              ,
+  nowMs        ,
+  playerFishTrapLevel = 1,
+  hasScareChime = false,
+)               {
   return traps.map((trap) => {
     if (trap.collected) return trap;
-    if (trap.caughtItem) return trap;
 
-    if (nowMs >= trap.readyAtMs) {
+    let caughtItem = trap.caughtItem;
+    let scavenged = trap.scavenged ?? false;
+
+    if (!caughtItem && nowMs >= trap.readyAtMs) {
       if (trap.trapItemId === 'fish_trap') {
         const fTier = getFishTrapTier(playerFishTrapLevel);
-        const reward = fTier.bonusItem && Math.random() < 0.4
+        caughtItem = fTier.bonusItem && Math.random() < 0.4
           ? fTier.bonusItem
           : { itemId: 'raw_fish'          , nameVi: 'Cá tươi béo ngậy', qty: fTier.fishQty };
-        return {
-          ...trap,
-          caughtItem: reward,
-        };
+      } else {
+        const config = TRAP_CONFIG[trap.trapItemId];
+        caughtItem = config.catchItems[Math.floor(Math.random() * config.catchItems.length)] ?? config.catchItems[0];
       }
+    }
 
-      const config = TRAP_CONFIG[trap.trapItemId];
-      const reward = config.catchItems[Math.floor(Math.random() * config.catchItems.length)] ?? config.catchItems[0];
-      return {
-        ...trap,
-        caughtItem: reward,
+    // Phạt bẫy bỏ quên: Nếu đã sập quá 24 tiếng mà chưa thu, dã thú/quạ hoang ăn vụng 50% thịt (trừ khi có Chuông Tre Đuổi Quạ)
+    if (!hasScareChime && caughtItem && !scavenged && nowMs - trap.readyAtMs > 24 * 3600_000) {
+      scavenged = true;
+      caughtItem = {
+        ...caughtItem,
+        qty: Math.max(1, Math.floor(caughtItem.qty * 0.5)),
       };
     }
-    return trap;
+
+    return {
+      ...trap,
+      caughtItem,
+      scavenged,
+    };
   });
 }
 
@@ -251,7 +264,8 @@ export function collectTrap(
   playerAt        ,
   nowMs        ,
 )                                                                                                                    {
-  const traps = tickTraps(player.traps ?? [], nowMs, player.fishTrapLevel ?? 1);
+  const hasChime = (player.carried['bamboo_scare_chime'] ?? 0) > 0;
+  const traps = tickTraps(player.traps ?? [], nowMs, player.fishTrapLevel ?? 1, hasChime);
   const trap = traps.find((t) => t.id === trapId);
 
   if (!trap) {
@@ -294,10 +308,14 @@ export function collectTrap(
     traps: updatedTraps,
   };
 
+  const messageVi = trap.scavenged
+    ? `⚠️ Bẫy để quên quá 24h nên một phần thịt đã bị quạ/dã thú ăn vụng! Thu được ${caught.nameVi} ×${caught.qty} và thu hồi ${trap.nameVi}.`
+    : `🎯 Thu bẫy thành công! Nhận được ${caught.nameVi} ×${caught.qty} và thu hồi ${trap.nameVi}.`;
+
   return {
     ok: true,
     player: updatedPlayer,
-    messageVi: `🎯 Thu bẫy thành công! Nhận được ${caught.nameVi} ×${caught.qty} và thu hồi ${trap.nameVi}.`,
+    messageVi,
     gained: caught,
   };
 }

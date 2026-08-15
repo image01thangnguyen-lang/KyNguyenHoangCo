@@ -125,6 +125,14 @@ export interface SurvivalState {
   asleep: boolean;
   /** Mốc thời gian đã mô phỏng tới (ms epoch). */
   lastTickMs: number;
+  /** Mốc thời gian hết cảm lạnh / thấm mưa (ms epoch), null nếu bình thường. */
+  hypothermiaUntilMs?: number | null;
+  /** Mốc thời gian hết say nắng khi đi trưa hè gắt (ms epoch), null nếu bình thường. */
+  heatstrokeUntilMs?: number | null;
+  /** Mốc thời gian kiệt sức do thức trắng > 36h không ngủ (ms epoch). */
+  fatiguedUntilMs?: number | null;
+  /** Mốc thời gian lần cuối ngủ tại doanh trại. */
+  lastSleepMs?: number;
 }
 
 export interface StepLedger {
@@ -178,6 +186,8 @@ export interface PlacedTrap {
   readyAtMs: number;
   caughtItem: { itemId: ItemId; nameVi: string; qty: number } | null;
   collected: boolean;
+  /** true nếu bẫy để quá 24h và bị dã thú hoang cắn trộm một phần thịt */
+  scavenged?: boolean;
 }
 
 export type Gender = 'male' | 'female';
