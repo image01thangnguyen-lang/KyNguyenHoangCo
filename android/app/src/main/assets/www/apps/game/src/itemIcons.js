@@ -93,6 +93,9 @@ export function itemIconSvg(id        , className = 'item-svg')         {
       );
 
     case 'seed':
+    case 'seed_herb':
+    case 'seed_corn':
+    case 'seed_berry':
       return svg(
         '<path d="M18 36c-5-8 2-16 10-14 6 2 8 10 2 15-4 4-8 2-12-1Z" fill="#8f5d34" stroke="#cca172" stroke-width="2"/><path d="M34 44c-4-7 1-15 9-13 5 2 7 9 2 14-4 4-7 2-11-1Z" fill="#6f4422" stroke="#ba8a58" stroke-width="2"/><path d="M28 22c-2-9 6-12 12-7 4 4 2 11-5 11-3 0-5-2-7-4Z" fill="#58853b" stroke="#90c26b" stroke-width="2"/>',
         className,

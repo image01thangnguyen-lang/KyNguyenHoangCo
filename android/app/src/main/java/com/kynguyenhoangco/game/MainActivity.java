@@ -191,6 +191,29 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
             } catch (Exception ignored) {
             }
         }
+
+        @JavascriptInterface
+        public void vibrate(String patternJson) {
+            try {
+                android.os.Vibrator v = (android.os.Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+                if (v == null || !v.hasVibrator()) return;
+                org.json.JSONArray arr = new org.json.JSONArray(patternJson);
+                long[] timings = new long[arr.length()];
+                for (int i = 0; i < arr.length(); i++) {
+                    timings[i] = arr.getLong(i);
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    v.vibrate(android.os.VibrationEffect.createWaveform(timings, -1));
+                } else {
+                    v.vibrate(timings, -1);
+                }
+            } catch (Exception e) {
+                try {
+                    android.os.Vibrator v = (android.os.Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+                    if (v != null) v.vibrate(180);
+                } catch (Exception ignored) {}
+            }
+        }
     }
 
     private Location getBestCurrentLocation() {
@@ -320,6 +343,13 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
     @Override
     protected void onPause() {
         super.onPause();
+        // Giữ LocationListener tiếp tục nhận toạ độ khi chạy nền hoặc tắt màn hình
+        // để hỗ trợ tính năng phát hiện vật phẩm hoang dã và rung cảnh báo.
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
         if (locationManager != null) {
             try {
                 locationManager.removeUpdates(this);

@@ -691,6 +691,91 @@ h3 {
   display: none;
 }
 
+/* ---------------------------------------------------------------- Thanh La Bàn Radar Chỉ Hướng Vật Phẩm */
+.drop-radar-banner {
+  position: fixed;
+  bottom: calc(var(--safe-b) + 78px);
+  top: auto;
+  left: 12px;
+  right: 12px;
+  max-width: 440px;
+  margin: 0 auto;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, rgba(22, 17, 12, 0.96), rgba(32, 25, 18, 0.96));
+  border: 1.5px solid rgba(245, 158, 11, 0.6);
+  border-radius: 14px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.8), 0 0 16px rgba(245, 158, 11, 0.25);
+  color: var(--bone);
+  font-size: 12.5px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  animation: radarFloat 2.8s infinite ease-in-out;
+  pointer-events: auto;
+}
+
+.drop-radar-banner[hidden] {
+  display: none !important;
+}
+
+.drop-radar-banner--ready {
+  border-color: #4ade80;
+  background: linear-gradient(135deg, rgba(12, 34, 18, 0.97), rgba(18, 50, 26, 0.97));
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.85), 0 0 22px rgba(74, 222, 128, 0.45);
+}
+
+.drop-radar__compass {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(245, 158, 11, 0.18);
+  border: 1.5px solid rgba(245, 158, 11, 0.5);
+  flex: none;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
+  transition: transform 0.2s ease-out;
+}
+
+@keyframes radarFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.drop-radar__icon {
+  font-size: 20px;
+  line-height: 1;
+  flex: none;
+}
+
+.drop-radar__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.drop-radar__sub {
+  font-size: 11px;
+  color: var(--ink-dim);
+  margin-top: 1px;
+}
+
+@keyframes radarPulse {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
 /* Danh sách hành động bên trong Drawer */
 .zone-actions {
   display: grid;

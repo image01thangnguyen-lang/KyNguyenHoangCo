@@ -78,6 +78,9 @@ import {
   resolveCoopRewards,
   upgradeArtisanRankWithGold,
   upgradeFishTrapWithGold,
+  buyItemFromNpc,
+  sellItemToNpc,
+  claimWeekendQuest,
 } from '../../../packages/game-core/src/index.js';
              
                
@@ -88,8 +91,6 @@ import {
            
             
            
-                 
-                
                                                   
 
 import { MapView, featureAtPoint } from './mapView.js';
@@ -213,24 +214,115 @@ const POOL_BY_ZONE                                                 = {
   ],
 };
 
+let lastVibratedDropId                = null;
+
+function getCompassDirection(from        , to        )                                                 {
+  const lat1 = (from.lat * Math.PI) / 180;
+  const lat2 = (to.lat * Math.PI) / 180;
+  const dLon = ((to.lon - from.lon) * Math.PI) / 180;
+
+  const y = Math.sin(dLon) * Math.cos(lat2);
+  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+  let brng = (Math.atan2(y, x) * 180) / Math.PI;
+  brng = (brng + 360) % 360;
+
+  const dirs = [
+    { name: 'Bắc', arrow: '⬆️' },
+    { name: 'Đông Bắc', arrow: '↗️' },
+    { name: 'Đông', arrow: '➡️' },
+    { name: 'Đông Nam', arrow: '↘️' },
+    { name: 'Nam', arrow: '⬇️' },
+    { name: 'Tây Nam', arrow: '↙️' },
+    { name: 'Tây', arrow: '⬅️' },
+    { name: 'Tây Bắc', arrow: '↖️' },
+  ];
+  const idx = Math.round(brng / 45) % 8;
+  return { angle: brng, name: dirs[idx].name, arrow: dirs[idx].arrow };
+}
+
+function updateDropRadar(drop                  , dist         , playerPos         )       {
+  const banner = document.getElementById('drop-radar-banner');
+  if (!banner) return;
+
+  if (!drop || dist === undefined || !playerPos) {
+    banner.hidden = true;
+    return;
+  }
+
+  banner.hidden = false;
+  const dir = getCompassDirection(playerPos, { lat: drop.lat, lon: drop.lon });
+  const roundedDist = Math.round(dist);
+
+  if (dist <= 25) {
+    // Đã vào bán kính nhặt (<= 25m)
+    banner.className = 'drop-radar-banner drop-radar-banner--ready';
+    banner.innerHTML = `
+      <div class="drop-radar__icon">✨</div>
+      <div class="drop-radar__info">
+        <strong>${drop.nameVi} (+${drop.qty})</strong> • Cách <strong>${roundedDist}m</strong>
+        <div class="drop-radar__sub" style="color:#86efac;font-weight:600;">Đã đủ gần! Chạm để nhặt ngay</div>
+      </div>
+      <button id="btn-radar-collect" class="btn btn--tiny btn--primary" style="background:#16a34a;border-color:#4ade80;font-weight:800;padding:6px 12px;font-size:0.85rem;white-space:nowrap;">🖐️ Nhặt (+${drop.qty})</button>
+    `;
+    const btn = document.getElementById('btn-radar-collect');
+    if (btn) {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        collectWorldDrop(drop);
+      };
+    }
+  } else {
+    // Đang ở khoảng cách phát hiện (~26m - 65m): hiển thị la bàn chỉ hướng
+    banner.className = 'drop-radar-banner';
+    banner.innerHTML = `
+      <div class="drop-radar__compass" style="transform: rotate(${dir.angle}deg); font-size:1.25rem;">🧭</div>
+      <div class="drop-radar__info">
+        <strong>${drop.nameVi} (+${drop.qty})</strong> • Cách <strong>${roundedDist}m</strong> (${dir.arrow} Hướng ${dir.name})
+        <div class="drop-radar__sub">Tiến lại gần &le; 25m để nhặt</div>
+      </div>
+    `;
+  }
+}
+
+function checkDropProximityAndAlert()       {
+  if (worldDrops.length === 0) {
+    lastVibratedDropId = null;
+    updateDropRadar(null);
+    return;
+  }
+
+  const drop = worldDrops[0];
+  const { render: at, position: pos } = currentPosition();
+  const playerPos = pos ?? at;
+  const dist = distanceMeters(playerPos, { lat: drop.lat, lon: drop.lon });
+
+  // 1. Nếu vật phẩm nằm trong bán kính phát hiện (<= 60m): kích hoạt rung cảnh báo
+  if (dist <= 60) {
+    if (lastVibratedDropId !== drop.id) {
+      lastVibratedDropId = drop.id;
+      buzz([0, 180, 120, 240]); // Nhịp rung đôi rõ rệt trong túi quần
+    }
+  }
+
+  // 2. Cập nhật thanh La Bàn Radar trên giao diện
+  updateDropRadar(drop, dist, playerPos);
+}
+
 /**
- * Sinh DUY NHẤT 1 cụm vật phẩm quanh người chơi.
- * Chỉ gặp 1 loại vật phẩm 1 lần để bản đồ thoáng đãng, không rối mắt.
+ * Sinh DUY NHẤT 1 cụm vật phẩm quanh người chơi trong tầm phát hiện ~20m - 48m.
  */
 function spawnSingleWorldDropNear(center        , zone        )       {
-  // Nếu trên bản đồ đã có 1 điểm vật phẩm chưa nhặt -> không sinh thêm
   if (worldDrops.length > 0) return;
 
   const pool = POOL_BY_ZONE[zone] ?? POOL_BY_ZONE.wilderness;
   const item = pool[Math.floor(Math.random() * pool.length)];
 
-  // Sinh toạ độ ngẫu nhiên xung quanh người chơi ở bán kính 8m - 24m
-  const dist = 8 + Math.random() * 16;
+  // Sinh toạ độ ngẫu nhiên xung quanh người chơi ở bán kính 18m - 46m
+  const dist = 18 + Math.random() * 28;
   const angle = Math.random() * Math.PI * 2;
   const dLat = (dist * Math.cos(angle)) * metersToLatDegrees(1);
   const dLon = (dist * Math.sin(angle)) * metersToLonDegrees(1, center.lat);
 
-  // Số lượng vật phẩm từ 2 đến 4 món trong cụm
   const qty = 2 + Math.floor(Math.random() * 3);
 
   worldDrops = [{
@@ -242,16 +334,19 @@ function spawnSingleWorldDropNear(center        , zone        )       {
     lon: center.lon + dLon,
     spawnedAtMs: now(),
   }];
+
+  checkDropProximityAndAlert();
 }
 
 function collectWorldDrop(drop           )       {
   if (!app.profile) return;
 
-  const { render: at } = currentPosition();
-  const dist = distanceMeters(at, { lat: drop.lat, lon: drop.lon });
+  const { render: at, position: pos } = currentPosition();
+  const playerPos = pos ?? at;
+  const dist = distanceMeters(playerPos, { lat: drop.lat, lon: drop.lon });
 
-  if (dist > 30) {
-    toast(`Vật phẩm ở hơi xa (~${Math.round(dist)}m). Hãy đi lại gần hơn để nhặt!`, 'warn');
+  if (dist > 25) {
+    toast(`Vật phẩm ở cách ~${Math.round(dist)}m. Hãy đi lại gần hơn (&le; 25m) để nhặt!`, 'warn');
     return;
   }
 
@@ -259,10 +354,12 @@ function collectWorldDrop(drop           )       {
   const currentQty = app.profile.player.carried[drop.itemId] ?? 0;
   app.profile.player.carried[drop.itemId] = currentQty + drop.qty;
 
-  // Xoá drop khỏi danh sách (để trống cho lượt sinh tiếp theo khi đi bộ)
+  // Xoá drop khỏi danh sách và reset radar
   worldDrops = [];
+  lastVibratedDropId = null;
+  updateDropRadar(null);
 
-  buzz(18);
+  buzz(25);
   audio.play('pickup');
   toast(`✨ Đã nhặt: +${drop.qty} ${drop.nameVi}!`, 'good');
 
@@ -293,11 +390,11 @@ function currentPosition()                                                      
   let targetPos        ;
   let hasFix = false;
 
-  if (state?.position && geo?.hasFreshFix()) {
-    targetPos = state.position;
-    hasFix = true;
-  } else if (!isNativeApk() && devMockPosition) {
+  if (devMockPosition) {
     targetPos = devMockPosition;
+    hasFix = true;
+  } else if (state?.position && geo?.hasFreshFix()) {
+    targetPos = state.position;
     hasFix = true;
   } else {
     const steps = app.profile?.player?.lifetime?.steps ?? 0;
@@ -750,7 +847,7 @@ function render(forceAll = false)       {
   if (forceAll || active === 'log') {
     const current = chapter(profile.story.chapterIndex);
     const played = (current?.beats ?? []).filter((b) => profile.story.playedBeatIds.includes(b.id));
-    renderLog(view, profile, current?.titleVi ?? '—', current?.summaryVi ?? '', played);
+    renderLog(view, profile, current?.titleVi ?? '—', current?.summaryVi ?? '', played, handlers, now());
   }
   if (forceAll || active === 'settings') {
     renderSettings(profile, handlers, app.storageOk);
@@ -779,6 +876,8 @@ function drawMap()       {
     traps: app.profile.player.traps,
     activePetId: app.profile.player.pets?.find((p     ) => p.isActive)?.petId ?? null,
   });
+
+  checkDropProximityAndAlert();
 }
 
 function toRoman(num        )         {
@@ -1250,6 +1349,21 @@ const handlers           = {
 
   onPlantCrop(plotIndex, cropId) {
     if (!app.profile) return;
+
+    // Kiểm tra: phải đứng tại doanh trại mới được gieo hạt
+    const campCenter = getHomeCampCenter();
+    const pos = currentPosition().position;
+    if (campCenter && pos) {
+      const dist = distanceMeters(pos, campCenter);
+      if (dist > 200) {
+        toast(`🏕️ Cần về Doanh Trại mới có thể gieo hạt! (Còn cách ${Math.round(dist)}m)`, 'bad');
+        return;
+      }
+    } else if (!campCenter) {
+      toast('Chưa có doanh trại. Hãy đặt trại trước!', 'bad');
+      return;
+    }
+
     const seedQty = app.profile.player.carried['seed'] ?? 0;
     if (seedQty <= 0) {
       toast('Cần có Hạt giống trong túi đồ để gieo trồng.', 'bad');
@@ -1344,6 +1458,22 @@ const handlers           = {
   onOpenCoop() {
     if (!app.profile) return;
     openCoopModal();
+  },
+
+  onClaimWeekendQuest(questId) {
+    if (!app.profile) return;
+    const currentPoi = app.view?.location?.insidePoi ?? null;
+    const result = claimWeekendQuest(app.profile.player, questId, now(), currentPoi);
+    if (result.ok) {
+      app.profile.player = result.player;
+      persist();
+      audio.play('quest_complete');
+      buzz([0, 150, 100, 250]);
+      toast(result.messageVi, 'good');
+      render();
+    } else {
+      toast(result.messageVi, 'bad');
+    }
   },
 
   onToggleSetting(key) {
@@ -1546,6 +1676,31 @@ function wireStaticControls()       {
   el('btn-close-notifs').onclick = () => {
     el('popover-notifications').hidden = true;
   };
+
+  // Mở Cẩm Nang Sinh Tồn từ HUD bars hoặc từ nút trong Nhật Ký
+  const openSurvivalGuide = () => {
+    const overlay = el('overlay-survival-guide');
+    if (overlay) overlay.hidden = false;
+    audio.play('click');
+  };
+
+  const closeSurvivalGuide = () => {
+    const overlay = el('overlay-survival-guide');
+    if (overlay) overlay.hidden = true;
+    audio.play('click');
+  };
+
+  const hudBars = document.getElementById('hud-survival-bars');
+  if (hudBars) hudBars.onclick = openSurvivalGuide;
+
+  const btnOpenGuide = document.getElementById('btn-open-survival-guide');
+  if (btnOpenGuide) btnOpenGuide.onclick = openSurvivalGuide;
+
+  const btnCloseGuide = document.getElementById('btn-survival-guide-close');
+  if (btnCloseGuide) btnCloseGuide.onclick = closeSurvivalGuide;
+
+  const btnOkGuide = document.getElementById('btn-survival-guide-ok');
+  if (btnOkGuide) btnOkGuide.onclick = closeSurvivalGuide;
 
   el('narration-next').onclick = () => {
     speech.stop();
@@ -1752,6 +1907,25 @@ function wirePedometerPanel()       {
     render();
   };
 
+  const teleportToCamp = () => {
+    const campCenter = getHomeCampCenter();
+    if (!campCenter) {
+      toast('Chưa có doanh trại nào được thiết lập. Hãy đặt trại trước!', 'bad');
+      return;
+    }
+    devMockPosition = {
+      lat: campCenter.lat,
+      lon: campCenter.lon,
+    };
+    smoothRenderPos = { ...devMockPosition };
+    toast('🏕️ [Dev] Đã dịch chuyển về Doanh Trại thành công!', 'good');
+    sync();
+    render();
+  };
+
+  const btnCamp = document.getElementById('btn-tp-camp');
+  if (btnCamp) btnCamp.onclick = () => teleportToCamp();
+
   const btnNear = document.getElementById('btn-tp-nearest-npc');
   if (btnNear) btnNear.onclick = () => teleportToPoi();
 
@@ -1766,6 +1940,18 @@ function wirePedometerPanel()       {
 
   const btnRest = document.getElementById('btn-tp-restaurant');
   if (btnRest) btnRest.onclick = () => teleportToPoi((p) => p.category === 'restaurant' || p.categoryVi?.includes('Ăn') || p.nameVi?.includes('Quán'));
+
+  const btnTayHo = document.getElementById('btn-tp-tayho');
+  if (btnTayHo) btnTayHo.onclick = () => teleportToPoi((p) => p.nameVi?.includes('Tây Hồ') || p.nameVi?.includes('Trấn Quốc') || p.nameVi?.includes('Trúc Bạch'));
+
+  const btnHoGuom = document.getElementById('btn-tp-hoguom');
+  if (btnHoGuom) btnHoGuom.onclick = () => teleportToPoi((p) => p.nameVi?.includes('Hồ Gươm') || p.nameVi?.includes('Tháp Rùa') || p.nameVi?.includes('Ngọc Sơn') || p.nameVi?.includes('Hàng Bông'));
+
+  const btnBatTrang = document.getElementById('btn-tp-battrang');
+  if (btnBatTrang) btnBatTrang.onclick = () => teleportToPoi((p) => p.nameVi?.includes('Bát Tràng') || p.nameVi?.includes('Vạn Phúc') || p.nameVi?.includes('Đa Sỹ') || p.nameVi?.includes('Gốm'));
+
+  const btnBaVi = document.getElementById('btn-tp-bavi');
+  if (btnBaVi) btnBaVi.onclick = () => teleportToPoi((p) => p.nameVi?.includes('Ba Vì') || p.nameVi?.includes('Suối Hai') || p.nameVi?.includes('Sóc Sơn'));
 }
 
 /** Nhảy chính xác tới đúng giờ đích (ví dụ 7h00 sáng hoặc 20h00 tối). */

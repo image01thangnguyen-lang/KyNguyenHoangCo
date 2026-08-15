@@ -51,22 +51,23 @@
           </button>
         </div>
 
-        <div class="bars">
-          <div class="bar bar--satiety" title="Độ no">
+        <div class="bars" id="hud-survival-bars" style="cursor: pointer;" title="Chạm để xem Cẩm Nang &amp; Chi tiết chỉ số sinh tồn">
+          <div class="bar bar--satiety" title="Độ no / Đói (Satiety: 0-100)">
             <span class="bar__icon">🍗</span>
             <div class="bar__track"><div id="bar-satiety" class="bar__fill"></div></div>
             <span id="val-satiety" class="bar__value">0</span>
           </div>
-          <div class="bar bar--hydration" title="Độ khát">
+          <div class="bar bar--hydration" title="Độ khát (Hydration: 0-100)">
             <span class="bar__icon">💧</span>
             <div class="bar__track"><div id="bar-hydration" class="bar__fill"></div></div>
             <span id="val-hydration" class="bar__value">0</span>
           </div>
-          <div class="bar bar--hp" title="Thể lực / HP">
+          <div class="bar bar--hp" title="Thể lực / Máu (HP: 0-100)">
             <span class="bar__icon">❤️</span>
             <div class="bar__track"><div id="bar-hp" class="bar__fill"></div></div>
             <span id="val-hp" class="bar__value">0</span>
           </div>
+          <div id="hud-guide-btn" style="font-size:0.65rem; color:#fef08a; background:rgba(0,0,0,0.55); padding:1.5px 6px; border-radius:8px; border:1px dashed rgba(254,240,138,0.35); text-align:center; margin-top:2px;">📖 Xem chỉ số</div>
         </div>
 
         <!-- Hộp thông báo popover dạng gom gọn -->
@@ -95,6 +96,9 @@
           <!-- Thông tin vùng mỏng gọn ở góc trên bên phải dưới HUD -->
           <div id="map-zone" class="map__zone"></div>
           <div id="safety-banner" class="safety-banner" hidden></div>
+
+          <!-- Thanh La Bàn Radar Chỉ Hướng Vật Phẩm Phát Hiện Được -->
+          <div id="drop-radar-banner" class="drop-radar-banner" hidden></div>
         </div>
 
         <!-- Backdrop khi mở Drawer -->
@@ -170,6 +174,9 @@
             </div>
           </div>
           <div class="drawer-content">
+            <button id="btn-open-survival-guide" class="btn btn--primary" style="width: 100%; margin-bottom: 14px; padding: 10px 14px; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 800; background: linear-gradient(135deg, #1e293b, #0f172a); border: 1.5px solid #fef08a; color: #fef08a; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
+              <span style="font-size: 1.2rem;">📖</span> Cẩm Nang &amp; Cơ Chế Sinh Tồn
+            </button>
             <div id="quest-board" class="quests"></div>
             <h3 class="section-title">Chương truyện</h3>
             <div id="chapter-info" class="chapter"></div>
@@ -272,13 +279,18 @@
             <button id="btn-saturday" class="btn btn--tiny">Tới Trăng Máu</button>
           </label>
           <div class="pedo__section" style="margin-top:8px;border-top:1px dashed rgba(255,255,255,0.15);padding-top:6px;">
-            <div style="font-size:0.75rem;font-weight:800;color:#fef08a;margin-bottom:4px;">📍 Dịch chuyển đến NPC gần nhất (Dev Demo):</div>
+            <div style="font-size:0.75rem;font-weight:800;color:#fef08a;margin-bottom:4px;">📍 Dịch chuyển vị trí (Dev Demo):</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+              <button id="btn-tp-camp" class="btn btn--tiny" style="grid-column: span 2; background: linear-gradient(135deg, #15803d, #166534); border-color: #4ade80; color: #f0fdf4; font-weight: bold;">🏕️ Về Doanh Trại</button>
               <button id="btn-tp-nearest-npc" class="btn btn--tiny btn--primary" style="grid-column: span 2;">🚀 Đến NPC gần nhất</button>
               <button id="btn-tp-cafe" class="btn btn--tiny">☕ Quán Cà Phê</button>
               <button id="btn-tp-teahouse" class="btn btn--tiny">🍵 Trà Quán Cổ</button>
               <button id="btn-tp-market" class="btn btn--tiny">🏺 Tiệm Đồ Cổ</button>
               <button id="btn-tp-restaurant" class="btn btn--tiny">🍲 Quán Ăn</button>
+              <button id="btn-tp-tayho" class="btn btn--tiny">🌊 Hồ Tây</button>
+              <button id="btn-tp-hoguom" class="btn btn--tiny">🚶‍♂️ Hồ Gươm</button>
+              <button id="btn-tp-battrang" class="btn btn--tiny">🏺 Làng Bát Tràng</button>
+              <button id="btn-tp-bavi" class="btn btn--tiny">🏕️ Rừng Ba Vì</button>
             </div>
           </div>
         </div>
@@ -664,6 +676,87 @@
         <div class="coop-logs-section">
           <div id="coop-battle-logs" class="coop-logs-container"></div>
         </div>
+      </div>
+    </div>
+
+    <!-- Lớp phủ: Cẩm Nang Sinh Tồn Hoang Cổ (Survival Guide Handbook) -->
+    <div id="overlay-survival-guide" class="overlay" hidden>
+      <div class="card card--survival-guide" style="max-width: 450px; max-height: 85vh; overflow-y: auto; padding: 18px 20px;">
+        <div class="panel-head" style="margin-bottom: 14px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 1.6rem;">📖</span>
+            <div>
+              <h2 style="margin: 0; font-size: 1.15rem; color: #fef08a;">Cẩm Nang Sinh Tồn</h2>
+              <small style="color: var(--ink-dim);">Luật &amp; Cơ chế chỉ số trong Kỷ Nguyên Hoang Cổ</small>
+            </div>
+          </div>
+          <button id="btn-survival-guide-close" class="drawer-close" title="Đóng">✕</button>
+        </div>
+
+        <div class="survival-guide-body" style="display: flex; flex-direction: column; gap: 12px; font-size: 0.88rem; line-height: 1.5; color: var(--bone);">
+          
+          <!-- Quy tắc vàng -->
+          <div style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.08)); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 10px; padding: 10px 12px;">
+            <div style="font-weight: 800; color: #fef08a; display: flex; align-items: center; gap: 6px;">
+              <span>🌟</span> QUY TẮC VÀNG: Đi bộ luôn lãi ròng!
+            </div>
+            <p style="margin: 4px 0 0 0; font-size: 0.82rem; color: var(--ink);">
+              Mỗi <strong>1.000 bước chân</strong> chỉ tiêu hao <strong>1 điểm Đói</strong> (10.000 bước chỉ tốn 10 đói = 1 quả dại), nhưng giúp bạn thu hoạch được hàng chục tài nguyên giá trị dọc đường.
+            </p>
+          </div>
+
+          <!-- Đói (Satiety) -->
+          <div style="background: rgba(0,0,0,0.35); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 10px; padding: 10px 12px;">
+            <div style="font-weight: 800; color: #fbbf24; display: flex; align-items: center; gap: 6px; font-size: 0.95rem;">
+              <span>🍗</span> ĐỘ NO &amp; ĐÓI (Satiety: 0 – 100)
+            </div>
+            <ul style="margin: 6px 0 0 16px; padding: 0; font-size: 0.82rem; color: var(--ink);">
+              <li><strong>Tốc độ giảm:</strong> <code>-5 điểm / giờ</code> khi thức; <code>-2 điểm / giờ</code> khi ngủ tại Trại.</li>
+              <li><strong>Đi bộ:</strong> <code>-1 điểm / 1.000 bước</code>.</li>
+              <li>⚠️ <strong>Khi Đói = 0:</strong> Bị trừ <strong>-5 HP mỗi 10 phút</strong> cho đến khi ăn lại.</li>
+              <li>🍏 <strong>Hồi phục:</strong> Quả dại (+10), Cá nướng (+30), Thịt nướng (+40), Thịt khô (+25)...</li>
+            </ul>
+          </div>
+
+          <!-- Khát (Hydration) -->
+          <div style="background: rgba(0,0,0,0.35); border: 1px solid rgba(6, 182, 212, 0.25); border-radius: 10px; padding: 10px 12px;">
+            <div style="font-weight: 800; color: #38bdf8; display: flex; align-items: center; gap: 6px; font-size: 0.95rem;">
+              <span>💧</span> NƯỚC UỐNG &amp; ĐỘ KHÁT (Hydration: 0 – 100)
+            </div>
+            <ul style="margin: 6px 0 0 16px; padding: 0; font-size: 0.82rem; color: var(--ink);">
+              <li><strong>Tốc độ giảm:</strong> <code>-8 điểm / giờ</code> khi thức; <code>-3 điểm / giờ</code> khi ngủ tại Trại.</li>
+              <li><strong>Đi bộ:</strong> Không tốn thêm nước (không phạt người đi bộ).</li>
+              <li>⚠️ <strong>Khi Khát = 0:</strong> Bị trừ <strong>-8 HP mỗi 10 phút</strong> (cực kỳ nguy hiểm, cạn nước ~2h là kiệt sức).</li>
+              <li>🥛 <strong>Hồi phục:</strong> Nước sôi (+50 khát, an toàn 100%), Nước thô (+20 khát, có 40% nguy cơ đau bụng mất 15 HP).</li>
+            </ul>
+          </div>
+
+          <!-- Thể lực (HP) & Giấc ngủ -->
+          <div style="background: rgba(0,0,0,0.35); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 10px; padding: 10px 12px;">
+            <div style="font-weight: 800; color: #f87171; display: flex; align-items: center; gap: 6px; font-size: 0.95rem;">
+              <span>❤️</span> THỂ LỰC &amp; MÁU (HP: 0 – 100)
+            </div>
+            <ul style="margin: 6px 0 0 16px; padding: 0; font-size: 0.82rem; color: var(--ink);">
+              <li><strong>Hồi phục khi Ngủ tại Trại:</strong> <code>+14 HP / giờ</code> (cần Đói &amp; Khát &gt; 0).</li>
+              <li><strong>Hồi phục tự nhiên:</strong> <code>+1 HP / giờ</code> khi No đủ (Đói &ge; 50).</li>
+              <li>😵 <strong>Khi HP = 0 (Ngất xỉu):</strong> Làm rơi <strong>30% đồ đang mang</strong> trên người, tỉnh lại ở Trại với HP 30, Đói 20, Khát 20.</li>
+              <li>🔒 <strong>Két An Toàn:</strong> Toàn bộ vật phẩm cất trong Két An Toàn được <strong>bảo toàn 100%</strong>, không bao giờ mất khi ngất!</li>
+            </ul>
+          </div>
+
+          <!-- Bảo vệ người chơi offline -->
+          <div style="background: rgba(0,0,0,0.35); border: 1px solid rgba(74, 222, 128, 0.25); border-radius: 10px; padding: 10px 12px;">
+            <div style="font-weight: 800; color: #4ade80; display: flex; align-items: center; gap: 6px; font-size: 0.95rem;">
+              <span>🛡️</span> BẢO VỆ OFFLINE (Vắng game lâu ngày)
+            </div>
+            <p style="margin: 4px 0 0 0; font-size: 0.82rem; color: var(--ink);">
+              Nếu bạn bận việc hoặc đi công tác nhiều ngày, game <strong>chỉ mô phỏng tối đa 24 giờ</strong> và đóng băng chỉ số ở <strong>mức sàn an toàn</strong> (HP 30, Đói 20, Khát 20) — bạn <strong>không bao giờ bị chết hay bị phạt mất đồ</strong> khi mở lại game!
+            </p>
+          </div>
+
+        </div>
+
+        <button id="btn-survival-guide-ok" class="btn btn--primary" style="width: 100%; margin-top: 14px; padding: 10px; font-weight: 700;">Đã hiểu!</button>
       </div>
     </div>
 

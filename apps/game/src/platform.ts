@@ -233,8 +233,13 @@ export function readTextFile(file: File): Promise<string> {
 
 export function buzz(pattern: number | number[]): void {
   try {
-    navigator.vibrate?.(pattern);
+    if (typeof (globalThis as any).AndroidBridge?.vibrate === 'function') {
+      const arr = Array.isArray(pattern) ? pattern : [0, pattern];
+      (globalThis as any).AndroidBridge.vibrate(JSON.stringify(arr));
+    } else {
+      navigator.vibrate?.(pattern);
+    }
   } catch {
-    /* trình duyệt không hỗ trợ rung */
+    /* thiết bị không hỗ trợ rung */
   }
 }

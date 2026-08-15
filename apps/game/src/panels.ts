@@ -27,6 +27,8 @@ import {
   slotsUsed,
   FISH_TRAP_TIERS,
   getFishTrapTier,
+  getWeekendQuestBoard,
+  isWeekend,
 } from '../../../packages/game-core/src/index.ts';
 import { actionIconSvg, itemIconSvg, zoneIconSvg, coinIconSvg } from './itemIcons.ts';
 import { audio } from './audio.ts';
@@ -68,6 +70,7 @@ export interface Handlers {
   onUpgradeArtisan?(): void;
   onOpenAR?(): void;
   onOpenCoop?(): void;
+  onClaimWeekendQuest?(questId: string): void;
   onToggleSetting(key: 'parentalNightLock' | 'realWeatherSync' | 'narrationAudio' | 'haptics'): void;
   onExport(): void;
   onImport(): void;
@@ -1178,10 +1181,89 @@ export function renderLog(
   chapterTitle: string,
   chapterSummary: string,
   playedBeats: { id: string; textVi: string }[],
+  handlers?: Handlers,
+  nowMs?: number,
 ): void {
   const board = el('quest-board');
   board.replaceChildren();
 
+  // 1. Khối Nhiệm Vụ Dã Ngoại Cuối Tuần Hà Nội (Tự động kích hoạt Thứ 7 & Chủ Nhật)
+  const currentTime = nowMs ?? Date.now();
+  const weekendBoard = getWeekendQuestBoard(profile.player, currentTime, view.location?.insidePoi ?? null);
+
+  const weekendCard = document.createElement('div');
+  weekendCard.className = 'weekend-quests-card';
+  weekendCard.style.cssText = 'background:linear-gradient(135deg, rgba(30,24,18,0.95), rgba(45,34,22,0.95));border:1.5px solid rgba(245,158,11,0.5);border-radius:12px;padding:12px 14px;margin-bottom:14px;box-shadow:0 4px 16px rgba(0,0,0,0.5);';
+
+  if (weekendBoard.isWeekendActive) {
+    weekendCard.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(245,158,11,0.25);padding-bottom:8px;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:1.5rem;">🎉</span>
+          <div>
+            <div style="font-weight:800;font-size:0.98rem;color:#fef08a;display:flex;align-items:center;gap:6px;">
+              DÃ NGOẠI CUỐI TUẦN HÀ NỘI
+              <span class="chip chip--warn" style="font-size:0.68rem;padding:1px 6px;">Đang Diễn Ra</span>
+            </div>
+            <small style="color:var(--ink-dim);font-size:0.75rem;">Khám phá 8 địa điểm &amp; hoạt động nhận Đồng Vàng Cổ, Trứng Linh Thú!</small>
+          </div>
+        </div>
+      </div>
+      <div class="weekend-quest-list" style="display:flex;flex-direction:column;gap:8px;">
+        ${weekendBoard.quests.map((q) => `
+          <div class="weekend-quest-item" style="background:rgba(0,0,0,0.4);border:1px solid ${q.claimed ? 'rgba(255,255,255,0.08)' : q.done ? '#4ade80' : 'rgba(245,158,11,0.22)'};border-radius:8px;padding:8px 10px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+              <div style="display:flex;align-items:flex-start;gap:8px;flex:1;">
+                <span style="font-size:1.3rem;line-height:1.2;">${q.quest.icon}</span>
+                <div>
+                  <div style="font-weight:700;font-size:0.88rem;color:${q.claimed ? 'var(--ink-dim)' : '#fef08a'};">${q.quest.titleVi}</div>
+                  <div style="font-size:0.78rem;color:var(--ink-muted);margin-top:1px;">${q.quest.descVi}</div>
+                  <div style="font-size:0.72rem;color:${q.claimed ? 'var(--ink-faint)' : q.done ? '#86efac' : '#fb923c'};margin-top:3px;font-weight:600;">
+                    ${q.progressText}
+                  </div>
+                  <div style="display:flex;align-items:center;gap:6px;margin-top:4px;font-size:0.75rem;color:var(--gold-faint);">
+                    <span>🎁 Thưởng:</span>
+                    ${q.quest.rewards.map((r) => `<span>${itemIconSvg(r.itemId, 'mini-svg')} ${r.qty}</span>`).join(' ')}
+                  </div>
+                </div>
+              </div>
+              <div style="flex-shrink:0;">
+                ${q.claimed
+                  ? `<span class="chip" style="font-size:0.7rem;background:rgba(255,255,255,0.06);color:var(--ink-dim);padding:2px 6px;">Đã Nhận</span>`
+                  : q.done
+                    ? `<button type="button" class="btn btn--tiny btn--primary btn-claim-weekend" data-quest-id="${q.quest.id}" style="background:#16a34a;border-color:#4ade80;font-weight:800;white-space:nowrap;padding:5px 10px;font-size:0.78rem;">🎁 Nhận Thưởng</button>`
+                    : `<span class="chip chip--warn" style="font-size:0.7rem;padding:2px 6px;">Chưa Đến</span>`
+                }
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+
+    for (const claimBtn of weekendCard.querySelectorAll<HTMLButtonElement>('.btn-claim-weekend')) {
+      claimBtn.onclick = (e) => {
+        e.stopPropagation();
+        const qId = claimBtn.dataset.questId;
+        if (qId && handlers?.onClaimWeekendQuest) {
+          handlers.onClaimWeekendQuest(qId);
+        }
+      };
+    }
+  } else {
+    weekendCard.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:1.4rem;">🗓️</span>
+        <div>
+          <div style="font-weight:700;font-size:0.92rem;color:var(--gold);">DÃ NGOẠI CUỐI TUẦN HÀ NỘI</div>
+          <small style="color:var(--ink-dim);">Sự kiện sẽ tự động mở vào <strong>Thứ Bảy &amp; Chủ Nhật</strong> tới với 8 nhiệm vụ dã ngoại &amp; thưởng Đồng Vàng Cổ!</small>
+        </div>
+      </div>
+    `;
+  }
+  board.append(weekendCard);
+
+  // 2. Mục tiêu Cốt truyện / Tutorial hiện tại
   const isTutorial = profile.story.tutorialDay > 0;
   const header = document.createElement('div');
   header.className = 'quest-section-header';

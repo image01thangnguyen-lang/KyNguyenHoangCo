@@ -233,8 +233,13 @@ export function readTextFile(file      )                  {
 
 export function buzz(pattern                   )       {
   try {
-    navigator.vibrate?.(pattern);
+    if (typeof (globalThis       ).AndroidBridge?.vibrate === 'function') {
+      const arr = Array.isArray(pattern) ? pattern : [0, pattern];
+      (globalThis       ).AndroidBridge.vibrate(JSON.stringify(arr));
+    } else {
+      navigator.vibrate?.(pattern);
+    }
   } catch {
-    /* trình duyệt không hỗ trợ rung */
+    /* thiết bị không hỗ trợ rung */
   }
 }

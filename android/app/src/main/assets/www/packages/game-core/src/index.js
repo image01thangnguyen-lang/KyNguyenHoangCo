@@ -30,4 +30,5 @@ export * from './farming.js';
 export * from './lunar.js';
 export * from './coop.js';
 export * from './merchant.js';
+export * from './weekendQuests.js';
 export * from './game.js';

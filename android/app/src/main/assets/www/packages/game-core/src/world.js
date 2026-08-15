@@ -833,7 +833,147 @@ export function sampleHanoiPack()          {
       { id: 'ho_suoihai',   zone: 'water',    nameVi: 'Đại Đầm Suối Hai Mênh Mông (Ba Vì)',         lat: 21.1255, lon: 105.3785, radiusMeters: 350 },
       { id: 'ho_tiensa',    zone: 'water',    nameVi: 'Hồ Tiên Sa Thần Cảnh (Ba Vì)',               lat: 21.0925, lon: 105.3715, radiusMeters: 160 },
 
+      // ═══════════════════════════════════════════════════════════════
+      // LÀNG NGHỀ NGOẠI THÀNH (Bổ Sung Đầy Đủ)
+      // ═══════════════════════════════════════════════════════════════
+
+      // Hà Đông
+      { id: 'lang_lua_van_phuc',    zone: 'merchant', nameVi: 'Làng Lụa Vạn Phúc Thiên Niên (Hà Đông)',               lat: 20.9728, lon: 105.7548, radiusMeters: 100 },
+      { id: 'lang_ren_da_sy_hd',    zone: 'merchant', nameVi: 'Lò Rèn Đa Sỹ Cổ Nghề (Kiến Hưng - Hà Đông)',          lat: 20.9578, lon: 105.7778, radiusMeters: 90 },
+      { id: 'lang_may_phung_xa',    zone: 'merchant', nameVi: 'Làng Nghề May Phùng Xá (Mỹ Đức)',                      lat: 20.6968, lon: 105.7368, radiusMeters: 85 },
+
+      // Thường Tín
+      { id: 'lang_theu_quat_dong',  zone: 'merchant', nameVi: 'Làng Thêu Ren Quất Động Ngàn Kim Chỉ (Thường Tín)',   lat: 20.8618, lon: 105.8978, radiusMeters: 90 },
+      { id: 'lang_dieu_khac_nhan_hien', zone: 'merchant', nameVi: 'Làng Điêu Khắc Đá Nhân Hiền (Thường Tín)',        lat: 20.8478, lon: 105.8888, radiusMeters: 85 },
+      { id: 'lang_dan_lat_thuy_ung',zone: 'merchant', nameVi: 'Làng Đan Lát Thụy Ứng (Thường Tín)',                  lat: 20.8728, lon: 105.8618, radiusMeters: 90 },
+
+      // Ứng Hòa
+      { id: 'lang_tam_huong_qpc',   zone: 'merchant', nameVi: 'Làng Tăm Hương Quảng Phú Cầu (Ứng Hòa)',              lat: 20.7978, lon: 105.8178, radiusMeters: 95 },
+
+      // Chương Mỹ
+      { id: 'lang_tho_cam_phu_nghia',zone: 'merchant',nameVi: 'Làng Dệt Thổ Cẩm Phú Nghĩa (Chương Mỹ)',              lat: 20.9068, lon: 105.7468, radiusMeters: 90 },
+      { id: 'lang_may_tre_phu_vinh2',zone: 'forest',  nameVi: 'Rừng Mây Tre Đan Phú Vinh (Chương Mỹ)',               lat: 20.9115, lon: 105.7618, radiusMeters: 95 },
+
+      // Hoài Đức
+      { id: 'lang_chup_anh_lai_xa', zone: 'merchant', nameVi: 'Làng Nghề Nhiếp Ảnh Lai Xá (Hoài Đức)',               lat: 21.0178, lon: 105.7218, radiusMeters: 80 },
+      { id: 'lang_nuoc_mam_cu_da',  zone: 'merchant', nameVi: 'Làng Nghề Nước Mắm Cự Đà (Thanh Oai)',                lat: 20.9018, lon: 105.8018, radiusMeters: 80 },
+
+      // Gia Lâm
+      { id: 'lang_gom_kim_lan',     zone: 'merchant', nameVi: 'Làng Gốm Kim Lan Cổ (Gia Lâm)',                       lat: 20.9858, lon: 105.9068, radiusMeters: 90 },
+      { id: 'lang_tranh_dong_ho',   zone: 'merchant', nameVi: 'Làng Tranh Dân Gian Đông Hồ (Gia Lâm)',               lat: 21.1158, lon: 106.0328, radiusMeters: 90 },
+
+      // Đông Anh
+      { id: 'lang_che_bien_lim_dong',zone:'merchant', nameVi: 'Làng Nghề Chế Biến Lâm Sản Đông Anh',                lat: 21.0958, lon: 105.8758, radiusMeters: 85 },
+
+      // Sóc Sơn
+      { id: 'lang_moc_pha_thi',     zone: 'merchant', nameVi: 'Làng Nghề Mộc Phù Lỗ (Sóc Sơn)',                     lat: 21.2155, lon: 105.8255, radiusMeters: 90 },
+      { id: 'lang_go_my_nghe_ss',   zone: 'merchant', nameVi: 'Làng Nghề Gỗ Mỹ Nghệ Sóc Sơn',                      lat: 21.2358, lon: 105.7958, radiusMeters: 85 },
+
+      // ═══════════════════════════════════════════════════════════════
+      // TRUNG TÂM THƯƠNG MẠI & ĐẠI SIÊU THỊ (Bổ Sung Đầy Đủ)
+      // ═══════════════════════════════════════════════════════════════
+
+      { id: 'vincom_op',            zone: 'merchant', nameVi: 'Đại Thành Vincom Mega Mall Ocean Park (Gia Lâm)',      lat: 20.9928, lon: 105.9462, radiusMeters: 200 },
+      { id: 'vincom_pnt',           zone: 'merchant', nameVi: 'Kim Tháp Vincom Center Phạm Ngọc Thạch',              lat: 21.0068, lon: 105.8328, radiusMeters: 80 },
+      { id: 'vincom_long_bien',     zone: 'merchant', nameVi: 'Vincom Plaza Long Biên (Cổ Linh)',                    lat: 21.0458, lon: 105.8888, radiusMeters: 90 },
+      { id: 'mipec_lb',             zone: 'merchant', nameVi: 'Mipec Mall Long Biên (Cầu Chương Dương)',             lat: 21.0478, lon: 105.8748, radiusMeters: 85 },
+      { id: 'savico_lb',            zone: 'merchant', nameVi: 'Savico MegaMall Long Biên',                          lat: 21.0398, lon: 105.8878, radiusMeters: 110 },
+      { id: 'indochina_plaza',      zone: 'merchant', nameVi: 'Indochina Plaza Hà Nội (Xuân Thủy)',                  lat: 21.0358, lon: 105.7842, radiusMeters: 70 },
+      { id: 'parkson_thai_ha',      zone: 'merchant', nameVi: 'Parkson Viet Tower (Thái Hà)',                        lat: 21.0148, lon: 105.8178, radiusMeters: 75 },
+      { id: 'intimex_giang_vo',     zone: 'merchant', nameVi: 'Tổ Hợp Intimex Giảng Võ (Giảng Võ)',                 lat: 21.0268, lon: 105.8258, radiusMeters: 80 },
+      { id: 'aeon_hadong2',         zone: 'merchant', nameVi: 'AEON Mall Hà Đông (Dương Nội)',                       lat: 20.9785, lon: 105.7485, radiusMeters: 170 },
+      { id: 'aeon_giaolam',         zone: 'merchant', nameVi: 'AEON Mall Gia Lâm (Đa Tốn)',                         lat: 21.0078, lon: 105.9278, radiusMeters: 160 },
+      { id: 'bigc_thanglong2',      zone: 'merchant', nameVi: 'Big C Thăng Long (Trần Duy Hưng)',                   lat: 21.0058, lon: 105.7928, radiusMeters: 80 },
+      { id: 'mega_market_nlp',      zone: 'merchant', nameVi: 'Mega Market Nguyễn Xiển (Thanh Xuân)',               lat: 20.9778, lon: 105.8258, radiusMeters: 100 },
+      { id: 'lotte_tbn',            zone: 'merchant', nameVi: 'Lotte Mart Tây Bắc Ngã Tư Sở (Tây Sơn)',             lat: 21.0048, lon: 105.8398, radiusMeters: 85 },
+      { id: 'the_garden',           zone: 'merchant', nameVi: 'The Garden Shopping Center (Mễ Trì)',                lat: 21.0135, lon: 105.7768, radiusMeters: 90 },
+      { id: 'pacific_place',        zone: 'merchant', nameVi: 'Pacific Place (Lý Thường Kiệt)',                     lat: 21.0262, lon: 105.8548, radiusMeters: 60 },
+      { id: 'trang_tien_plaza',     zone: 'merchant', nameVi: 'Tràng Tiền Plaza (Hoàn Kiếm)',                       lat: 21.0248, lon: 105.8532, radiusMeters: 60 },
+      { id: 'ctu_artex_sontay',     zone: 'merchant', nameVi: 'Artex Sơn Tây (Thị Xã Sơn Tây)',                    lat: 21.1392, lon: 105.5042, radiusMeters: 75 },
+
+      // ═══════════════════════════════════════════════════════════════
+      // BỆNH VIỆN — ĐẦY ĐỦ TOÀN THÀNH PHỐ
+      // ═══════════════════════════════════════════════════════════════
+
+      // Tuyến Trung Ương
+      { id: 'bv_bachimai',          zone: 'forest',   nameVi: 'Thần Dược Đại Viện Bạch Mai (BV Bạch Mai - Giải Phóng)',lat: 21.0025, lon: 105.8438, radiusMeters: 110 },
+      { id: 'bv_viet_duc',          zone: 'forest',   nameVi: 'Phẫu Thuật Thần Điện Việt Đức (Tràng Thi)',           lat: 21.0282, lon: 105.8448, radiusMeters: 80 },
+      { id: 'bv_huu_nghi',          zone: 'forest',   nameVi: 'Hữu Nghị Bang Giao Y Quán (Trần Khánh Dư)',           lat: 21.0218, lon: 105.8598, radiusMeters: 75 },
+      { id: 'bv_phu_san_tw',        zone: 'forest',   nameVi: 'Sinh Linh Thần Viện TW (BV Phụ Sản TW - Tràng Thi)',  lat: 21.0278, lon: 105.8428, radiusMeters: 70 },
+      { id: 'bv_nhi_tw',            zone: 'forest',   nameVi: 'Ấu Nhi Thần Y Viện TW (BV Nhi TW - La Thành)',        lat: 21.0218, lon: 105.8358, radiusMeters: 75 },
+      { id: 'bv_k_quanhoa',         zone: 'forest',   nameVi: 'Ung Bướu Diệt Trừ Viện K (Cầu Giấy - Quan Hoa)',     lat: 21.0388, lon: 105.7958, radiusMeters: 80 },
+      { id: 'bv_tai_mu_hong',       zone: 'forest',   nameVi: 'Thanh Âm Thần Viện (BV Tai Mũi Họng TW - Trần Phú)', lat: 21.0275, lon: 105.8375, radiusMeters: 65 },
+      { id: 'bv_rang_ham_mat',      zone: 'forest',   nameVi: 'Ngọc Nha Y Điện (BV Răng Hàm Mặt TW)',               lat: 21.0248, lon: 105.8438, radiusMeters: 60 },
+      { id: 'bv_noi_tiet',          zone: 'forest',   nameVi: 'Huyết Mạch Điều Tiết Viện (BV Nội Tiết TW)',         lat: 21.0258, lon: 105.8318, radiusMeters: 65 },
+      { id: 'bv_phy_phuc_hoi',      zone: 'forest',   nameVi: 'Phục Hồi Thần Lực Viện (BV PHCN TW - Điện Biên Phủ)',lat: 21.0398, lon: 105.8398, radiusMeters: 70 },
+      { id: 'bv_pham_ngoc_thach',   zone: 'forest',   nameVi: 'Phế Khí Thần Viện (BV Phạm Ngọc Thạch - Phụ Sản HN)',lat: 21.0388, lon: 105.8348, radiusMeters: 65 },
+      { id: 'bv_saint_paul',        zone: 'forest',   nameVi: 'Thánh Paul Y Điện (BV Saint-Paul - Phủ Doãn)',       lat: 21.0282, lon: 105.8448, radiusMeters: 70 },
+      { id: 'bv_119',               zone: 'forest',   nameVi: 'Cấp Cứu Thần Tốc 115 (BV Cấp Cứu Trưng Vương)',     lat: 21.0178, lon: 105.8498, radiusMeters: 65 },
+
+      // Tuyến Thành Phố & Quận
+      { id: 'bv_phu_san_hn',        zone: 'forest',   nameVi: 'Nữ Thần Sinh Linh Y Viện (BV Phụ Sản HN - Đê La Thành)',lat: 21.0218, lon: 105.8388, radiusMeters: 80 },
+      { id: 'bv_nhi_ha_noi',        zone: 'forest',   nameVi: 'Ấu Nhi Bảo Hộ Y Điện (BV Nhi HN - Tuệ Tĩnh)',       lat: 21.0148, lon: 105.8488, radiusMeters: 70 },
+      { id: 'bv_thanh_nhan',        zone: 'forest',   nameVi: 'Thanh Nhàn Cứu Chữa Điện (Phố Thanh Nhàn)',          lat: 21.0068, lon: 105.8588, radiusMeters: 75 },
+      { id: 'bv_dong_da',           zone: 'forest',   nameVi: 'Đống Đa Hồi Phục Viện (Kim Liên - Đống Đa)',         lat: 21.0118, lon: 105.8358, radiusMeters: 75 },
+      { id: 'bv_ha_dong',           zone: 'forest',   nameVi: 'Hà Đông Thái Y Điện (BV Hà Đông - Trần Phú)',        lat: 20.9718, lon: 105.7798, radiusMeters: 80 },
+      { id: 'bv_duc_giang',         zone: 'forest',   nameVi: 'Đức Giang Thần Y Quán (BV Đức Giang - Long Biên)',   lat: 21.0478, lon: 105.8798, radiusMeters: 80 },
+      { id: 'bv_son_tay',           zone: 'forest',   nameVi: 'Sơn Tây Thái Y Viện (BV Đa Khoa Sơn Tây)',          lat: 21.1368, lon: 105.5048, radiusMeters: 80 },
+      { id: 'bv_dong_anh',          zone: 'forest',   nameVi: 'Đông Anh Đại Y Điện (BV Đa Khoa Đông Anh)',         lat: 21.1398, lon: 105.8428, radiusMeters: 85 },
+      { id: 'bv_me_linh',           zone: 'forest',   nameVi: 'Mê Linh Thần Y Quán (BV Đa Khoa Mê Linh)',          lat: 21.1718, lon: 105.7558, radiusMeters: 80 },
+      { id: 'bv_gia_lam',           zone: 'forest',   nameVi: 'Gia Lâm Bảo Sinh Y Điện (BV Đa Khoa Gia Lâm)',      lat: 21.0348, lon: 105.9118, radiusMeters: 80 },
+      { id: 'bv_soc_son',           zone: 'forest',   nameVi: 'Sóc Sơn Hoang Dã Y Viện (BV Đa Khoa Sóc Sơn)',      lat: 21.2618, lon: 105.8418, radiusMeters: 80 },
+      { id: 'bv_buu_dien',          zone: 'forest',   nameVi: 'Bưu Chính Y Quán (BV Bưu Điện - Đinh Tiên Hoàng)',  lat: 21.0338, lon: 105.8548, radiusMeters: 65 },
+      { id: 'bv_nong_nghiep',       zone: 'forest',   nameVi: 'Nông Nghiệp Thảo Y Viện (BV Nông Nghiệp - Phương Mai)',lat: 21.0048, lon: 105.8388, radiusMeters: 70 },
+      { id: 'bv_thanh_tri',         zone: 'forest',   nameVi: 'Thanh Trì Y Điện (BV Đa Khoa Thanh Trì)',           lat: 20.9618, lon: 105.8368, radiusMeters: 75 },
+      { id: 'bv_hoai_duc',          zone: 'forest',   nameVi: 'Hoài Đức Thần Y Quán (BV Đa Khoa Hoài Đức)',        lat: 21.0218, lon: 105.7068, radiusMeters: 75 },
+      { id: 'bv_chuong_my',         zone: 'forest',   nameVi: 'Chương Mỹ Thảo Dược Viện (BV Đa Khoa Chương Mỹ)',   lat: 20.9258, lon: 105.7258, radiusMeters: 75 },
+      { id: 'bv_thuong_tin',        zone: 'forest',   nameVi: 'Thường Tín Y Điện (BV Đa Khoa Thường Tín)',         lat: 20.8728, lon: 105.8728, radiusMeters: 75 },
+      { id: 'bv_phu_xuyen',         zone: 'forest',   nameVi: 'Phú Xuyên Thái Y Quán (BV Đa Khoa Phú Xuyên)',     lat: 20.7188, lon: 105.9068, radiusMeters: 75 },
+      { id: 'bv_ung_hoa',           zone: 'forest',   nameVi: 'Ứng Hòa Dược Thảo Viện (BV Đa Khoa Ứng Hòa)',      lat: 20.7578, lon: 105.7788, radiusMeters: 75 },
+      { id: 'bv_my_duc',            zone: 'forest',   nameVi: 'Mỹ Đức Sơn Thảo Y Điện (BV Đa Khoa Mỹ Đức)',       lat: 20.6868, lon: 105.7468, radiusMeters: 75 },
+      { id: 'bv_ba_vi',             zone: 'forest',   nameVi: 'Ba Vì Linh Dược Viện (BV Đa Khoa Ba Vì)',           lat: 21.0828, lon: 105.4258, radiusMeters: 80 },
+
+      // ═══════════════════════════════════════════════════════════════
+      // TRƯỜNG HỌC & ĐẠI HỌC — ĐẦY ĐỦ TOÀN THÀNH PHỐ
+      // ═══════════════════════════════════════════════════════════════
+
+      // Đại Học & Học Viện Còn Thiếu
+      { id: 'dh_ha_noi_ulis',       zone: 'forest',   nameVi: 'Ngôn Ngữ Bí Thư Điện (ĐH Hà Nội ULIS - Từ Liêm)',    lat: 21.0135, lon: 105.7598, radiusMeters: 80 },
+      { id: 'dh_kien_truc',         zone: 'forest',   nameVi: 'Thạch Trúc Kiến Thiết Điện (ĐH Kiến Trúc - Nguyễn Trãi)',lat: 21.0068, lon: 105.8188, radiusMeters: 80 },
+      { id: 'dh_giao_thong',        zone: 'merchant', nameVi: 'Vạn Đạo Giao Thông Viện (ĐH GTVT - Láng Thượng)',    lat: 21.0165, lon: 105.8048, radiusMeters: 80 },
+      { id: 'dh_dien_luc',          zone: 'merchant', nameVi: 'Lôi Điện Thần Điện (ĐH Điện Lực - Hoàng Quốc Việt)',  lat: 21.0498, lon: 105.7828, radiusMeters: 75 },
+      { id: 'dh_thuy_loi',          zone: 'water',    nameVi: 'Thủy Trị Đại Thần Viện (ĐH Thủy Lợi - Tây Sơn)',     lat: 21.0085, lon: 105.8228, radiusMeters: 80 },
+      { id: 'dh_lam_nghiep',        zone: 'forest',   nameVi: 'Vạn Lâm Thảo Học Viện (ĐH Lâm Nghiệp - Xuân Mai)',   lat: 20.8742, lon: 105.6128, radiusMeters: 85 },
+      { id: 'hv_ky_thuat_quan_su',  zone: 'merchant', nameVi: 'Quân Sự Kỳ Kỹ Điện (HV Kỹ Thuật Quân Sự - Hoàng Quốc Việt)',lat: 21.0548, lon: 105.7888, radiusMeters: 90 },
+      { id: 'hv_tai_chinh',         zone: 'merchant', nameVi: 'Kim Khố Học Điện (HV Tài Chính - Đức Thắng)',         lat: 21.0578, lon: 105.7788, radiusMeters: 80 },
+      { id: 'hv_an_ninh',           zone: 'forest',   nameVi: 'An Ninh Thần Điện (HV An Ninh Nhân Dân - Lê Đức Thọ)', lat: 21.0265, lon: 105.7738, radiusMeters: 85 },
+      { id: 'hv_canh_sat',          zone: 'forest',   nameVi: 'Cảnh Sát Hộ Pháp Điện (HV Cảnh Sát - Trần Phú)',     lat: 21.1528, lon: 105.7758, radiusMeters: 85 },
+      { id: 'hv_quan_y',            zone: 'forest',   nameVi: 'Quân Y Thần Lực Học Viện (HV Quân Y - Phùng Chí Kiên)',lat: 21.0628, lon: 105.7988, radiusMeters: 80 },
+      { id: 'dh_phuong_dong',       zone: 'merchant', nameVi: 'Phương Đông Tư Viện (ĐH Phương Đông - Trung Hòa)',    lat: 21.0158, lon: 105.7978, radiusMeters: 75 },
+      { id: 'dh_dai_nam',           zone: 'merchant', nameVi: 'Đại Nam Thương Học Điện (ĐH Đại Nam - Hà Đông)',      lat: 20.9668, lon: 105.7598, radiusMeters: 80 },
+      { id: 'dh_hoa_binh',          zone: 'merchant', nameVi: 'Hòa Bình Đại Thư Viện (ĐH Hòa Bình - Lê Văn Thiêm)', lat: 21.0028, lon: 105.8028, radiusMeters: 75 },
+      { id: 'dh_cntt_hn',           zone: 'merchant', nameVi: 'Số Hóa Thần Điện (ĐH CNTT Hà Nội - Duy Tân)',         lat: 21.0318, lon: 105.7828, radiusMeters: 75 },
+      { id: 'hv_ngan_hang2',        zone: 'merchant', nameVi: 'Tiền Tệ Học Điện 2 (HV Ngân Hàng CS2 - Nam Từ Liêm)',lat: 21.0118, lon: 105.7748, radiusMeters: 70 },
+      { id: 'dh_mo_dia_chat2',      zone: 'merchant', nameVi: 'Khai Thác Cơ Sở 2 (ĐH Mỏ ĐC CS2 - Đông Anh)',        lat: 21.1028, lon: 105.8328, radiusMeters: 70 },
+
+      // THPT Còn Thiếu (Các Trường Trung Học Phổ Thông Danh Tiếng)
+      { id: 'thpt_nguyen_gia_thieu', zone: 'forest',  nameVi: 'Nguyễn Gia Thiều Thần Học Điện (Long Biên)',          lat: 21.0518, lon: 105.8868, radiusMeters: 70 },
+      { id: 'thpt_yen_hoa',          zone: 'forest',  nameVi: 'Yên Hòa Khai Trí Điện (Cầu Giấy)',                   lat: 21.0218, lon: 105.7948, radiusMeters: 70 },
+      { id: 'thpt_phan_dinh_phung',  zone: 'forest',  nameVi: 'Phan Đình Phùng Cổ Học Đường (Ba Đình)',              lat: 21.0408, lon: 105.8418, radiusMeters: 70 },
+      { id: 'thpt_tran_hung_dao_hd', zone: 'forest',  nameVi: 'Trần Hưng Đạo Học Đường (Hà Đông)',                  lat: 20.9718, lon: 105.7728, radiusMeters: 65 },
+      { id: 'thpt_nguyen_hue_hd',    zone: 'forest',  nameVi: 'Nguyễn Huệ Thần Tài Điện (Hà Đông)',                 lat: 20.9628, lon: 105.7758, radiusMeters: 65 },
+      { id: 'thpt_hoang_van_thu_lb', zone: 'forest',  nameVi: 'Hoàng Văn Thụ Khai Trí (Long Biên)',                  lat: 21.0448, lon: 105.8748, radiusMeters: 65 },
+      { id: 'thpt_nguyen_trai_tx',   zone: 'forest',  nameVi: 'Nguyễn Trãi Đại Học Đường (Thanh Xuân)',              lat: 20.9978, lon: 105.8238, radiusMeters: 65 },
+      { id: 'thpt_khoa_hoc_tu_nhien',zone: 'forest',  nameVi: 'Khoa Học Tự Nhiên Thần Điện (Chuyên TN - Cầu Giấy)',  lat: 21.0382, lon: 105.7822, radiusMeters: 70 },
+      { id: 'thpt_tran_phu_hd',      zone: 'forest',  nameVi: 'Trần Phú Cổ Học Xá (Hà Đông)',                       lat: 20.9748, lon: 105.7908, radiusMeters: 65 },
+      { id: 'thpt_duong_xa_gl',      zone: 'forest',  nameVi: 'Đường Xá Học Đường (Gia Lâm)',                       lat: 21.0228, lon: 105.9148, radiusMeters: 65 },
+      { id: 'thpt_dong_anh_da',      zone: 'forest',  nameVi: 'Đông Anh Thư Viện Thần (THPT Đông Anh)',              lat: 21.1368, lon: 105.8428, radiusMeters: 65 },
+      { id: 'thpt_soc_son_ss',       zone: 'forest',  nameVi: 'Sóc Sơn Học Đường (THPT Sóc Sơn)',                   lat: 21.2638, lon: 105.8378, radiusMeters: 65 },
+      { id: 'thpt_me_linh_ml',       zone: 'forest',  nameVi: 'Mê Linh Khai Trí Điện (THPT Mê Linh)',               lat: 21.1728, lon: 105.7548, radiusMeters: 65 },
+      { id: 'thpt_thanh_tri_tt',     zone: 'forest',  nameVi: 'Thanh Trì Học Viện (THPT Thanh Trì)',                 lat: 20.9628, lon: 105.8368, radiusMeters: 65 },
+
       // 18. Các Bến Xe & Trục Cầu Sông Hồng
+
       { id: 'bx_giapbat',   zone: 'merchant', nameVi: 'Đại Trạm Lữ Khách Phía Nam (Bến Xe Giáp Bát)', lat: 20.9785, lon: 105.8415, radiusMeters: 95 },
       { id: 'bx_nuocngam',  zone: 'merchant', nameVi: 'Mạch Nước Ngầm Lữ Điểm (Bến Xe Nước Ngầm)',   lat: 20.9615, lon: 105.8385, radiusMeters: 85 },
       { id: 'cau_nhattan',  zone: 'forest',   nameVi: 'Ngũ Trụ Cầu Thần (Cầu Nhật Tân)',             lat: 21.0925, lon: 105.8235, radiusMeters: 110 },
