@@ -502,31 +502,9 @@ function getDynamicDropPool(zone: string, campLevel: number, activePetId?: strin
       { id: 'stone_block', name: 'Khối đá xẻ' },
       { id: 'iron_ore', name: 'Quặng sắt' },
       { id: 'leather', name: 'Da thú dày' },
-      { id: 'seed_herb', name: 'Hạt giống dược thảo' },
-      { id: 'arrow', name: 'Bó mũi tên' },
     );
-    if (zone === 'water') {
-      pool.push({ id: 'pearl', name: 'Ngọc trai sông' });
-    }
   }
-
-  // 4. Tầng 4+: Thành cổ thần thoại (Cấp 4+)
   if (campLevel >= 4) {
-    pool.push(
-      { id: 'gold_ore', name: 'Quặng vàng quý' },
-      { id: 'ancient_coin', name: 'Đồng vàng cổ' },
-      { id: 'iron_ingot', name: 'Thanh sắt' },
-    );
-  }
-
-  // 5. Bonus từ Linh Thú xuất chiến đi cùng:
-  if (activePetId === 'otter') {
-    pool.push({ id: 'pearl', name: 'Ngọc trai sông' }, { id: 'raw_fish', name: 'Cá tươi béo ngậy' });
-  } else if (activePetId === 'hound') {
-    pool.push({ id: 'leather', name: 'Da thú dày' }, { id: 'raw_meat', name: 'Thịt tươi' });
-  } else if (activePetId === 'fox') {
-    pool.push({ id: 'seed_herb', name: 'Hạt giống dược thảo' }, { id: 'red_mushroom', name: 'Nấm đỏ' });
-  } else if (activePetId === 'mammoth') {
     pool.push({ id: 'gold_ore', name: 'Quặng vàng quý' }, { id: 'log', name: 'Khúc gỗ lớn' });
   }
 
@@ -591,8 +569,9 @@ function collectWorldDrop(drop: WorldDrop): void {
   const playerPos = pos ?? at;
   const dist = distanceMeters(playerPos, { lat: drop.lat, lon: drop.lon });
 
-  if (dist > 25) {
-    toast(`Vật phẩm ở cách ~${Math.round(dist)}m. Hãy đi lại gần hơn (dưới 25m) để nhặt!`, 'warn');
+  // Bán kính nhặt 35m (đủ rộng cho vỉa hè và bù trừ sai số GPS ngoài trời)
+  if (dist > 35) {
+    toast(`Vật phẩm ở cách ~${Math.round(dist)}m. Hãy đi lại gần hơn (dưới 35m) để nhặt!`, 'warn');
     return;
   }
 
@@ -1097,7 +1076,16 @@ function sync(): void {
   for (const f of app.view.mapFeatures) featureMap.set(f.id, f);
   cachedCombinedFeatures = Array.from(featureMap.values());
 
-  if (steps.newSteps > 0) {
+  // Xoá drop cũ nếu quá xa vị trí hiện tại (>150m) — sửa bug drop spawn ở FALLBACK_POSITION rồi GPS bắt vị trí thật
+  if (worldDrops.length > 0) {
+    const { render: playerAt } = currentPosition();
+    const dropDist = distanceMeters(playerAt, { lat: worldDrops[0].lat, lon: worldDrops[0].lon });
+    if (dropDist > 150) {
+      worldDrops = [];
+    }
+  }
+
+  if (steps.newSteps > 0 || worldDrops.length === 0) {
     const { render: at } = currentPosition();
     spawnSingleWorldDropNear(at, app.view.location?.zone ?? 'wilderness');
   }
