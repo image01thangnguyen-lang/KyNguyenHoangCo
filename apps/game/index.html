@@ -147,6 +147,18 @@
 
           <!-- Banner Cảnh Báo Lãnh Địa Quái Thú Sương Đỏ -->
           <div id="territory-threat-banner" class="territory-threat-banner" hidden></div>
+
+          <!-- Banner Hướng Dẫn Chấm Chọn Vị Trí Doanh Trại Trên Bản Đồ -->
+          <div id="map-pick-guide-banner" class="map-pick-banner" hidden>
+            <div class="map-pick-banner__content">
+              <span class="map-pick-banner__icon">🏕️</span>
+              <div class="map-pick-banner__text">
+                <strong id="map-pick-guide-title">Chế độ chọn vị trí Doanh Trại</strong>
+                <p id="map-pick-guide-desc">Hãy kéo/phóng to bản đồ và <strong>chạm vào vị trí</strong> bạn muốn đặt Doanh Trại.</p>
+              </div>
+              <button id="btn-cancel-map-pick" class="btn btn--ghost" style="padding:6px 10px;font-size:0.78rem;border:1px solid rgba(255,255,255,0.2);">Huỷ</button>
+            </div>
+          </div>
         </div>
 
         <!-- Backdrop khi mở Drawer -->
@@ -539,19 +551,91 @@
 
     <!-- Lớp phủ: Thiết lập Căn Cứ / Nhà ban đầu -->
     <div id="overlay-set-home" class="overlay" hidden>
-      <div class="card card--home">
+      <div class="card card--home" style="max-width:420px;">
         <div class="card__icon-badge">🏕️</div>
-        <h2>Thiết Lập Căn Cứ</h2>
-        <p>Hãy chọn vị trí hiện tại của bạn làm <strong>Căn Cứ (Nhà)</strong>.</p>
-        <div class="home-prompt-box">
-          <p class="fineprint">
-            🏢 <strong>Lối chơi sinh tồn công sở:</strong><br />
-            • 🌅 <strong>Sáng đi làm:</strong> Bước chân trên đường giúp bạn tìm thấy tài nguyên hoang dã.<br />
-            • 🌇 <strong>Chiều về nhà:</strong> Trở về Căn Cứ cất kho an toàn, ngủ hồi sức, chế tạo và thủ đêm!
+        <h2>Thiết Lập Doanh Trại</h2>
+        <p>Hãy chọn vị trí dựng <strong>Doanh Trại (Nhà)</strong> của bộ tộc bạn:</p>
+        <div class="home-prompt-box" style="text-align:left;margin-bottom:14px;">
+          <p class="fineprint" style="margin:0 0 6px 0;">
+            🏢 <strong>Lối chơi sinh tồn hoang dã:</strong><br />
+            • 🌅 <strong>Ban ngày:</strong> Đi bộ ra ngoài săn thú, nhặt khoáng sản.<br />
+            • 🌇 <strong>Ban đêm:</strong> Trở về Doanh Trại cất giữ kho báu an toàn, ngủ hồi sức, chế tạo và thủ đêm!
           </p>
         </div>
-        <div class="card-actions" style="margin-top: 16px;">
-          <button id="btn-confirm-home" class="btn btn--primary">🏕️ Đặt Căn Cứ tại vị trí này</button>
+
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <button id="btn-confirm-home-gps" class="btn btn--primary" style="width:100%;padding:12px 14px;font-size:0.95rem;">
+            📍 1. Đặt Căn Cứ Tại Vị Trí GPS Hiện Tại
+          </button>
+
+          <button id="btn-open-map-pick" class="btn btn--ghost" style="border:1.5px solid var(--gold);color:#fef08a;padding:12px 14px;font-size:0.95rem;">
+            🗺️ 2. Chấm Chọn Trực Tiếp Trên Bản Đồ
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lớp phủ: Xác nhận Vị Trí Đặt Doanh Trại (Sau khi chạm trên bản đồ) -->
+    <div id="overlay-confirm-camp-location" class="overlay" hidden>
+      <div class="card card--home" style="max-width:420px;">
+        <div class="card__icon-badge">🏕️</div>
+        <h2>Xác Nhận Vị Trí Doanh Trại</h2>
+        <p>Bạn đã chọn vị trí sau làm <strong>Doanh Trại (Nhà)</strong> của bộ tộc:</p>
+        
+        <div class="home-prompt-box" style="text-align:left;margin:12px 0;font-size:0.88rem;">
+          <div style="margin-bottom:4px;">📍 <strong>Toạ độ:</strong> <span id="confirm-camp-coords" style="color:#fef08a;font-weight:700;">--</span></div>
+          <div>🌿 <strong>Địa hình sinh thái:</strong> <span id="confirm-camp-biome" style="color:#6ee7b7;font-weight:700;">--</span></div>
+        </div>
+        
+        <p class="fineprint" style="margin-bottom:14px;">
+          💡 <em>Đây sẽ là nơi an toàn để bạn trở về mỗi chiều, cất giữ kho báu, ngủ hồi sức và phòng thủ đêm. Bạn có thể di dời doanh trại sau này nếu cần.</em>
+        </p>
+
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <button id="btn-confirm-camp-final" class="btn btn--primary" style="width:100%;padding:10px 14px;font-size:0.95rem;">
+            ✅ Xác Nhận Đặt Doanh Trại Tại Đây
+          </button>
+          <button id="btn-repick-camp-location" class="btn btn--ghost" style="width:100%;font-size:0.85rem;">
+            🔄 Chạm Chọn Lại Điểm Khác
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lớp phủ: Di Dời Doanh Trại Sang Vùng Đất Mới -->
+    <div id="overlay-relocate-camp" class="overlay" hidden>
+      <div class="card card--home" style="max-width:440px;">
+        <div class="card__icon-badge">🚚</div>
+        <h2>Di Dời Doanh Trại</h2>
+        <p class="fineprint">Bạn muốn dỡ trại và tái dựng tại một vùng đất mới? Toàn bộ cấp độ trại, két an toàn, nông trại và thú cưng sẽ được bảo toàn nguyên vẹn.</p>
+        
+        <div id="relocate-target-info" style="background:rgba(0,0,0,0.3);border:1px solid rgba(251,191,36,0.3);border-radius:8px;padding:10px;margin:10px 0;text-align:left;font-size:0.85rem;">
+          <div>📍 <strong>Vị trí mới nhắm đến:</strong> <span id="relocate-loc-desc" style="color:#fef08a;">Vị trí GPS hiện tại của bạn</span></div>
+        </div>
+
+        <div style="font-size:0.82rem;font-weight:700;color:var(--gold);margin-bottom:6px;text-align:left;">CHỌN PHƯƠNG THỨC DI DỜI:</div>
+        
+        <!-- Tùy chọn 1: Dùng nguyên liệu -->
+        <div class="relocate-opt-card" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:10px;margin-bottom:8px;text-align:left;">
+          <div style="font-weight:700;color:#fef08a;margin-bottom:4px;">📦 1. Tự Tháo Dỡ &amp; Vận Chuyển</div>
+          <div style="font-size:0.78rem;color:var(--ink-muted);margin-bottom:6px;">Chi phí: 15 Gỗ lớn, 10 Khối đá, 5 Dây bện + 20 Đồng Vàng Cổ</div>
+          <button id="btn-relocate-by-materials" class="btn btn--primary" style="width:100%;font-size:0.85rem;padding:7px 10px;">
+            Dùng Nguyên Liệu Di Dời
+          </button>
+        </div>
+
+        <!-- Tùy chọn 2: Thuê caravan thương nhân -->
+        <div class="relocate-opt-card" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:10px;margin-bottom:10px;text-align:left;">
+          <div style="font-weight:700;color:#fef08a;margin-bottom:4px;">🪙 2. Thuê Thương Nhân Caravan Trọn Gói</div>
+          <div style="font-size:0.78rem;color:var(--ink-muted);margin-bottom:6px;">Chi phí: 50 Đồng Vàng Cổ (Không cần gỗ đá)</div>
+          <button id="btn-relocate-by-gold" class="btn btn--primary" style="width:100%;font-size:0.85rem;padding:7px 10px;background:linear-gradient(135deg,#d97706,#b45309);">
+            Thuê Vận Chuyển (50 Vàng)
+          </button>
+        </div>
+
+        <div style="display:flex;gap:6px;">
+          <button id="btn-relocate-pick-map" class="btn btn--ghost" style="flex:1;font-size:0.82rem;">🗺️ Chấm Toạ Độ Khác</button>
+          <button id="btn-relocate-close" class="btn btn--ghost" style="flex:1;font-size:0.82rem;">Đóng</button>
         </div>
       </div>
     </div>

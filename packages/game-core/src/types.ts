@@ -164,8 +164,10 @@ export interface CampState {
   defenseStructures: Partial<Record<DefenseStructureId, number>>;
   /** Mốc hoàn tất nâng cấp đang chạy (ms epoch), null nếu không nâng cấp. */
   upgradeCompleteAtMs: number | null;
-  /** Vị trí trại — chỉ lưu ô lưới, không lưu toạ độ chính xác (§6.3). */
+  /** Vị trí trại — lưu ô lưới (§6.3) và toạ độ chính xác do người chơi chấm chọn. */
   homeCell: string | null;
+  exactLat?: number;
+  exactLon?: number;
   /** Danh sách các luống đất trồng trọt quanh doanh trại */
   farmPlots?: any[];
 }

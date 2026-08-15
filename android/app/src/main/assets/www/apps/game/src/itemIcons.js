@@ -644,14 +644,19 @@ export function avatarSvg(gender                   , className = 'avatar-svg')  
     <!-- Miệng cương nghị -->
     <path d="M29 38 H35" stroke="#632e1d" stroke-width="1.6" stroke-linecap="round"/>
     <!-- Cổ & Vòng nanh thú -->
-    <path d="M27 41 L27 46 L37 46 L37 41 Z" fill="#a67149"/>
-    <path d="M23 45 Q32 50 41 45" fill="none" stroke="#3d2617" stroke-width="2"/>
-    <path d="M30 46 L32 51 L34 46 Z" fill="#f0ebe1"/>
-    <path d="M26 44 L27 48 L29 45 Z" fill="#f0ebe1"/>
-    <path d="M38 44 L37 48 L35 45 Z" fill="#f0ebe1"/>
-    <!-- Thân & Da thú vắt chéo vai -->
-    <path d="M17 60 Q21 47 32 47 Q43 47 47 60 Z" fill="#4d3522" stroke="#7a5538" stroke-width="1.5"/>
-    <path d="M18 49 L46 60 L42 60 L18 53 Z" fill="#805634"/>`,
+    <path d="M27 41 L27 46 L37 46 L37 41 Z" fill="#b88056"/>
+    <path d="M23 45 Q32 50 41 45" fill="none" stroke="#451a03" stroke-width="2"/>
+    <path d="M30 46 L32 52 L34 46 Z" fill="#fef3c7"/>
+    <path d="M26 44 L27 49 L29 45 Z" fill="#fef3c7"/>
+    <path d="M38 44 L37 49 L35 45 Z" fill="#fef3c7"/>
+    <!-- Thân trần vạm vỡ & Vết xăm màu đất đỏ -->
+    <path d="M17 60 Q20 46 32 46 Q44 46 47 60 Z" fill="#b88056"/>
+    <path d="M32 46 L32 56" stroke="#8c4e28" stroke-width="1.4"/>
+    <path d="M25 50 Q28 53 32 53 Q36 53 39 50" fill="none" stroke="#8c4e28" stroke-width="1.4"/>
+    <path d="M21 49 L24 53 M43 49 L40 53" stroke="#c43d31" stroke-width="1.4" stroke-linecap="round"/>
+    <!-- Khố da thú ở hông -->
+    <path d="M20 57 L44 57 L42 64 L22 64 Z" fill="#451a03"/>
+    <path d="M20 57 L44 57" stroke="#78350f" stroke-width="2"/>`,
     className,
   );
 }

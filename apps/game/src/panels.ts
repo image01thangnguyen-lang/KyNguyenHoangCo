@@ -78,6 +78,7 @@ export interface Handlers {
   onOpenCoop?(): void;
   onClaimWeekendQuest?(questId: string): void;
   onUpgradeStrength?(): void;
+  onOpenRelocateCamp?(): void;
   onToggleSetting(key: 'parentalNightLock' | 'realWeatherSync' | 'narrationAudio' | 'haptics'): void;
   onTogglePocketMode?(): void;
   onExport(): void;
@@ -756,6 +757,9 @@ export function renderSafeVaultSection(profile: ProfileSave, handlers: Handlers)
         <button id="btn-quick-safe-transfer" class="btn btn--ghost" style="font-size:0.82rem;padding:8px 12px;" title="Tự động cất nguyên liệu quý, đồng vàng và bản vẽ vào két">
           ⚡ Cất nhanh đồ quý
         </button>
+        <button id="btn-open-relocate-camp" class="btn btn--ghost" style="font-size:0.82rem;padding:8px 12px;border:1px dashed var(--gold);color:var(--gold);" title="Di dời doanh trại sang vùng đất mới">
+          🚚 Di Dời Doanh Trại
+        </button>
       </div>
     </div>
   `;
@@ -769,6 +773,11 @@ export function renderSafeVaultSection(profile: ProfileSave, handlers: Handlers)
   const btnQuick = box.querySelector<HTMLButtonElement>('#btn-quick-safe-transfer');
   if (btnQuick) {
     btnQuick.onclick = () => handlers.onQuickStorePrecious?.();
+  }
+
+  const btnRelocate = box.querySelector<HTMLButtonElement>('#btn-open-relocate-camp');
+  if (btnRelocate) {
+    btnRelocate.onclick = () => handlers.onOpenRelocateCamp?.();
   }
 }
 

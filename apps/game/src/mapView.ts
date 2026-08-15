@@ -329,12 +329,14 @@ export class MapView {
   private pointerDownTime = 0;
   private lastInput: RenderInput | null = null;
   private lastProject: ((at: LatLon) => [number, number]) | null = null;
+  private lastUnproject: ((cx: number, cy: number) => LatLon) | null = null;
 
   onViewportChange?: (state: ViewportState) => void;
   onPanChange?: (isPanned: boolean) => void;
   onDropClick?: (drop: WorldDrop) => void;
   onTrapClick?: (trap: PlacedTrap) => void;
   onFeatureClick?: (feature: MapFeature) => void;
+  onMapClick?: (latLon: LatLon) => void;
 
   private viewportDirty = false;
   private cachedInputFeatures: MapFeature[] | null = null;
@@ -400,8 +402,10 @@ export class MapView {
 
         if (dist < 28 && duration < 500 && this.lastProject) {
           const rect = canvas.getBoundingClientRect();
-          const clickX = (e.clientX - rect.left) * this.dpr;
-          const clickY = (e.clientY - rect.top) * this.dpr;
+          const scaleX = rect.width > 0 ? canvas.width / rect.width : this.dpr;
+          const scaleY = rect.height > 0 ? canvas.height / rect.height : this.dpr;
+          const clickX = (e.clientX - rect.left) * scaleX;
+          const clickY = (e.clientY - rect.top) * scaleY;
 
           // 1. Click vào bẫy thú
           if (this.lastInput?.traps) {
@@ -463,7 +467,16 @@ export class MapView {
 
             if (nearestFeature) {
               this.onFeatureClick?.(nearestFeature);
+              this.lastPointer = null;
+              this.pointerDownPos = null;
+              return;
             }
+          }
+
+          // 4. Click tự do vào toạ độ trên mặt đất (Dùng cho chọn vị trí Căn Cứ / Di Dời Trại)
+          if (this.lastUnproject) {
+            const picked = this.lastUnproject(clickX, clickY);
+            this.onMapClick?.(picked);
           }
         }
 
@@ -569,6 +582,16 @@ export class MapView {
       return [w / 2 + dx * pxPerMeter + this.panX, h / 2 - dy * pxPerMeter * TILT_Y + this.panY];
     };
     this.lastProject = project;
+
+    const unproject = (cx: number, cy: number): LatLon => {
+      const dx = (cx - w / 2 - this.panX) / (pxPerMeter || 1);
+      const dy = -(cy - h / 2 - this.panY) / ((pxPerMeter * TILT_Y) || 1);
+      return {
+        lat: input.center.lat + dy * metersToLatDegrees(1),
+        lon: input.center.lon + dx * metersToLonDegrees(1, input.center.lat),
+      };
+    };
+    this.lastUnproject = unproject;
 
     ctx.save();
 
@@ -1491,282 +1514,316 @@ export class MapView {
     ctx.fill();
 
     if (isFemale) {
-      // ==================== NỮ THÁNH NỮ HOÀNG CỔ (CHI TIẾT CAO CẤP) ====================
-      // 1. Áo choàng lụa xanh ngọc bay sau lưng
-      ctx.fillStyle = '#065f46';
+      // ==================== NỮ THỔ DÂN TIỀN SỬ (THOÁT TỤC & KHỎE KHOẮN) ====================
+      // 1. Tóc đen dài gợn sóng buông sau lưng
+      ctx.fillStyle = '#18120e';
       ctx.beginPath();
-      ctx.moveTo(rx - 8 * this.dpr, rpy - 6 * this.dpr);
-      ctx.lineTo(rx + 8 * this.dpr, rpy - 6 * this.dpr);
-      ctx.quadraticCurveTo(rx + 14 * this.dpr, rpy + 15 * this.dpr, rx + 9 * this.dpr, rpy + 18 * this.dpr);
-      ctx.quadraticCurveTo(rx, rpy + 14 * this.dpr, rx - 9 * this.dpr, rpy + 18 * this.dpr);
-      ctx.quadraticCurveTo(rx - 14 * this.dpr, rpy + 15 * this.dpr, rx - 8 * this.dpr, rpy - 6 * this.dpr);
+      ctx.ellipse(rx - 8 * this.dpr, rpy + 1 * this.dpr, 3.5 * this.dpr, 11 * this.dpr, 0.15, 0, Math.PI * 2);
+      ctx.ellipse(rx + 8 * this.dpr, rpy + 1 * this.dpr, 3.5 * this.dpr, 11 * this.dpr, -0.15, 0, Math.PI * 2);
       ctx.fill();
 
-      // 2. Chân thon bọc giáp xà cạp ngọc
-      ctx.fillStyle = '#b47b52';
-      ctx.fillRect(rx - 5.5 * this.dpr, rpy + 6 * this.dpr, 3.8 * this.dpr, 10 * this.dpr);
-      ctx.fillRect(rx + 1.8 * this.dpr, rpy + 6 * this.dpr, 3.8 * this.dpr, 10 * this.dpr);
-      ctx.strokeStyle = '#2dd4bf';
+      // 2. Chân trần thon thả & Vòng dây leo quấn cổ chân
+      ctx.fillStyle = '#b8794c';
+      ctx.fillRect(rx - 5.2 * this.dpr, rpy + 6 * this.dpr, 3.6 * this.dpr, 11 * this.dpr);
+      ctx.fillRect(rx + 1.6 * this.dpr, rpy + 6 * this.dpr, 3.6 * this.dpr, 11 * this.dpr);
+      // Dây bện cổ chân
+      ctx.strokeStyle = '#78350f';
       ctx.lineWidth = 1.2 * this.dpr;
-      ctx.strokeRect(rx - 5.5 * this.dpr, rpy + 9 * this.dpr, 3.8 * this.dpr, 4 * this.dpr);
-      ctx.strokeRect(rx + 1.8 * this.dpr, rpy + 9 * this.dpr, 3.8 * this.dpr, 4 * this.dpr);
+      ctx.strokeRect(rx - 5.2 * this.dpr, rpy + 14 * this.dpr, 3.6 * this.dpr, 2 * this.dpr);
+      ctx.strokeRect(rx + 1.6 * this.dpr, rpy + 14 * this.dpr, 3.6 * this.dpr, 2 * this.dpr);
 
-      // 3. Váy Yếm Thổ Cẩm Lạc Việt
-      ctx.fillStyle = '#0f766e';
+      // 3. Váy Khố Da Thú Ngắn Ngang Đùi (Loincloth Skirt)
+      ctx.fillStyle = '#5c2d12';
       ctx.beginPath();
-      ctx.moveTo(rx - 8 * this.dpr, rpy + 7 * this.dpr);
-      ctx.lineTo(rx + 8 * this.dpr, rpy + 7 * this.dpr);
-      ctx.lineTo(rx + 10 * this.dpr, rpy + 12 * this.dpr);
-      ctx.lineTo(rx + 6.5 * this.dpr, rpy - 5 * this.dpr);
-      ctx.lineTo(rx - 6.5 * this.dpr, rpy - 5 * this.dpr);
-      ctx.lineTo(rx - 10 * this.dpr, rpy + 12 * this.dpr);
+      ctx.moveTo(rx - 7.5 * this.dpr, rpy + 2 * this.dpr);
+      ctx.lineTo(rx + 7.5 * this.dpr, rpy + 2 * this.dpr);
+      ctx.lineTo(rx + 9 * this.dpr, rpy + 9.5 * this.dpr);
+      ctx.lineTo(rx + 4 * this.dpr, rpy + 11.5 * this.dpr);
+      ctx.lineTo(rx, rpy + 9 * this.dpr);
+      ctx.lineTo(rx - 4 * this.dpr, rpy + 11.5 * this.dpr);
+      ctx.lineTo(rx - 9 * this.dpr, rpy + 9.5 * this.dpr);
       ctx.closePath();
       ctx.fill();
 
-      // Hoa văn viền yếm thêu vàng
-      ctx.strokeStyle = '#fde047';
-      ctx.lineWidth = 1.4 * this.dpr;
+      // Dây thắt lưng vỏ cây & Chuỗi hạt gỗ
+      ctx.strokeStyle = '#d97706';
+      ctx.lineWidth = 1.6 * this.dpr;
+      ctx.beginPath();
+      ctx.moveTo(rx - 7.5 * this.dpr, rpy + 2.5 * this.dpr);
+      ctx.lineTo(rx + 7.5 * this.dpr, rpy + 2.5 * this.dpr);
       ctx.stroke();
 
-      // 4. Đai thắt lưng ngọc bích & ngọc bội rủ
-      ctx.fillStyle = '#14b8a6';
-      ctx.fillRect(rx - 8 * this.dpr, rpy + 1.5 * this.dpr, 16 * this.dpr, 3 * this.dpr);
-      ctx.fillStyle = '#fef08a';
+      // 4. Thân thể & Áo Yếm Da Thú Buộc Gáy
+      ctx.fillStyle = '#c68b5e';
       ctx.beginPath();
-      ctx.arc(rx, rpy + 3 * this.dpr, 2.5 * this.dpr, 0, Math.PI * 2);
+      ctx.arc(rx, rpy - 2.5 * this.dpr, 6.5 * this.dpr, 0, Math.PI * 2);
       ctx.fill();
 
-      // 5. Trượng Thần Đài Sen Ngọc Bích (Held Staff)
-      const staffX = rx + 12 * this.dpr;
-      ctx.strokeStyle = '#78350f';
-      ctx.lineWidth = 2.4 * this.dpr;
-      ctx.beginPath();
-      ctx.moveTo(staffX, rpy - 18 * this.dpr);
-      ctx.lineTo(staffX, rpy + 13 * this.dpr);
-      ctx.stroke();
-
-      // Đài sen ngọc bích phát sáng
-      ctx.fillStyle = '#2dd4bf';
-      ctx.beginPath();
-      ctx.arc(staffX, rpy - 18 * this.dpr, 5 * this.dpr, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#fef08a';
-      ctx.beginPath();
-      ctx.arc(staffX, rpy - 18 * this.dpr, 2.5 * this.dpr, 0, Math.PI * 2);
-      ctx.fill();
-
-      // 6. Gương mặt thanh tú & Suối tóc mây
-      ctx.fillStyle = '#140c06';
-      ctx.beginPath();
-      ctx.ellipse(rx - 9 * this.dpr, rpy - 2 * this.dpr, 3.5 * this.dpr, 10 * this.dpr, 0.2, 0, Math.PI * 2);
-      ctx.ellipse(rx + 9 * this.dpr, rpy - 2 * this.dpr, 3.5 * this.dpr, 10 * this.dpr, -0.2, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = '#c58e65';
-      ctx.beginPath();
-      ctx.arc(rx, rpy - 9 * this.dpr, 6.8 * this.dpr, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Đôi mắt thánh nữ
-      ctx.fillStyle = '#0f172a';
-      ctx.beginPath();
-      ctx.arc(rx - 2.5 * this.dpr, rpy - 9.5 * this.dpr, 1.2 * this.dpr, 0, Math.PI * 2);
-      ctx.arc(rx + 2.5 * this.dpr, rpy - 9.5 * this.dpr, 1.2 * this.dpr, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Trâm cài tóc phượng hoàng ngọc lục bảo
-      ctx.fillStyle = '#0d9488';
-      ctx.beginPath();
-      ctx.moveTo(rx + 4 * this.dpr, rpy - 12 * this.dpr);
-      ctx.quadraticCurveTo(rx + 13 * this.dpr, rpy - 22 * this.dpr, rx + 10 * this.dpr, rpy - 10 * this.dpr);
-      ctx.fill();
-    } else {
-      // ==================== NAM DŨNG SĨ ĐÔNG SƠN (SIÊU CHI TIẾT) ====================
-      // 1. Áo choàng da hổ dũng mãnh viền lông thú
-      ctx.fillStyle = '#7c2d12';
-      ctx.beginPath();
-      ctx.moveTo(rx - 9 * this.dpr, rpy - 6 * this.dpr);
-      ctx.lineTo(rx + 9 * this.dpr, rpy - 6 * this.dpr);
-      ctx.quadraticCurveTo(rx + 16 * this.dpr, rpy + 16 * this.dpr, rx + 10 * this.dpr, rpy + 19 * this.dpr);
-      ctx.quadraticCurveTo(rx, rpy + 14 * this.dpr, rx - 10 * this.dpr, rpy + 19 * this.dpr);
-      ctx.quadraticCurveTo(rx - 16 * this.dpr, rpy + 16 * this.dpr, rx - 9 * this.dpr, rpy - 6 * this.dpr);
-      ctx.fill();
-
-      // Viền lông trắng áo choàng
-      ctx.strokeStyle = '#f1f5f9';
-      ctx.lineWidth = 1.8 * this.dpr;
-      ctx.stroke();
-
-      // 2. Đôi chân chiến binh cơ bắp & Giáp xà cạp đồng cổ
-      ctx.fillStyle = '#a1653d';
-      ctx.fillRect(rx - 7 * this.dpr, rpy + 6 * this.dpr, 5 * this.dpr, 10 * this.dpr);
-      ctx.fillRect(rx + 2 * this.dpr, rpy + 6 * this.dpr, 5 * this.dpr, 10 * this.dpr);
-      
-      // Xà cạp đai đồng bảo hộ chân
-      ctx.fillStyle = '#d97706';
-      ctx.fillRect(rx - 7 * this.dpr, rpy + 8 * this.dpr, 5 * this.dpr, 5 * this.dpr);
-      ctx.fillRect(rx + 2 * this.dpr, rpy + 8 * this.dpr, 5 * this.dpr, 5 * this.dpr);
-
-      // 3. Khố Chiến Binh Da Thú Thêu Hoa Văn Đông Sơn
-      ctx.fillStyle = '#831843';
-      ctx.beginPath();
-      ctx.moveTo(rx - 8 * this.dpr, rpy + 1 * this.dpr);
-      ctx.lineTo(rx + 8 * this.dpr, rpy + 1 * this.dpr);
-      ctx.lineTo(rx + 6.5 * this.dpr, rpy + 9 * this.dpr);
-      ctx.lineTo(rx - 6.5 * this.dpr, rpy + 9 * this.dpr);
-      ctx.closePath();
-      ctx.fill();
-
-      // Thắt lưng da bản to & Mặt khóa đồng tròn
-      ctx.fillStyle = '#451a03';
-      ctx.fillRect(rx - 8.5 * this.dpr, rpy + 1 * this.dpr, 17 * this.dpr, 3.5 * this.dpr);
-      ctx.fillStyle = '#f59e0b';
-      ctx.beginPath();
-      ctx.arc(rx, rpy + 2.8 * this.dpr, 3 * this.dpr, 0, Math.PI * 2);
-      ctx.fill();
-
-      // 4. Giáp Ngực Hộ Tâm Phiến Mặt Trời Đông Sơn (Bronze Solar Breastplate)
-      ctx.fillStyle = '#b87a4b';
-      ctx.beginPath();
-      ctx.arc(rx, rpy - 3 * this.dpr, 7.8 * this.dpr, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Tấm đồng hộ tâm mạ vàng chạm 8 tia sáng mặt trời Đông Sơn
-      ctx.fillStyle = '#d97706';
-      ctx.beginPath();
-      ctx.arc(rx, rpy - 3 * this.dpr, 5.5 * this.dpr, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = '#fef08a';
-      ctx.lineWidth = 1.4 * this.dpr;
-      ctx.stroke();
-
-      // Tâm điểm mặt trời rực sáng
-      ctx.fillStyle = '#fef08a';
-      ctx.beginPath();
-      ctx.arc(rx, rpy - 3 * this.dpr, 2.2 * this.dpr, 0, Math.PI * 2);
-      ctx.fill();
-
-      // 5. Giáp vai đồng hai bên chạm hình chim Lạc (Pauldrons)
-      ctx.fillStyle = '#f59e0b';
-      ctx.beginPath();
-      ctx.arc(rx - 8 * this.dpr, rpy - 4.5 * this.dpr, 4.5 * this.dpr, 0, Math.PI * 2);
-      ctx.arc(rx + 8 * this.dpr, rpy - 4.5 * this.dpr, 4.5 * this.dpr, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = '#78350f';
-      ctx.lineWidth = 1.2 * this.dpr;
-      ctx.stroke();
-
-      // 6. Khiên Tròn Đồng Đông Sơn cầm tay trái (Sun Disc Bronze Shield)
-      const shieldX = rx - 12 * this.dpr;
-      const shieldY = rpy - 2 * this.dpr;
+      // Áo yếm da thú màu nâu đất
       ctx.fillStyle = '#78350f';
       ctx.beginPath();
-      ctx.arc(shieldX, shieldY, 8.5 * this.dpr, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#f59e0b';
-      ctx.beginPath();
-      ctx.arc(shieldX, shieldY, 7 * this.dpr, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = '#fef08a';
-      ctx.lineWidth = 1.4 * this.dpr;
-      ctx.beginPath();
-      ctx.arc(shieldX, shieldY, 4.5 * this.dpr, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.fillStyle = '#dc2626';
-      ctx.beginPath();
-      ctx.arc(shieldX, shieldY, 2 * this.dpr, 0, Math.PI * 2);
+      ctx.moveTo(rx - 6 * this.dpr, rpy + 1 * this.dpr);
+      ctx.lineTo(rx + 6 * this.dpr, rpy + 1 * this.dpr);
+      ctx.lineTo(rx + 3 * this.dpr, rpy - 5.5 * this.dpr);
+      ctx.lineTo(rx - 3 * this.dpr, rpy - 5.5 * this.dpr);
+      ctx.closePath();
       ctx.fill();
 
-      // 7. Thần Thương Mũi Đôi Đồng Cổ tay phải (Ancient Spear)
-      const spearX = rx + 13 * this.dpr;
-      ctx.strokeStyle = '#3b1806';
-      ctx.lineWidth = 2.6 * this.dpr;
+      // Dây yếm mảnh buộc quanh cổ
+      ctx.strokeStyle = '#451a03';
+      ctx.lineWidth = 1 * this.dpr;
       ctx.beginPath();
-      ctx.moveTo(spearX, rpy - 20 * this.dpr);
+      ctx.moveTo(rx - 3 * this.dpr, rpy - 5.5 * this.dpr);
+      ctx.lineTo(rx, rpy - 8 * this.dpr);
+      ctx.lineTo(rx + 3 * this.dpr, rpy - 5.5 * this.dpr);
+      ctx.stroke();
+
+      // 5. Chuỗi Vòng Cổ Hạt Ngọc Bích & Vỏ Sò
+      ctx.strokeStyle = '#0d9488';
+      ctx.lineWidth = 1.5 * this.dpr;
+      ctx.beginPath();
+      ctx.arc(rx, rpy - 5 * this.dpr, 4 * this.dpr, 0.2, Math.PI - 0.2);
+      ctx.stroke();
+      ctx.fillStyle = '#5eead4';
+      ctx.beginPath();
+      ctx.arc(rx, rpy - 1.5 * this.dpr, 1.8 * this.dpr, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 6. Cây Lao Gỗ Săn Bắn (Hunting Spear)
+      const fSpearX = rx + 10 * this.dpr;
+      ctx.strokeStyle = '#543118';
+      ctx.lineWidth = 2 * this.dpr;
+      ctx.beginPath();
+      ctx.moveTo(fSpearX, rpy - 18 * this.dpr);
+      ctx.lineTo(fSpearX, rpy + 12 * this.dpr);
+      ctx.stroke();
+      // Mũi lao đá nhọn gắn dây
+      ctx.fillStyle = '#64748b';
+      ctx.beginPath();
+      ctx.moveTo(fSpearX, rpy - 23 * this.dpr);
+      ctx.lineTo(fSpearX - 2.5 * this.dpr, rpy - 16 * this.dpr);
+      ctx.lineTo(fSpearX + 2.5 * this.dpr, rpy - 16 * this.dpr);
+      ctx.closePath();
+      ctx.fill();
+
+      // 7. Khuôn mặt thanh tú & Lông chim rừng cài tóc
+      ctx.fillStyle = '#c68b5e';
+      ctx.beginPath();
+      ctx.arc(rx, rpy - 8.5 * this.dpr, 6.2 * this.dpr, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Mái tóc đen & Băng trán vải thô
+      ctx.fillStyle = '#18120e';
+      ctx.beginPath();
+      ctx.arc(rx, rpy - 10.5 * this.dpr, 6.4 * this.dpr, Math.PI, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#92400e';
+      ctx.lineWidth = 1.8 * this.dpr;
+      ctx.beginPath();
+      ctx.arc(rx, rpy - 9 * this.dpr, 6 * this.dpr, Math.PI * 1.1, Math.PI * 1.9);
+      ctx.stroke();
+
+      // Đôi mắt linh hoạt & Vệt sơn xanh trên má
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.arc(rx - 2.2 * this.dpr, rpy - 8.5 * this.dpr, 1.1 * this.dpr, 0, Math.PI * 2);
+      ctx.arc(rx + 2.2 * this.dpr, rpy - 8.5 * this.dpr, 1.1 * this.dpr, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#0d9488';
+      ctx.fillRect(rx - 4.8 * this.dpr, rpy - 7 * this.dpr, 1.8 * this.dpr, 1 * this.dpr);
+      ctx.fillRect(rx + 3 * this.dpr, rpy - 7 * this.dpr, 1.8 * this.dpr, 1 * this.dpr);
+
+      // Lông chim rừng xanh ngọc cắm sau đầu
+      const fFeatherSway = Math.sin(this.tick / 6) * 1.2 * this.dpr;
+      ctx.fillStyle = '#14b8a6';
+      ctx.beginPath();
+      ctx.moveTo(rx + 3 * this.dpr, rpy - 11 * this.dpr);
+      ctx.quadraticCurveTo(rx + 10 * this.dpr + fFeatherSway, rpy - 22 * this.dpr, rx + 8 * this.dpr + fFeatherSway, rpy - 23 * this.dpr);
+      ctx.quadraticCurveTo(rx + 5 * this.dpr, rpy - 17 * this.dpr, rx + 4 * this.dpr, rpy - 11 * this.dpr);
+      ctx.fill();
+    } else {
+      // ==================== NAM THỔ DÂN TIỀN SỬ (THÂN TRẦN MẶC KHỐ ĐÍCH THỰC) ====================
+      // 1. Chân trần cơ bắp bước đi trên đất mẹ
+      ctx.fillStyle = '#a1653d';
+      ctx.fillRect(rx - 6.5 * this.dpr, rpy + 6 * this.dpr, 4.8 * this.dpr, 12 * this.dpr);
+      ctx.fillRect(rx + 1.8 * this.dpr, rpy + 6 * this.dpr, 4.8 * this.dpr, 12 * this.dpr);
+
+      // Dây da thú thô quấn bắp chân
+      ctx.strokeStyle = '#543118';
+      ctx.lineWidth = 1.3 * this.dpr;
+      ctx.strokeRect(rx - 6.5 * this.dpr, rpy + 10 * this.dpr, 4.8 * this.dpr, 2.5 * this.dpr);
+      ctx.strokeRect(rx + 1.8 * this.dpr, rpy + 10 * this.dpr, 4.8 * this.dpr, 2.5 * this.dpr);
+
+      // 2. KHỐ DA THÚ THỔ DÂN NGUYÊN BẢN (Authentic Primitive Loincloth)
+      ctx.fillStyle = '#451a03'; // Da thú nâu sẫm
+      ctx.beginPath();
+      ctx.moveTo(rx - 8.5 * this.dpr, rpy + 1 * this.dpr);
+      ctx.lineTo(rx + 8.5 * this.dpr, rpy + 1 * this.dpr);
+      ctx.lineTo(rx + 6 * this.dpr, rpy + 11 * this.dpr);
+      ctx.lineTo(rx + 3 * this.dpr, rpy + 13 * this.dpr);
+      ctx.lineTo(rx, rpy + 10 * this.dpr);
+      ctx.lineTo(rx - 3 * this.dpr, rpy + 13 * this.dpr);
+      ctx.lineTo(rx - 6 * this.dpr, rpy + 11 * this.dpr);
+      ctx.closePath();
+      ctx.fill();
+
+      // Dải thắt lưng bện bằng dây leo & Gắn nanh thú
+      ctx.fillStyle = '#78350f';
+      ctx.fillRect(rx - 9 * this.dpr, rpy + 1 * this.dpr, 18 * this.dpr, 2.8 * this.dpr);
+      // Khóa đai răng nanh
+      ctx.fillStyle = '#fef3c7';
+      ctx.beginPath();
+      ctx.moveTo(rx - 1.5 * this.dpr, rpy + 1.5 * this.dpr);
+      ctx.lineTo(rx + 1.5 * this.dpr, rpy + 1.5 * this.dpr);
+      ctx.lineTo(rx, rpy + 5 * this.dpr);
+      ctx.closePath();
+      ctx.fill();
+
+      // 3. THÂN TRẦN VẠM VỠ — Cơ ngực & Cơ bụng 6 múi săn chắc
+      ctx.fillStyle = '#b47545'; // Da bánh mật rám nắng khỏe khoắn
+      ctx.beginPath();
+      ctx.arc(rx, rpy - 3 * this.dpr, 8.2 * this.dpr, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Vạch cơ bụng săn chắc & Cơ ngực thổ dân
+      ctx.strokeStyle = '#8c4e28';
+      ctx.lineWidth = 1.4 * this.dpr;
+      // Đường giữa ngực
+      ctx.beginPath();
+      ctx.moveTo(rx, rpy - 6 * this.dpr);
+      ctx.lineTo(rx, rpy + 1 * this.dpr);
+      ctx.stroke();
+      // Vệt cơ ngực nở nang
+      ctx.beginPath();
+      ctx.arc(rx - 3.5 * this.dpr, rpy - 3.5 * this.dpr, 3 * this.dpr, 0.2, Math.PI * 0.85);
+      ctx.arc(rx + 3.5 * this.dpr, rpy - 3.5 * this.dpr, 3 * this.dpr, 0.15, Math.PI * 0.8);
+      ctx.stroke();
+
+      // Vệt xăm hoang dã màu đất đỏ trên vai thổ dân
+      ctx.strokeStyle = '#dc2626';
+      ctx.lineWidth = 1.2 * this.dpr;
+      ctx.beginPath();
+      ctx.moveTo(rx - 8 * this.dpr, rpy - 5 * this.dpr);
+      ctx.lineTo(rx - 5 * this.dpr, rpy - 2 * this.dpr);
+      ctx.moveTo(rx + 8 * this.dpr, rpy - 5 * this.dpr);
+      ctx.lineTo(rx + 5 * this.dpr, rpy - 2 * this.dpr);
+      ctx.stroke();
+
+      // 4. CHUỖI VÒNG CỔ NANH THÚ TIỀN SỬ (Tooth & Claw Necklace)
+      ctx.strokeStyle = '#451a03';
+      ctx.lineWidth = 1.6 * this.dpr;
+      ctx.beginPath();
+      ctx.arc(rx, rpy - 5.5 * this.dpr, 5.2 * this.dpr, 0.2, Math.PI - 0.2);
+      ctx.stroke();
+
+      // 3 chiếc nanh thú ngà trắng rủ trước ngực
+      ctx.fillStyle = '#fef3c7';
+      // Nanh giữa
+      ctx.beginPath();
+      ctx.moveTo(rx - 1.2 * this.dpr, rpy - 0.5 * this.dpr);
+      ctx.lineTo(rx + 1.2 * this.dpr, rpy - 0.5 * this.dpr);
+      ctx.lineTo(rx, rpy + 3.5 * this.dpr);
+      ctx.closePath();
+      ctx.fill();
+      // Nanh trái
+      ctx.beginPath();
+      ctx.moveTo(rx - 4.5 * this.dpr, rpy - 2 * this.dpr);
+      ctx.lineTo(rx - 2.5 * this.dpr, rpy - 2.5 * this.dpr);
+      ctx.lineTo(rx - 4 * this.dpr, rpy + 1 * this.dpr);
+      ctx.closePath();
+      ctx.fill();
+      // Nanh phải
+      ctx.beginPath();
+      ctx.moveTo(rx + 4.5 * this.dpr, rpy - 2 * this.dpr);
+      ctx.lineTo(rx + 2.5 * this.dpr, rpy - 2.5 * this.dpr);
+      ctx.lineTo(rx + 4 * this.dpr, rpy + 1 * this.dpr);
+      ctx.closePath();
+      ctx.fill();
+
+      // 5. Cánh tay & Vòng dây leo quấn bắp tay
+      ctx.fillStyle = '#a1653d';
+      ctx.beginPath();
+      ctx.arc(rx - 9.5 * this.dpr, rpy - 2 * this.dpr, 3.2 * this.dpr, 0, Math.PI * 2);
+      ctx.arc(rx + 9.5 * this.dpr, rpy - 2 * this.dpr, 3.2 * this.dpr, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#78350f';
+      ctx.lineWidth = 1.3 * this.dpr;
+      ctx.strokeRect(rx - 11.5 * this.dpr, rpy - 3 * this.dpr, 4 * this.dpr, 2 * this.dpr);
+      ctx.strokeRect(rx + 7.5 * this.dpr, rpy - 3 * this.dpr, 4 * this.dpr, 2 * this.dpr);
+
+      // 6. TAY CẦM VŨ KHÍ: Ngọn Lao Gỗ Đá Nhọn Tiền Sử
+      const spearX = rx + 12 * this.dpr;
+      // Cán lao bằng gỗ rừng mộc mạc
+      ctx.strokeStyle = '#451a03';
+      ctx.lineWidth = 2.4 * this.dpr;
+      ctx.beginPath();
+      ctx.moveTo(spearX, rpy - 22 * this.dpr);
       ctx.lineTo(spearX, rpy + 14 * this.dpr);
       ctx.stroke();
 
-      // Tua cờ đỏ dưới ngọn giáo
-      ctx.fillStyle = '#dc2626';
+      // Mũi lao bằng phiến đá nhọn sắc bén (Flint Spearhead)
+      ctx.fillStyle = '#475569';
       ctx.beginPath();
-      ctx.moveTo(spearX - 2 * this.dpr, rpy - 16 * this.dpr);
-      ctx.lineTo(spearX + 4 * this.dpr, rpy - 14 * this.dpr);
-      ctx.lineTo(spearX - 1 * this.dpr, rpy - 11 * this.dpr);
-      ctx.fill();
-
-      // Mũi giáo đồng 2 ngạnh Lạc Việt mạ vàng sắc nhọn
-      ctx.fillStyle = '#fef08a';
-      ctx.beginPath();
-      ctx.moveTo(spearX, rpy - 26 * this.dpr);
-      ctx.lineTo(spearX - 4 * this.dpr, rpy - 18 * this.dpr);
-      ctx.lineTo(spearX, rpy - 19.5 * this.dpr);
-      ctx.lineTo(spearX + 4 * this.dpr, rpy - 18 * this.dpr);
+      ctx.moveTo(spearX, rpy - 29 * this.dpr);
+      ctx.lineTo(spearX - 3.5 * this.dpr, rpy - 20 * this.dpr);
+      ctx.lineTo(spearX + 3.5 * this.dpr, rpy - 20 * this.dpr);
       ctx.closePath();
       ctx.fill();
+      // Dây leo buộc chéo mũi đá
       ctx.strokeStyle = '#d97706';
       ctx.lineWidth = 1.2 * this.dpr;
+      ctx.beginPath();
+      ctx.moveTo(spearX - 3 * this.dpr, rpy - 20 * this.dpr);
+      ctx.lineTo(spearX + 3 * this.dpr, rpy - 17 * this.dpr);
+      ctx.moveTo(spearX + 3 * this.dpr, rpy - 20 * this.dpr);
+      ctx.lineTo(spearX - 3 * this.dpr, rpy - 17 * this.dpr);
       ctx.stroke();
 
-      // 8. Khuôn mặt dũng tướng kiên nghị & Tóc búi cao
-      ctx.fillStyle = '#140c06';
+      // 7. KHUÔN MẶT THỔ DÂN DŨNG MÃNH & TÓC DÀI TIỀN SỬ
+      // Tóc đen buông ngang vai
+      ctx.fillStyle = '#18120e';
       ctx.beginPath();
-      ctx.arc(rx, rpy - 13 * this.dpr, 7 * this.dpr, 0, Math.PI * 2);
+      ctx.ellipse(rx - 8 * this.dpr, rpy - 5 * this.dpr, 3.8 * this.dpr, 9 * this.dpr, 0.1, 0, Math.PI * 2);
+      ctx.ellipse(rx + 8 * this.dpr, rpy - 5 * this.dpr, 3.8 * this.dpr, 9 * this.dpr, -0.1, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.fillStyle = '#c58e65';
+      // Khuôn mặt cương nghị da bánh mật
+      ctx.fillStyle = '#b47545';
       ctx.beginPath();
-      ctx.arc(rx, rpy - 10 * this.dpr, 6.8 * this.dpr, 0, Math.PI * 2);
+      ctx.arc(rx, rpy - 9.5 * this.dpr, 7 * this.dpr, 0, Math.PI * 2);
       ctx.fill();
 
-      // Đôi mắt chiến binh dũng mãnh & Vệt xăm văn thân Lạc Việt
+      // Mái tóc đen & Dải băng trán da thô
+      ctx.fillStyle = '#18120e';
+      ctx.beginPath();
+      ctx.arc(rx, rpy - 12 * this.dpr, 7.2 * this.dpr, Math.PI * 0.95, Math.PI * 2.05);
+      ctx.fill();
+      ctx.strokeStyle = '#78350f';
+      ctx.lineWidth = 2.4 * this.dpr;
+      ctx.beginPath();
+      ctx.arc(rx, rpy - 10.5 * this.dpr, 6.8 * this.dpr, Math.PI * 1.05, Math.PI * 1.95);
+      ctx.stroke();
+
+      // Đôi mắt hoang dã sắc sảo
       ctx.fillStyle = '#0f172a';
       ctx.beginPath();
-      ctx.arc(rx - 2.6 * this.dpr, rpy - 10.5 * this.dpr, 1.3 * this.dpr, 0, Math.PI * 2);
-      ctx.arc(rx + 2.6 * this.dpr, rpy - 10.5 * this.dpr, 1.3 * this.dpr, 0, Math.PI * 2);
+      ctx.arc(rx - 2.6 * this.dpr, rpy - 9.5 * this.dpr, 1.2 * this.dpr, 0, Math.PI * 2);
+      ctx.arc(rx + 2.6 * this.dpr, rpy - 9.5 * this.dpr, 1.2 * this.dpr, 0, Math.PI * 2);
       ctx.fill();
 
-      // Vệt xăm đỏ trên má
-      ctx.fillStyle = '#dc2626';
-      ctx.fillRect(rx - 5.2 * this.dpr, rpy - 8.5 * this.dpr, 2.2 * this.dpr, 1.2 * this.dpr);
-      ctx.fillRect(rx + 3 * this.dpr, rpy - 8.5 * this.dpr, 2.2 * this.dpr, 1.2 * this.dpr);
+      // Vệt sơn chiến binh màu đất đỏ ngang 2 gò má
+      ctx.fillStyle = '#c2410c';
+      ctx.fillRect(rx - 5.5 * this.dpr, rpy - 7.5 * this.dpr, 2.5 * this.dpr, 1.2 * this.dpr);
+      ctx.fillRect(rx + 3 * this.dpr, rpy - 7.5 * this.dpr, 2.5 * this.dpr, 1.2 * this.dpr);
 
-      // Băng trán đồng Đông Sơn
-      ctx.fillStyle = '#f59e0b';
-      ctx.fillRect(rx - 7 * this.dpr, rpy - 13 * this.dpr, 14 * this.dpr, 2.8 * this.dpr);
-      ctx.fillStyle = '#dc2626';
-      ctx.beginPath();
-      ctx.arc(rx, rpy - 11.6 * this.dpr, 1.8 * this.dpr, 0, Math.PI * 2);
-      ctx.fill();
-
-      // 9. Mũ Lông Chim Lạc Việt 3 Tầng Ngũ Sắc Vương Giả (3-Tiered Feathers)
+      // 8. LÔNG CHIM RỪNG CÀI ĐẦU ĐUNG ĐƯA THEO BƯỚC ĐI
       const featherSway = Math.sin(this.tick / 6) * 1.5 * this.dpr;
-
-      // Lông giữa cao vút màu đỏ son & ngà
-      ctx.fillStyle = '#dc2626';
+      ctx.fillStyle = '#b91c1c'; // Lông đại bàng đỏ thẫm
       ctx.beginPath();
-      ctx.moveTo(rx - 2.5 * this.dpr, rpy - 13 * this.dpr);
-      ctx.quadraticCurveTo(rx + featherSway, rpy - 27 * this.dpr, rx + 1 * this.dpr + featherSway, rpy - 28 * this.dpr);
-      ctx.quadraticCurveTo(rx + 3 * this.dpr + featherSway, rpy - 20 * this.dpr, rx + 2.5 * this.dpr, rpy - 13 * this.dpr);
-      ctx.fill();
-      ctx.fillStyle = '#fef08a';
-      ctx.beginPath();
-      ctx.arc(rx + 1 * this.dpr + featherSway, rpy - 28 * this.dpr, 2 * this.dpr, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Lông trái màu vàng kim
-      ctx.fillStyle = '#f59e0b';
-      ctx.beginPath();
-      ctx.moveTo(rx - 4 * this.dpr, rpy - 13 * this.dpr);
-      ctx.quadraticCurveTo(rx - 9 * this.dpr + featherSway, rpy - 23 * this.dpr, rx - 7 * this.dpr + featherSway, rpy - 24 * this.dpr);
-      ctx.quadraticCurveTo(rx - 3 * this.dpr, rpy - 18 * this.dpr, rx - 1.5 * this.dpr, rpy - 13 * this.dpr);
-      ctx.fill();
-
-      // Lông phải màu xanh ngọc bích
-      ctx.fillStyle = '#059669';
-      ctx.beginPath();
-      ctx.moveTo(rx + 1.5 * this.dpr, rpy - 13 * this.dpr);
-      ctx.quadraticCurveTo(rx + 9 * this.dpr + featherSway, rpy - 23 * this.dpr, rx + 7 * this.dpr + featherSway, rpy - 24 * this.dpr);
-      ctx.quadraticCurveTo(rx + 4 * this.dpr, rpy - 18 * this.dpr, rx + 4 * this.dpr, rpy - 13 * this.dpr);
+      ctx.moveTo(rx - 2 * this.dpr, rpy - 12 * this.dpr);
+      ctx.quadraticCurveTo(rx + 2 * this.dpr + featherSway, rpy - 24 * this.dpr, rx + 1 * this.dpr + featherSway, rpy - 25 * this.dpr);
+      ctx.quadraticCurveTo(rx + 4 * this.dpr + featherSway, rpy - 18 * this.dpr, rx + 2 * this.dpr, rpy - 12 * this.dpr);
+      ctx.closePath();
       ctx.fill();
     }
 

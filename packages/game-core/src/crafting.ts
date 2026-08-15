@@ -482,3 +482,74 @@ export function upgradeProgress(
 }
 
 export { recipesAvailable, CAMP_TIERS };
+
+/**
+ * Chi phí Di Dời Doanh Trại:
+ * 1. Phương thức 'materials': Dùng 15 Gỗ lớn, 10 Khối đá, 5 Dây bện + 20 Đồng Vàng Cổ.
+ * 2. Phương thức 'gold': Thuê Thương Nhân Caravan vận chuyển trọn gói bằng 50 Đồng Vàng Cổ.
+ */
+export const RELOCATE_CAMP_COST_MATERIALS: ItemStack[] = [
+  { itemId: 'log', qty: 15 },
+  { itemId: 'stone_block', qty: 10 },
+  { itemId: 'rope', qty: 5 },
+  { itemId: 'ancient_coin', qty: 20 },
+];
+
+export const RELOCATE_CAMP_COST_GOLD: ItemStack[] = [
+  { itemId: 'ancient_coin', qty: 50 },
+];
+
+export interface RelocateCampResult {
+  ok: boolean;
+  messageVi: string;
+  player: PlayerState;
+  newHomeCell?: string;
+}
+
+export function relocateCamp(
+  player: PlayerState,
+  newCellId: string,
+  method: 'materials' | 'gold' = 'materials',
+  exactLat?: number,
+  exactLon?: number,
+): RelocateCampResult {
+  if (player.camp.homeCell === newCellId && (!exactLat || player.camp.exactLat === exactLat)) {
+    return {
+      ok: false,
+      messageVi: 'Vị trí mới trùng với vị trí Doanh Trại hiện tại.',
+      player,
+    };
+  }
+
+  const cost = method === 'gold' ? RELOCATE_CAMP_COST_GOLD : RELOCATE_CAMP_COST_MATERIALS;
+
+  // Kiểm tra tài nguyên trong carried
+  if (!hasAll(player.carried, cost)) {
+    const missing = missingFrom(player.carried, cost);
+    return {
+      ok: false,
+      messageVi: `Không đủ tài nguyên di dời trại: thiếu ${missing.map((m) => `${m.itemId} × ${m.qty}`).join(', ')}.`,
+      player,
+    };
+  }
+
+  const updatedCarried = removeItems(player.carried, cost);
+  const updatedPlayer: PlayerState = {
+    ...player,
+    carried: updatedCarried,
+    camp: {
+      ...player.camp,
+      homeCell: newCellId,
+      exactLat,
+      exactLon,
+    },
+  };
+
+  return {
+    ok: true,
+    messageVi: `🏕️ Di dời Doanh Trại thành công! Toàn bộ cơ sở vật chất, két an toàn và nông trại đã được chuyển đến vùng đất mới.`,
+    player: updatedPlayer,
+    newHomeCell: newCellId,
+  };
+}
+

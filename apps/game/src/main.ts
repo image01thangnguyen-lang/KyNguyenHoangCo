@@ -95,6 +95,9 @@ import {
   checkBeastTerritory,
   checkNightAmbientThreat,
   raidBeastDen,
+  relocateCamp,
+  RELOCATE_CAMP_COST_MATERIALS,
+  RELOCATE_CAMP_COST_GOLD,
 } from '../../../packages/game-core/src/index.ts';
 import type {
   DifficultyId,
@@ -795,6 +798,9 @@ function collectWorldDrop(drop: WorldDrop): void {
 
 function getHomeCampCenter(): LatLon | null {
   if (!app.profile?.player.camp.homeCell) return null;
+  if (typeof app.profile.player.camp.exactLat === 'number' && typeof app.profile.player.camp.exactLon === 'number') {
+    return { lat: app.profile.player.camp.exactLat, lon: app.profile.player.camp.exactLon };
+  }
   const cell = cellById(app.profile.player.camp.homeCell);
   if (!cell) return null;
   return { lat: cell.centerLat, lon: cell.centerLon };
@@ -802,6 +808,22 @@ function getHomeCampCenter(): LatLon | null {
 
 let smoothRenderPos: LatLon | null = null;
 let devMockPosition: LatLon | null = null;
+let mapPickMode: 'set_home' | 'relocate_camp' | null = null;
+let relocateTargetPos: LatLon | null = null;
+
+function openRelocateCampModal(targetPos?: LatLon): void {
+  if (!app.profile) return;
+  relocateTargetPos = targetPos || currentPosition().render;
+  const targetCell = cellAt(relocateTargetPos.lat, relocateTargetPos.lon);
+  const currentCell = app.profile.player.camp.homeCell;
+  const isSame = currentCell === targetCell.id;
+
+  const descEl = el('relocate-loc-desc');
+  if (descEl) {
+    descEl.innerHTML = `Toạ độ [${relocateTargetPos.lat.toFixed(4)}, ${relocateTargetPos.lon.toFixed(4)}] · Vùng ${targetCell.biome} ${isSame ? '<span style="color:#ef4444;font-weight:700;">(Trùng vị trí hiện tại)</span>' : '<span style="color:#4ade80;font-weight:700;">✅ Vị trí hợp lệ</span>'}`;
+  }
+  el('overlay-relocate-camp').hidden = false;
+}
 
 export function isNativeApk(): boolean {
   return (
@@ -1020,6 +1042,19 @@ function enterProfile(slot: number): void {
       audio.play('click');
       openPoiExploreSheet(feat);
     };
+    mapView.onMapClick = (latLon) => {
+      if (mapPickMode === 'set_home') {
+        mapPickMode = null;
+        const banner = document.getElementById('map-pick-guide-banner');
+        if (banner) banner.hidden = true;
+        promptConfirmCampLocation(latLon);
+      } else if (mapPickMode === 'relocate_camp') {
+        mapPickMode = null;
+        const banner = document.getElementById('map-pick-guide-banner');
+        if (banner) banner.hidden = true;
+        openRelocateCampModal(latLon);
+      }
+    };
     globalThis.addEventListener('resize', () => mapView?.resize());
   }
   mapView.resize();
@@ -1081,21 +1116,167 @@ function enterProfile(slot: number): void {
     el('overlay-gps-required').hidden = true;
   };
 
-  // Nút Thiết lập Căn Cứ / Nhà ban đầu
-  el('btn-confirm-home').onclick = () => {
+  // ==================== THIẾT LẬP CĂN CỨ / DOANH TRẠI ====================
+  let pendingCampPos: LatLon | null = null;
+
+  function promptConfirmCampLocation(pos: LatLon): void {
+    pendingCampPos = pos;
+    const cell = cellAt(pos.lat, pos.lon);
+    const coordsEl = document.getElementById('confirm-camp-coords');
+    const biomeEl = document.getElementById('confirm-camp-biome');
+    if (coordsEl) coordsEl.textContent = `[${pos.lat.toFixed(4)}, ${pos.lon.toFixed(4)}]`;
+    if (biomeEl) biomeEl.textContent = cell.biome;
+    el('overlay-confirm-camp-location').hidden = false;
+  }
+
+  function setupInitialCampAt(pos: LatLon): void {
     if (!app.profile) return;
-    const { render: at } = currentPosition();
-    const cell = cellAt(at.lat, at.lon).id;
+    const cell = cellAt(pos.lat, pos.lon).id;
     app.profile.player.camp.homeCell = cell;
+    app.profile.player.camp.exactLat = pos.lat;
+    app.profile.player.camp.exactLon = pos.lon;
     persist();
     el('overlay-set-home').hidden = true;
-    toast('🏕️ Đã thiết lập Căn Cứ thành công! Đây là Nhà an toàn của bạn.', 'good');
+    el('overlay-confirm-camp-location').hidden = true;
+    toast(`🏕️ Đã thiết lập Doanh Trại tại [${pos.lat.toFixed(4)}, ${pos.lon.toFixed(4)}]! Đây là Nhà an toàn của bạn.`, 'good');
+    audio.play('quest_complete');
     afterAction();
-  };
+  }
+
+  const btnConfirmGps = document.getElementById('btn-confirm-home-gps');
+  if (btnConfirmGps) {
+    btnConfirmGps.onclick = () => {
+      const { render: at } = currentPosition();
+      el('overlay-set-home').hidden = true;
+      promptConfirmCampLocation(at);
+    };
+  }
+
+  // Chấm chọn tự do trên bản đồ
+  const btnOpenMapPick = document.getElementById('btn-open-map-pick');
+  if (btnOpenMapPick) {
+    btnOpenMapPick.onclick = () => {
+      mapPickMode = 'set_home';
+      el('overlay-set-home').hidden = true;
+      const banner = document.getElementById('map-pick-guide-banner');
+      if (banner) {
+        banner.hidden = false;
+        const titleEl = document.getElementById('map-pick-guide-title');
+        const descEl = document.getElementById('map-pick-guide-desc');
+        if (titleEl) titleEl.textContent = 'Chế độ chọn vị trí Doanh Trại';
+        if (descEl) descEl.innerHTML = 'Hãy kéo/phóng to bản đồ và <strong>chạm vào vị trí</strong> bạn muốn đặt Doanh Trại.';
+      }
+      toast('🗺️ Hãy chạm vào bất kỳ vị trí nào trên bản đồ để chọn nơi đặt Doanh Trại!', 'good');
+    };
+  }
+
+  const btnCancelMapPick = document.getElementById('btn-cancel-map-pick');
+  if (btnCancelMapPick) {
+    btnCancelMapPick.onclick = () => {
+      const prevMode = mapPickMode;
+      mapPickMode = null;
+      const banner = document.getElementById('map-pick-guide-banner');
+      if (banner) banner.hidden = true;
+      if (prevMode === 'set_home' && !app.profile?.player.camp.homeCell) {
+        el('overlay-set-home').hidden = false;
+      }
+    };
+  }
+
+  const btnConfirmCampFinal = document.getElementById('btn-confirm-camp-final');
+  if (btnConfirmCampFinal) {
+    btnConfirmCampFinal.onclick = () => {
+      if (pendingCampPos) {
+        setupInitialCampAt(pendingCampPos);
+      }
+    };
+  }
+
+  const btnRepickCampLoc = document.getElementById('btn-repick-camp-location');
+  if (btnRepickCampLoc) {
+    btnRepickCampLoc.onclick = () => {
+      el('overlay-confirm-camp-location').hidden = true;
+      mapPickMode = 'set_home';
+      const banner = document.getElementById('map-pick-guide-banner');
+      if (banner) {
+        banner.hidden = false;
+        const titleEl = document.getElementById('map-pick-guide-title');
+        const descEl = document.getElementById('map-pick-guide-desc');
+        if (titleEl) titleEl.textContent = 'Chế độ chọn vị trí Doanh Trại';
+        if (descEl) descEl.innerHTML = 'Hãy kéo/phóng to bản đồ và <strong>chạm vào vị trí</strong> bạn muốn đặt Doanh Trại.';
+      }
+      toast('🗺️ Hãy chạm vào vị trí mới trên bản đồ để chọn lại.', 'good');
+    };
+  }
 
   // Nếu người chơi chưa có vị trí Căn Cứ (Nhà) -> mở màn hình thiết lập Nhà
   if (!app.profile.player.camp.homeCell) {
     el('overlay-set-home').hidden = false;
+  }
+
+  // ==================== DI DỜI DOANH TRẠI (CAMP RELOCATION) ====================
+  const btnRelocateMat = document.getElementById('btn-relocate-by-materials');
+  if (btnRelocateMat) {
+    btnRelocateMat.onclick = () => {
+      if (!app.profile || !relocateTargetPos) return;
+      const targetCell = cellAt(relocateTargetPos.lat, relocateTargetPos.lon).id;
+      const result = relocateCamp(app.profile.player, targetCell, 'materials', relocateTargetPos.lat, relocateTargetPos.lon);
+      if (result.ok) {
+        app.profile.player = result.player;
+        persist();
+        el('overlay-relocate-camp').hidden = true;
+        audio.play('quest_complete');
+        toast(result.messageVi, 'good');
+        afterAction();
+      } else {
+        audio.play('denied');
+        toast(result.messageVi, 'warn');
+      }
+    };
+  }
+
+  const btnRelocateGold = document.getElementById('btn-relocate-by-gold');
+  if (btnRelocateGold) {
+    btnRelocateGold.onclick = () => {
+      if (!app.profile || !relocateTargetPos) return;
+      const targetCell = cellAt(relocateTargetPos.lat, relocateTargetPos.lon).id;
+      const result = relocateCamp(app.profile.player, targetCell, 'gold', relocateTargetPos.lat, relocateTargetPos.lon);
+      if (result.ok) {
+        app.profile.player = result.player;
+        persist();
+        el('overlay-relocate-camp').hidden = true;
+        audio.play('quest_complete');
+        toast(result.messageVi, 'good');
+        afterAction();
+      } else {
+        audio.play('denied');
+        toast(result.messageVi, 'warn');
+      }
+    };
+  }
+
+  const btnRelocatePickMap = document.getElementById('btn-relocate-pick-map');
+  if (btnRelocatePickMap) {
+    btnRelocatePickMap.onclick = () => {
+      mapPickMode = 'relocate_camp';
+      el('overlay-relocate-camp').hidden = true;
+      const banner = document.getElementById('map-pick-guide-banner');
+      if (banner) {
+        banner.hidden = false;
+        const titleEl = document.getElementById('map-pick-guide-title');
+        const descEl = document.getElementById('map-pick-guide-desc');
+        if (titleEl) titleEl.textContent = 'Di dời Doanh Trại';
+        if (descEl) descEl.innerHTML = 'Hãy chạm vào <strong>toạ độ mới</strong> trên bản đồ để dựng trại.';
+      }
+      toast('🗺️ Chế độ di dời: Hãy chạm vào toạ độ mới trên bản đồ để dựng trại!', 'good');
+    };
+  }
+
+  const btnRelocateClose = document.getElementById('btn-relocate-close');
+  if (btnRelocateClose) {
+    btnRelocateClose.onclick = () => {
+      el('overlay-relocate-camp').hidden = true;
+    };
   }
 
   // Nút đóng Tiệm Thương Nhân NPC
@@ -2514,6 +2695,10 @@ const handlers: Handlers = {
       audio.play('denied');
       toast(res.messageVi, 'bad');
     }
+  },
+
+  onOpenRelocateCamp() {
+    openRelocateCampModal();
   },
 
   onToggleSetting(key) {

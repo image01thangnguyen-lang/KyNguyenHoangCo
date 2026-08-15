@@ -11,6 +11,9 @@ import {
   upgradeProgress,
   getArtisanRank,
   upgradeArtisanRankWithGold,
+  relocateCamp,
+  RELOCATE_CAMP_COST_MATERIALS,
+  RELOCATE_CAMP_COST_GOLD,
 } from '../src/crafting.js';
 import {
   dropFraction,
@@ -373,5 +376,42 @@ test('KÉT AN TOÀN: Nâng cấp sức chứa bằng Đồng Vàng Cổ (ancient
   assert.equal(withdraw.safe.blueprint, 1);
   assert.equal(withdraw.carried.blueprint, 1);
 });
+
+test('DI DỜI DOANH TRẠI: Đổi vị trí căn cứ bằng nguyên liệu hoặc đồng vàng cổ', () => {
+  const p              = {
+    id: 'p1',
+    displayName: 'Thổ Dân',
+    survival: { satiety: 100, hydration: 100, hp: 100, sickness: null, asleep: false, lastTickMs: T0 },
+    carried: { log: 20, stone_block: 15, rope: 10, ancient_coin: 60 },
+    safeStorage: { dried_meat: 50 },
+    camp: { ...camp1(), homeCell: 'c_210200_1058200' },
+    steps: { todaySteps: 0, lastStepMs: T0, history: {}, totalSteps: 0 },
+    lifetime: { steps: 0, daysPlayed: 1, craftCount: 0, nightDefenseWins: 0, bloodMoonWins: 0, totalGatherActions: 0 },
+    knownRecipes: [],
+    safeVaultLevel: 1,
+    createdAtMs: T0,
+  };
+
+  // 1. Trùng vị trí -> từ chối
+  const failSame = relocateCamp(p, 'c_210200_1058200', 'materials');
+  assert.equal(failSame.ok, false);
+
+  // 2. Di dời bằng nguyên liệu sang ô mới -> Thành công, bảo toàn két an toàn & trừ đúng nguyên liệu
+  const resMat = relocateCamp(p, 'c_210350_1058450', 'materials');
+  assert.equal(resMat.ok, true);
+  assert.equal(resMat.player.camp.homeCell, 'c_210350_1058450');
+  assert.equal(resMat.player.carried.log, 5); // 20 - 15 = 5
+  assert.equal(resMat.player.carried.stone_block, 5); // 15 - 10 = 5
+  assert.equal(resMat.player.carried.rope, 5); // 10 - 5 = 5
+  assert.equal(resMat.player.carried.ancient_coin, 40); // 60 - 20 = 40
+  assert.equal(resMat.player.safeStorage.dried_meat, 50);
+
+  // 3. Di dời bằng tiền vàng trọn gói -> Trừ 50 vàng
+  const resGold = relocateCamp(p, 'c_210600_1058200', 'gold');
+  assert.equal(resGold.ok, true);
+  assert.equal(resGold.player.camp.homeCell, 'c_210600_1058200');
+  assert.equal(resGold.player.carried.ancient_coin, 10); // 60 - 50 = 10
+});
+
 
 
