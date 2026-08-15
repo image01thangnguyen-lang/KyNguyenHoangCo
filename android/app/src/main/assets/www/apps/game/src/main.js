@@ -218,12 +218,21 @@ const POOL_BY_ZONE                                                 = {
 let lastVibratedDropId                = null;
 let currentDeviceHeading                = null;
 let compassListenerInitialized = false;
+let lastCompassUpdateMs = 0;
 
 function initCompassListener()       {
   if (compassListenerInitialized) return;
   compassListenerInitialized = true;
 
   const onOrientation = (event                        ) => {
+    // Tiết kiệm pin tối đa: Không xử lý khi thanh radar không bật chế độ chỉ hướng
+    if (!lastActiveDrop || lastDropDist > 75 || lastDropDist <= 35) return;
+
+    const t = performance.now();
+    // Giới hạn tần số la bàn tối đa 3 lần/giây (350ms/lần) thay vì 60-120Hz ép chip liên tục
+    if (t - lastCompassUpdateMs < 350) return;
+    lastCompassUpdateMs = t;
+
     let heading                = null;
     if ((event       ).webkitCompassHeading !== undefined) {
       // iOS Safari (0 là hướng Bắc thật)
@@ -234,14 +243,7 @@ function initCompassListener()       {
     }
 
     if (heading !== null && Number.isFinite(heading)) {
-      if (currentDeviceHeading === null) {
-        currentDeviceHeading = heading;
-      } else {
-        // Bộ lọc làm mượt chuyển động xoay (Low-Pass Filter) không giật lag
-        const diff = ((heading - currentDeviceHeading + 540) % 360) - 180;
-        currentDeviceHeading = (currentDeviceHeading + diff * 0.3 + 360) % 360;
-      }
-      // Cập nhật góc kim chỉ ngay lập tức với chi phí cực thấp (chỉ đổi CSS transform)
+      currentDeviceHeading = heading;
       updateDropRadarPointerOnly();
     }
   };
@@ -347,9 +349,11 @@ function getNavigationDirection(from        , to        , deviceHeading         
 let lastActiveDrop                   = null;
 let lastDropDist = 0;
 let lastPlayerPos                = null;
+let currentRadarMode                                  = 'none';
+let currentRadarDropId                = null;
 
 function updateDropRadarPointerOnly()       {
-  if (!lastActiveDrop || lastDropDist > 65 || lastDropDist <= 25 || !lastPlayerPos) return;
+  if (!lastActiveDrop || lastDropDist > 65 || lastDropDist <= 35 || !lastPlayerPos) return;
   const pointer = document.getElementById('drop-radar-pointer-svg');
   const textEl = document.getElementById('drop-radar-turn-text');
   if (!pointer || !textEl) return;
@@ -369,55 +373,90 @@ function updateDropRadar(drop                  , dist         , playerPos       
 
   if (!drop || dist === undefined || !playerPos) {
     banner.hidden = true;
+    currentRadarMode = 'none';
+    currentRadarDropId = null;
     return;
   }
 
   banner.hidden = false;
   const roundedDist = Math.round(dist);
+  const targetMode = dist <= 35 ? 'ready' : 'navigating';
 
-  if (dist <= 25) {
-    // Đã vào bán kính nhặt (<= 25m)
-    banner.className = 'drop-radar-banner drop-radar-banner--ready';
-    banner.innerHTML = `
-      <div class="drop-radar__icon" style="font-size:1.6rem;">✨</div>
-      <div class="drop-radar__info">
-        <div style="font-weight:800;font-size:0.95rem;color:#86efac;">
-          🖐️ ĐÃ ĐẾN GẦN! (Cách ${roundedDist}m)
+  if (targetMode === 'ready') {
+    // Đã vào bán kính nhặt (<= 35m)
+    // QUAN TRỌNG: Chỉ render HTML một lần duy nhất khi chuyển trạng thái, KHÔNG render 18 lần/giây để tránh xoá nút khi người dùng đang ấn ngón tay vào
+    if (currentRadarMode !== 'ready' || currentRadarDropId !== drop.id) {
+      currentRadarMode = 'ready';
+      currentRadarDropId = drop.id;
+      banner.className = 'drop-radar-banner drop-radar-banner--ready';
+      banner.innerHTML = `
+        <div class="drop-radar__icon" style="font-size:1.6rem;">✨</div>
+        <div class="drop-radar__info">
+          <div id="drop-radar-ready-title" style="font-weight:800;font-size:0.95rem;color:#86efac;">
+            🖐️ ĐÃ ĐẾN GẦN! (Cách ${roundedDist}m)
+          </div>
+          <div class="drop-radar__sub" style="color:#d1fae5;font-size:0.8rem;margin-top:2px;">
+            Đã trong tầm với! Chạm vào đây để nhặt
+          </div>
         </div>
-        <div class="drop-radar__sub" style="color:#d1fae5;font-size:0.8rem;margin-top:2px;">
-          Đã trong tầm với! Bấm nhặt ngay
-        </div>
-      </div>
-      <button id="btn-radar-collect" class="btn btn--tiny btn--primary" style="background:#16a34a;border-color:#4ade80;font-weight:800;padding:7px 14px;font-size:0.88rem;white-space:nowrap;box-shadow:0 0 12px rgba(74,222,128,0.5);">🖐️ Nhặt (${drop.qty})</button>
-    `;
-    const btn = document.getElementById('btn-radar-collect');
-    if (btn) {
-      btn.onclick = (e) => {
+        <button id="btn-radar-collect" class="btn btn--tiny btn--primary" style="background:#16a34a;border-color:#4ade80;font-weight:800;padding:8px 16px;font-size:0.92rem;white-space:nowrap;box-shadow:0 0 12px rgba(74,222,128,0.5);touch-action:manipulation;cursor:pointer;">🖐️ Nhặt (${drop.qty})</button>
+      `;
+
+      // Gắn sự kiện nhặt siêu nhạy cho cả nút bấm lẫn toàn bộ thanh banner (chạm đâu cũng nhặt được)
+      const handleCollect = (e       ) => {
         e.stopPropagation();
-        collectWorldDrop(drop);
+        if (lastActiveDrop) {
+          collectWorldDrop(lastActiveDrop);
+        }
       };
+
+      const btn = document.getElementById('btn-radar-collect');
+      if (btn) {
+        btn.onclick = handleCollect;
+        btn.ontouchend = handleCollect;
+      }
+      banner.onclick = handleCollect;
+      banner.ontouchend = handleCollect;
+    } else {
+      // Chỉ cập nhật khoảng cách số mà không phá huỷ DOM
+      const title = document.getElementById('drop-radar-ready-title');
+      if (title) title.textContent = `🖐️ ĐÃ ĐẾN GẦN! (Cách ${roundedDist}m)`;
     }
   } else {
-    // Đang ở khoảng cách phát hiện (~26m - 65m): hiển thị la bàn cảm biến chỉ quẹo trái/quẹo phải
-    banner.className = 'drop-radar-banner';
-    const nav = getNavigationDirection(playerPos, { lat: drop.lat, lon: drop.lon }, currentDeviceHeading);
-    
-    banner.innerHTML = `
-      <div class="drop-radar__compass-box">
-        <svg id="drop-radar-pointer-svg" class="drop-radar__pointer" viewBox="0 0 32 32" width="28" height="28" style="transform: rotate(${Math.round(nav.relativeAngle)}deg) translateZ(0);">
-          <polygon points="16,3 26,26 16,20 6,26" fill="#f59e0b" stroke="#fef08a" stroke-width="1.8" stroke-linejoin="round"/>
-        </svg>
-      </div>
-      <div class="drop-radar__info">
-        <div style="font-weight:800; font-size:0.95rem; color:#fef08a; display:flex; align-items:center; gap:6px;">
-          <span id="drop-radar-turn-text">${nav.arrow} ${nav.instructionVi}</span>
-          <span style="font-size:0.82rem; color:var(--bone); font-weight:normal;">• Cách <strong>${roundedDist}m</strong></span>
+    // Đang ở khoảng cách phát hiện (~36m - 75m): hiển thị la bàn cảm biến chỉ hướng
+    if (currentRadarMode !== 'navigating' || currentRadarDropId !== drop.id) {
+      currentRadarMode = 'navigating';
+      currentRadarDropId = drop.id;
+      banner.className = 'drop-radar-banner';
+      banner.onclick = null;
+      banner.ontouchend = null;
+      const nav = getNavigationDirection(playerPos, { lat: drop.lat, lon: drop.lon }, currentDeviceHeading);
+      
+      banner.innerHTML = `
+        <div class="drop-radar__compass-box">
+          <svg id="drop-radar-pointer-svg" class="drop-radar__pointer" viewBox="0 0 32 32" width="28" height="28" style="transform: rotate(${Math.round(nav.relativeAngle)}deg) translateZ(0);">
+            <polygon points="16,3 26,26 16,20 6,26" fill="#f59e0b" stroke="#fef08a" stroke-width="1.8" stroke-linejoin="round"/>
+          </svg>
         </div>
-        <div class="drop-radar__sub" style="color:#e5e7eb; font-size:0.8rem; margin-top:2px;">
-          📦 <strong>${drop.nameVi} (+${drop.qty})</strong> — ${nav.turnAdviceVi}
+        <div class="drop-radar__info">
+          <div style="font-weight:800; font-size:0.95rem; color:#fef08a; display:flex; align-items:center; gap:6px;">
+            <span id="drop-radar-turn-text">${nav.arrow} ${nav.instructionVi}</span>
+            <span id="drop-radar-dist-text" style="font-size:0.82rem; color:var(--bone); font-weight:normal;">• Cách <strong>${roundedDist}m</strong></span>
+          </div>
+          <div class="drop-radar__sub" style="color:#e5e7eb; font-size:0.8rem; margin-top:2px;">
+            📦 <strong>${drop.nameVi} (+${drop.qty})</strong> — ${nav.turnAdviceVi}
+          </div>
         </div>
-      </div>
-    `;
+      `;
+    } else {
+      const nav = getNavigationDirection(playerPos, { lat: drop.lat, lon: drop.lon }, currentDeviceHeading);
+      const pointer = document.getElementById('drop-radar-pointer-svg');
+      const textEl = document.getElementById('drop-radar-turn-text');
+      const distEl = document.getElementById('drop-radar-dist-text');
+      if (pointer) pointer.style.transform = `rotate(${Math.round(nav.relativeAngle)}deg) translateZ(0)`;
+      if (textEl) textEl.textContent = `${nav.arrow} ${nav.instructionVi}`;
+      if (distEl) distEl.innerHTML = `• Cách <strong>${roundedDist}m</strong>`;
+    }
   }
 }
 
@@ -635,8 +674,11 @@ let devMockPosition                = null;
 export function isNativeApk()          {
   return (
     typeof (globalThis       ).AndroidBridge !== 'undefined' ||
+    typeof (globalThis       ).webkit?.messageHandlers !== 'undefined' ||
     navigator.userAgent.includes('KyNguyenHoangCo') ||
-    (globalThis       ).__IS_APK__ === true
+    (globalThis       ).__IS_APK__ === true ||
+    window.location.protocol === 'file:' ||
+    (typeof (navigator       ).standalone !== 'undefined' && (navigator       ).standalone === true)
   );
 }
 
@@ -655,7 +697,7 @@ function currentPosition()                                                      
   } else {
     const steps = app.profile?.player?.lifetime?.steps ?? 0;
     targetPos = steps > 0 ? simulatedWalk(FALLBACK_POSITION, steps) : FALLBACK_POSITION;
-    hasFix = !isNativeApk();
+    hasFix = false;
   }
 
   if (!smoothRenderPos) {
@@ -667,7 +709,7 @@ function currentPosition()                                                      
   }
 
   return {
-    position: isNativeApk() ? (hasFix ? targetPos : null) : targetPos,
+    position: targetPos,
     render: smoothRenderPos,
     hasFix,
   };
@@ -1006,6 +1048,11 @@ function updatePocketModeDisplay()       {
   el('pocket-mode-steps').textContent = `${totalSteps.toLocaleString('vi-VN')} bước`;
 }
 
+let lastUserInteractionTime = 0;
+export function bumpInteraction()       {
+  lastUserInteractionTime = performance.now();
+}
+
 function startLoops()       {
   if (syncTimer) clearInterval(syncTimer);
   syncTimer = setInterval(() => sync(), 5000);
@@ -1021,8 +1068,10 @@ function startLoops()       {
       return;
     }
 
-    // Khóa cố định 18 FPS tiết kiệm pin (đủ mượt cho bản đồ 2.5D, giảm 70% tải GPU so với 60 FPS)
-    const frameInterval = 1000 / 18;
+    // Nhịp render thông minh: 10 FPS khi đứng yên (máy cực mát, 0% nóng), 18 FPS khi vuốt chạm bản đồ
+    const isInteracting = timestamp - lastUserInteractionTime < 1500;
+    const targetFps = isInteracting ? 18 : 10;
+    const frameInterval = 1000 / targetFps;
 
     const elapsed = timestamp - lastFrameTime;
     if (elapsed < frameInterval) return;
@@ -1089,6 +1138,9 @@ function sync()       {
     const { render: at } = currentPosition();
     spawnSingleWorldDropNear(at, app.view.location?.zone ?? 'wilderness');
   }
+
+  // Cập nhật kiểm tra khoảng cách đồ rơi theo chu kỳ sync (5 giây/lần), không chạy 18 lần/giây trong render loop
+  checkDropProximityAndAlert();
 
   for (const message of result.eventsVi) {
     if (message.includes('Đồng hồ máy')) continue; // Đã gom vào icon Chuông 🔔
@@ -1203,8 +1255,6 @@ function drawMap()       {
     traps: app.profile.player.traps,
     activePetId: app.profile.player.pets?.find((p     ) => p.isActive)?.petId ?? null,
   });
-
-  checkDropProximityAndAlert();
 }
 
 function toRoman(num        )         {
@@ -1978,6 +2028,11 @@ function wireStaticControls()       {
   // Kích hoạt cảm biến la bàn định hướng thời gian thực
   initCompassListener();
 
+  // Bắt sự kiện tương tác để điều chỉnh nhịp FPS thích ứng (10 FPS idle / 18 FPS tương tác)
+  window.addEventListener('pointerdown', bumpInteraction, { passive: true });
+  window.addEventListener('pointermove', bumpInteraction, { passive: true });
+  window.addEventListener('touchstart', bumpInteraction, { passive: true });
+
   // Tự động phát âm thanh click tương tác giòn giã cho mọi nút bấm và thành phần UI
   document.addEventListener(
     'click',
@@ -2013,14 +2068,7 @@ function wireStaticControls()       {
   // Bấm vào vùng backdrop ngoài Drawer để đóng về Bản đồ
   el('drawer-backdrop').onclick = () => switchTab('map');
 
-  // Cụm điều khiển Bản đồ: Phóng to (+), Thu nhỏ (−), Về ban đầu (🎯)
-  el('btn-zoom-in').onclick = () => {
-    mapView?.zoomIn();
-  };
-
-  el('btn-zoom-out').onclick = () => {
-    mapView?.zoomOut();
-  };
+  // Cụm điều khiển Bản đồ: Chế độ Bỏ túi (🔋), Về ban đầu (🎯)
 
   el('btn-pocket-mode').onclick = () => {
     togglePocketMode(true);
@@ -2142,36 +2190,15 @@ function wireGpsOverlay()       {
 
 function checkGpsRequirement()       {
   const overlay = document.getElementById('overlay-gps-required');
-  if (!isNativeApk()) {
-    if (overlay) overlay.hidden = true;
-    return;
-  }
+  if (overlay) overlay.hidden = true; // Luôn mở khóa game mượt mà, không chặn người chơi
 
-  // Tắt và xoá hoàn toàn bảng Dev Widget trên Android APK
-  const pedoPanel = document.getElementById('pedometer-panel');
-  if (pedoPanel) {
-    pedoPanel.style.display = 'none';
-    pedoPanel.remove();
-  }
-
-  if (!overlay) return;
-
-  const state = geo?.current();
-  const hasFix = state?.position !== null && geo?.hasFreshFix();
-  const hasPerm = (globalThis       ).AndroidBridge?.hasLocationPermission?.() ?? true;
-
-  if (!hasPerm || !hasFix) {
-    overlay.hidden = false;
-    const statusText = document.getElementById('gps-status-text');
-    if (statusText) {
-      if (!hasPerm) {
-        statusText.innerHTML = '🚫 <strong>Chưa cấp quyền Vị trí (GPS)</strong>. Kỷ Nguyên Hoang Cổ là game sinh tồn GPS thế giới thực — bạn bắt buộc phải cấp quyền vị trí để chơi.';
-      } else {
-        statusText.innerHTML = '🛰️ <strong>Đang kết nối tín hiệu vệ tinh GPS...</strong> Vui lòng ra nơi thoáng đãng hoặc bật Định vị (GPS) chính xác cao trong máy.';
-      }
+  // Tắt và xoá hoàn toàn bảng Dev Widget trên Native Mobile App
+  if (isNativeApk()) {
+    const pedoPanel = document.getElementById('pedometer-panel');
+    if (pedoPanel) {
+      pedoPanel.style.display = 'none';
+      pedoPanel.remove();
     }
-  } else {
-    overlay.hidden = true;
   }
 }
 
