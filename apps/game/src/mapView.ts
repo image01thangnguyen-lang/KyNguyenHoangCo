@@ -48,6 +48,8 @@ export interface WorldDrop {
 }
 
 export interface RenderInput {
+  /** Delta time (giây) giữa các frame để đồng bộ chuyển động và Camera Lerp mượt mà */
+  dt?: number;
   center: LatLon;
   features: MapFeature[];
   /** Cân nặng người chơi (kg) để tính toán độ lún đất và vết chân */
@@ -368,9 +370,14 @@ export class MapView {
   private lastPointer: { x: number; y: number } | null = null;
   private pointerDownPos: { x: number; y: number } | null = null;
   private pointerDownTime = 0;
-  private lastInput: RenderInput | null = null;
   private lastProject: ((at: LatLon) => [number, number]) | null = null;
   private lastUnproject: ((cx: number, cy: number) => LatLon) | null = null;
+
+  // HỆ THỐNG CAMERA WORLD SPACE & LERP SMOOTHING
+  private cameraLat: number | null = null;
+  private cameraLon: number | null = null;
+  private cameraLerpSpeed = 4.5;
+  private lastRenderTime = 0;
 
   onViewportChange?: (state: ViewportState) => void;
   onPanChange?: (isPanned: boolean) => void;
@@ -945,7 +952,7 @@ export class MapView {
     canvas.addEventListener('pointerup', endDrag);
     canvas.addEventListener('pointercancel', endDrag);
 
-    canvas.addEventListener(
+        canvas.addEventListener(
       'wheel',
       (e) => {
         e.preventDefault();
@@ -979,6 +986,10 @@ export class MapView {
     this.panX = 0;
     this.panY = 0;
     this.zoomFactor = 1.0;
+    if (this.lastInput) {
+      this.cameraLat = this.lastInput.center.lat;
+      this.cameraLon = this.lastInput.center.lon;
+    }
     this.viewportDirty = true;
     this.notifyViewportChange();
   }
@@ -1026,6 +1037,49 @@ export class MapView {
     this.tick++;
     this.lastInput = input;
 
+    // 1. TÍNH TOÁN DELTA TIME & CAMERA SMOOTHING (LERP)
+    const now = performance.now();
+    const dt = input.dt ?? (this.lastRenderTime > 0 ? Math.min(0.1, Math.max(0.001, (now - this.lastRenderTime) / 1000)) : 0.016);
+    this.lastRenderTime = now;
+
+    const targetCenterLat = Number.isFinite(input.center?.lat) ? input.center.lat : 21.0285;
+    const targetCenterLon = Number.isFinite(input.center?.lon) ? input.center.lon : 105.8542;
+
+    if (
+      this.cameraLat === null ||
+      this.cameraLon === null ||
+      !Number.isFinite(this.cameraLat) ||
+      !Number.isFinite(this.cameraLon)
+    ) {
+      this.cameraLat = targetCenterLat;
+      this.cameraLon = targetCenterLon;
+    } else {
+      const distFromTarget = distanceMeters(
+        { lat: this.cameraLat, lon: this.cameraLon },
+        { lat: targetCenterLat, lon: targetCenterLon },
+      );
+      if (!Number.isFinite(distFromTarget) || distFromTarget > 120) {
+        // Dịch chuyển quá xa (hồi sinh / teleport) -> Snap tức thời
+        this.cameraLat = targetCenterLat;
+        this.cameraLon = targetCenterLon;
+      } else {
+        // Exponential Decay Camera Lerp: Bám đuổi mượt mà không phụ thuộc FPS
+        const safeDt = Number.isFinite(dt) && dt > 0 ? Math.min(0.1, dt) : 0.016;
+        const lerpSpeed = Number.isFinite(this.cameraLerpSpeed) ? this.cameraLerpSpeed : 10.0;
+        const factor = Math.max(0, Math.min(1, 1 - Math.exp(-lerpSpeed * safeDt)));
+        if (Number.isFinite(factor) && factor > 0) {
+          this.cameraLat += (targetCenterLat - this.cameraLat) * factor;
+          this.cameraLon += (targetCenterLon - this.cameraLon) * factor;
+        } else {
+          this.cameraLat = targetCenterLat;
+          this.cameraLon = targetCenterLon;
+        }
+      }
+    }
+
+    const camLat = this.cameraLat;
+    const camLon = this.cameraLon;
+
     // Góc nghiêng nhẹ 2.5D tạo chiều sâu bản đồ đô thị
     const TILT_Y = 0.72;
     const baseSpan = input.spanMeters ?? 75;
@@ -1033,10 +1087,22 @@ export class MapView {
     const pxPerMeter = Math.min(w, h) / spanMeters;
     const palette = PALETTE[input.phase];
 
+    // PHÉP CHIẾU THẾ GIỚI -> MÀN HÌNH THEO CAMERA
     const project = (at: LatLon): [number, number] => {
-      const dx = (at.lon - input.center.lon) / metersToLonDegrees(1, input.center.lat);
-      const dy = (at.lat - input.center.lat) / metersToLatDegrees(1);
-      return [w / 2 + dx * pxPerMeter + this.panX, h / 2 - dy * pxPerMeter * TILT_Y + this.panY];
+      const latDegM = metersToLatDegrees(1) || 1e-5;
+      const lonDegM = metersToLonDegrees(1, Number.isFinite(camLat) ? camLat : 21.0) || 1e-5;
+      const safePxPerM = Number.isFinite(pxPerMeter) && pxPerMeter > 0 ? pxPerMeter : 10;
+      const safePanX = Number.isFinite(this.panX) ? this.panX : 0;
+      const safePanY = Number.isFinite(this.panY) ? this.panY : 0;
+
+      const targetLat = Number.isFinite(at?.lat) ? at.lat : camLat;
+      const targetLon = Number.isFinite(at?.lon) ? at.lon : camLon;
+
+      const dx = (targetLon - camLon) / lonDegM;
+      const dy = (targetLat - camLat) / latDegM;
+      const sx = w / 2 + dx * safePxPerM + safePanX;
+      const sy = h / 2 - dy * safePxPerM * TILT_Y + safePanY;
+      return [Number.isFinite(sx) ? sx : w / 2, Number.isFinite(sy) ? sy : h / 2];
     };
     this.lastProject = project;
     this.nearestAttackingBeast = null;
@@ -1045,14 +1111,20 @@ export class MapView {
       const dx = (cx - w / 2 - this.panX) / (pxPerMeter || 1);
       const dy = -(cy - h / 2 - this.panY) / ((pxPerMeter * TILT_Y) || 1);
       return {
-        lat: input.center.lat + dy * metersToLatDegrees(1),
-        lon: input.center.lon + dx * metersToLonDegrees(1, input.center.lat),
+        lat: camLat + dy * metersToLatDegrees(1),
+        lon: camLon + dx * metersToLonDegrees(1, camLat),
       };
     };
+    this.lastUnproject = unproject;
+
     ctx.save();
 
+    // =========================================================================
+    // GIAI ĐOẠN 1: TẦNG NỀN MẶT ĐẤT (GROUND LAYER - FLAT, VẼ TRƯỚC)
+    // =========================================================================
+
     // 1. Tầng nền địa hình thảm cỏ xanh mướt đồng nhất chuẩn Đế Chế (AoE 1 Seamless Grassland Surface)
-    this.drawTerrainGroundBase(w, h, palette, input, project, pxPerMeter, TILT_Y);
+    this.drawTerrainGroundBase(w, h, palette, input, project, pxPerMeter, TILT_Y, camLat, camLon);
 
     // 2. Tầng sông lớn & mặt nước tự nhiên trong xanh (Hồng Hà, Tô Lịch...)
     this.drawNaturalRivers(project, pxPerMeter, palette);
@@ -1070,67 +1142,121 @@ export class MapView {
       this.drawWaterFeature(feature, project, pxPerMeter, palette);
     }
 
-    // 4b. Tầng Cảnh Quan Kỷ Khủng Long Điểm Xuyết (Hóa thạch xương khủng long & Bụi dương xỉ ẩn nấp 3m)
-    this.drawPrehistoricAccents(w, h, input, project, pxPerMeter, TILT_Y);
-
-    // 4c. Hệ Thống Dấu Chân & Hiệu Ứng Hạt Bùn/Cát (Footprint System & Particle Splash)
+    // 4b. Hệ Thống Dấu Chân & Hiệu Ứng Hạt Bùn/Cát (Footprint System & Particle Splash)
     this.drawDinoFootprintsAndParticles(w, h, input, project, pxPerMeter, TILT_Y);
+
+    // 4c. Lãnh địa dã thú sương đỏ (Red Mist Beast Territories)
+    this.drawBeastTerritories(project, pxPerMeter, palette);
 
     // Reset danh sách hitboxes tương tác cho frame hiện tại
     this.renderedFarmPlots = [];
     this.renderedStations = [];
     this.renderedCampBounds = null;
 
-    // 4d. Lãnh địa dã thú sương đỏ (Red Mist Beast Territories)
-    this.drawBeastTerritories(project, pxPerMeter, palette);
+    // =========================================================================
+    // GIAI ĐOẠN 2: TẦNG Y-SORTING (2.5D DEPTH SORTING - VẬT THỂ CÓ CHIỀU CAO)
+    // =========================================================================
+    interface YSortEntity {
+      sortY: number;
+      render: (ctx: CanvasRenderingContext2D) => void;
+    }
+    const ySortedEntities: YSortEntity[] = [];
 
-    // 4e. TẦNG QUẦN XÃ DÃ THÚ & SINH CẢNH THIÊN NHIÊN (VẼ TRÊN ĐƯỜNG VÀ MẶT ĐẤT — TUYỆT ĐỐI KHÔNG BỊ CHUI DƯỚI ĐƯỜNG)
-    this.drawWildlifeAndEnvironment(w, h, palette, input, project, pxPerMeter, TILT_Y);
+    // 2a. Tảng đá & khối đá tự nhiên
+    this.collectNaturalBoulders(w, h, input, project, pxPerMeter, TILT_Y, camLat, camLon, ySortedEntities);
 
-    // 5. Căn Cứ / Doanh Trại Người Chơi (2.5D Isometric Stronghold)
+    // 2b. Cảnh quan kỷ khủng long điểm xuyết (Dương xỉ cổ & Hóa thạch xương khủng long)
+    this.collectPrehistoricAccents(w, h, input, project, pxPerMeter, TILT_Y, ySortedEntities);
+
+    // 2c. Tầng Quần Xã Dã Thú, Khủng Long & Cảnh Quan Cây Cối
+    this.collectWildlifeAndEnvironment(w, h, palette, input, project, pxPerMeter, TILT_Y, camLat, camLon, ySortedEntities);
+
+    // 2d. Căn Cứ / Doanh Trại Người Chơi (2.5D Isometric Stronghold)
     if (input.camp && input.homeCellCenter) {
-      this.drawPlayerStronghold(project(input.homeCellCenter), pxPerMeter, input, palette);
+      this.drawPlayerStronghold(project(input.homeCellCenter), pxPerMeter, input, palette, ySortedEntities);
     }
 
-    // 6. Các địa danh, di tích, mỏ tài nguyên (Solid Features)
+    // 2e. Các địa danh, di tích, mỏ tài nguyên (Solid Features)
     for (const feature of this.cachedSolidFeatures) {
-      this.drawFloatingFeatureBadge(feature, project, pxPerMeter, input, palette);
+      const [fx, fy] = project(feature);
+      if (fx >= -80 && fx <= w + 80 && fy >= -80 && fy <= h + 80) {
+        ySortedEntities.push({
+          sortY: fy,
+          render: () => this.drawFloatingFeatureBadge(feature, project, pxPerMeter, input, palette),
+        });
+      }
     }
 
-    // 7. Bẫy thú nổi 3D
+    // 2f. Bẫy thú nổi 3D
     if (input.traps && input.traps.length > 0) {
-      this.drawTraps(project, input.traps, pxPerMeter, input, palette);
+      for (const trap of input.traps) {
+        const [tx, ty] = project({ lat: trap.lat, lon: trap.lon });
+        if (tx >= -40 && tx <= w + 40 && ty >= -40 && ty <= h + 40) {
+          ySortedEntities.push({
+            sortY: ty,
+            render: () => this.drawSingleTrap(trap, tx, ty, input),
+          });
+        }
+      }
     }
 
-    // 8. Vật phẩm rơi (World Drops) nổi 3D bồng bềnh
+    // 2g. Vật phẩm rơi (World Drops) nổi 3D
     if (input.drops && input.drops.length > 0) {
-      this.drawFloatingDrops(project, input.drops, pxPerMeter, input, palette);
+      for (const drop of input.drops) {
+        const [dx, dy] = project({ lat: drop.lat, lon: drop.lon });
+        if (dx >= -50 && dx <= w + 50 && dy >= -50 && dy <= h + 50) {
+          ySortedEntities.push({
+            sortY: dy,
+            render: () => this.drawSingleDrop(drop, dx, dy, input),
+          });
+        }
+      }
     }
 
-    // 9. Nhân vật Dũng Sĩ Hoàng Cổ đứng giữa cung đường (Hỗ trợ độ mờ Stealth 0.55 khi ẩn nấp)
-    const playerScreenX = w / 2 + this.panX;
-    const playerScreenY = h / 2 + this.panY;
+    // 2h. Nhân vật Dũng Sĩ Hoàng Cổ đứng giữa không gian thế giới
+    const [playerScreenX, playerScreenY] = project(input.center);
+    ySortedEntities.push({
+      sortY: playerScreenY,
+      render: (c) => {
+        if (this.playerStealthState.isStealthed) {
+          c.save();
+          c.globalAlpha = 0.55;
+          this.drawPlayer(playerScreenX, playerScreenY, pxPerMeter, input, palette);
+          c.restore();
+        } else {
+          this.drawPlayer(playerScreenX, playerScreenY, pxPerMeter, input, palette);
+        }
+      },
+    });
+
+    // Sắp xếp thứ tự chiều sâu (Y-Sorting: Tọa độ Y nhỏ hơn vẽ trước, Y lớn hơn vẽ sau)
+    ySortedEntities.sort((a, b) => a.sortY - b.sortY);
+
+    // Duyệt vẽ tuần tự toàn bộ thực thể 2.5D đã được phân tầng
+    for (const entity of ySortedEntities) {
+      entity.render(ctx);
+    }
+
+    // =========================================================================
+    // GIAI ĐOẠN 3: TẦNG TRÊN KHÔNG & SCREEN OVERLAY (VẼ TRÊN CÙNG)
+    // =========================================================================
+
+    // 3a. HUD Ẩn nấp của người chơi
     if (this.playerStealthState.isStealthed) {
-      ctx.save();
-      ctx.globalAlpha = 0.55;
-      this.drawPlayer(playerScreenX, playerScreenY, pxPerMeter, input, palette);
-      ctx.restore();
       this.drawDinoStealthHud(w, h, playerScreenX, playerScreenY);
-    } else {
-      this.drawPlayer(playerScreenX, playerScreenY, pxPerMeter, input, palette);
     }
 
-    // 9a. CHỈ HIỂN THỊ VẠCH NGẮM KHI NGƯỜI CHƠI ĐANG GIỮ VÀ KÉO NÚT TẤN CÔNG (HOLD & DRAG TO AIM)
+    // 3b. Vạch chỉ báo ngắm bắn khi người chơi đang giữ và kéo nút tấn công
     if (input.isAiming) {
       this.drawAimingIndicator(ctx, playerScreenX, playerScreenY, input, pxPerMeter);
     }
 
-    // 9b. Linh Điểu Tiền Sử bay lượn & Vệt Gió Thần Tốc khi di chuyển nhanh (Xe buýt / Xe máy)
+    // 3c. Linh Điểu Tiền Sử bay lượn trên cao & Vệt Gió Thần Tốc khi di chuyển nhanh
     if (input.speedKmh && input.speedKmh >= 12) {
       this.drawSpiritBirdAndWindTrails(w, h, playerScreenX, playerScreenY, input.speedKmh, palette);
     }
 
-    // 9c. Hiệu ứng Số Máu Bị Trừ & Viền Máu Đỏ Màn Hình khi bị thú dữ tấn công
+    // 3d. Hiệu ứng Số Máu Bị Trừ & Viền Máu Đỏ Màn Hình khi bị thú dữ tấn công
     if (this.hitDamageNumber) {
       this.hitDamageNumber.y += 0.8 * this.dpr;
       this.hitDamageNumber.alpha -= 0.022;
@@ -1154,7 +1280,9 @@ export class MapView {
 
     if (this.hitFlashAlpha > 0) {
       ctx.save();
-      const vig = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.3, w / 2, h / 2, Math.max(w, h) * 0.75);
+      const vigR0 = Math.max(1, Math.min(w, h) * 0.3);
+      const vigR1 = Math.max(vigR0 + 1, Math.max(w, h) * 0.75);
+      const vig = ctx.createRadialGradient(w / 2, h / 2, vigR0, w / 2, h / 2, vigR1);
       vig.addColorStop(0, 'rgba(239, 68, 68, 0)');
       vig.addColorStop(0.7, `rgba(220, 38, 38, ${this.hitFlashAlpha * 0.4})`);
       vig.addColorStop(1, `rgba(185, 28, 28, ${this.hitFlashAlpha})`);
@@ -1164,12 +1292,12 @@ export class MapView {
       ctx.restore();
     }
 
-    // 9d. VẼ ĐƯỜNG ĐẠN TẦM XA (MŨI TÊN BAY 3D, VIÊN ĐÁ NÉM BAY PARABOL), VỆT CHÉM CẬN CHIẾN & TIA LỬA
+    // 3e. Vẽ đường đạn tầm xa (mũi tên, viên đá bay parabol), vệt chém cận chiến & tia lửa
     this.drawActiveProjectiles(ctx, w, h);
     this.drawMeleeSlashes(ctx);
     this.drawImpactSparks(ctx);
 
-    // 9e. Hiệu ứng Số Sát Thương Gây Ra Cho Dã Thú (Beast Combat Floating Numbers)
+    // 3f. Hiệu ứng Số Sát Thương Gây Ra Cho Dã Thú (Floating Damage Text)
     if (this.beastDamageNumbers.length > 0) {
       ctx.save();
       ctx.font = `bold ${14 * this.dpr}px 'Be Vietnam Pro', system-ui, sans-serif`;
@@ -1192,7 +1320,7 @@ export class MapView {
       ctx.restore();
     }
 
-    // 10. Hiệu ứng thời tiết mưa & không khí cổ kính
+    // 3g. Hiệu ứng thời tiết mưa & không khí cổ kính
     if (input.weather.raining) {
       this.drawRain(w, h, input.weather.rainIntensity);
     }
@@ -1487,9 +1615,9 @@ export class MapView {
     ctx.translate(px, py);
 
     // 1. Quạt hình nón chỉ báo hướng mặt (Directional Aim Cone)
-    const coneRadius = (isAiming ? 34 : 24) * this.dpr;
+    const coneRadius = Math.max(2, (isAiming ? 34 : 24) * this.dpr);
     const coneAngle = isAiming ? 0.35 : 0.52;
-    const grad = ctx.createRadialGradient(0, 0, 4 * this.dpr, 0, 0, coneRadius);
+    const grad = ctx.createRadialGradient(0, 0, Math.max(0.1, 4 * this.dpr), 0, 0, coneRadius);
     grad.addColorStop(0, isAiming ? 'rgba(239, 68, 68, 0.45)' : 'rgba(251, 191, 36, 0.35)');
     grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
 
@@ -1571,6 +1699,8 @@ export class MapView {
     project: (at: LatLon) => [number, number],
     pxPerMeter: number,
     TILT_Y: number,
+    camLat: number,
+    camLon: number,
   ): void {
     const { ctx } = this;
     this.ensureAoePatterns();
@@ -1580,36 +1710,36 @@ export class MapView {
     const WORLD_ORIGIN_LAT = 21.0;
     const WORLD_ORIGIN_LON = 105.8;
 
-    const centerWorldX = (input.center.lon - WORLD_ORIGIN_LON) / metersToLonDegrees(1, input.center.lat);
-    const centerWorldY = (input.center.lat - WORLD_ORIGIN_LAT) / metersToLatDegrees(1);
+    const camWorldX = (camLon - WORLD_ORIGIN_LON) / (metersToLonDegrees(1, camLat) || 1e-5);
+    const camWorldY = (camLat - WORLD_ORIGIN_LAT) / (metersToLatDegrees(1) || 1e-5);
 
-    // 1. NỀN CỎ AOE 1 CHI TIẾT TOÀN BỘ BẢN ĐỒ — KHOÁ TOẠ ĐỘ THẾ GIỚI (Cuộn mượt 1:1 theo bước chân)
-    const baseGrass = isNight
-      ? (this.patternGrassNight || palette.parchment)
-      : (this.patternGrassDay || palette.parchment);
-
-    const patternSize = 128;
-    const patternShiftX = (w / 2 + this.panX - centerWorldX * pxPerMeter) % patternSize;
-    const patternShiftY = (h / 2 + this.panY + centerWorldY * pxPerMeter * TILT_Y) % patternSize;
-
-    if (baseGrass && typeof (baseGrass as any).setTransform === 'function') {
-      const mat = new DOMMatrix();
-      mat.translateSelf(patternShiftX, patternShiftY);
-      (baseGrass as any).setTransform(mat);
-    }
-
-    ctx.fillStyle = baseGrass;
+    // 1. NỀN CỎ AOE 1 CHI TIẾT TOÀN BỘ BẢN ĐỒ — KHOÁ TOẠ ĐỘ THẾ GIỚI THEO CAMERA
+    const bgColor = isNight ? '#14291c' : (palette.parchment || '#487625');
+    ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, w, h);
+
+    const baseGrass = isNight ? this.patternGrassNight : this.patternGrassDay;
+    if (baseGrass) {
+      const patternSize = 128;
+      const safeShiftX = (((w / 2 + this.panX - camWorldX * pxPerMeter) % patternSize) + patternSize) % patternSize;
+      const safeShiftY = (((h / 2 + this.panY + camWorldY * pxPerMeter * TILT_Y) % patternSize) + patternSize) % patternSize;
+
+      ctx.save();
+      ctx.translate(safeShiftX, safeShiftY);
+      ctx.fillStyle = baseGrass;
+      ctx.fillRect(-patternSize, -patternSize, w + patternSize * 2, h + patternSize * 2);
+      ctx.restore();
+    }
 
     // 2. ĐIỂM XUYẾT MỘT VÀI CHỖ KHÔNG CÓ CỎ NHỎ (AOE 1 BARE DIRT PATCHES - THƯA THỚT TỰ NHIÊN)
     const stepBare = 26; // Khoảng cách 26m
     const spanMetersX = (w / 2 + Math.abs(this.panX) + 30 * this.dpr) / pxPerMeter + stepBare;
     const spanMetersY = (h / 2 + Math.abs(this.panY) + 30 * this.dpr) / (pxPerMeter * TILT_Y) + stepBare;
 
-    const startWx = Math.floor((centerWorldX - spanMetersX) / stepBare) * stepBare;
-    const endWx = Math.ceil((centerWorldX + spanMetersX) / stepBare) * stepBare;
-    const startWy = Math.floor((centerWorldY - spanMetersY) / stepBare) * stepBare;
-    const endWy = Math.ceil((centerWorldY + spanMetersY) / stepBare) * stepBare;
+    const startWx = Math.floor((camWorldX - spanMetersX) / stepBare) * stepBare;
+    const endWx = Math.ceil((camWorldX + spanMetersX) / stepBare) * stepBare;
+    const startWy = Math.floor((camWorldY - spanMetersY) / stepBare) * stepBare;
+    const endWy = Math.ceil((camWorldY + spanMetersY) / stepBare) * stepBare;
 
     for (let wy = startWy; wy <= endWy; wy += stepBare) {
       for (let wx = startWx; wx <= endWx; wx += stepBare) {
@@ -1622,8 +1752,8 @@ export class MapView {
         const jitterX = (Math.sin(wx * 5.7 + wy * 2.3) * 0.35) * stepBare;
         const jitterY = (Math.cos(wx * 4.1 + wy * 6.9) * 0.35) * stepBare;
 
-        const sx = w / 2 + (wx + jitterX - centerWorldX) * pxPerMeter + this.panX;
-        const sy = h / 2 - (wy + jitterY - centerWorldY) * pxPerMeter * TILT_Y + this.panY;
+        const sx = w / 2 + (wx + jitterX - camWorldX) * pxPerMeter + this.panX;
+        const sy = h / 2 - (wy + jitterY - camWorldY) * pxPerMeter * TILT_Y + this.panY;
 
         if (sx < -30 || sx > w + 30 || sy < -30 || sy > h + 30) continue;
 
@@ -1653,16 +1783,35 @@ export class MapView {
         ctx.restore();
       }
     }
+  }
 
-    // 3. KHỐI ĐÁ & TẢNG ĐÁ RÊU PHONG TỰ NHIÊN 2.5D (AOE 1 ISOMETRIC NATURAL BOULDERS & ROCK OUTCROPS)
+  /** Thu thập các khối đá & tảng đá rêu phong tự nhiên vào danh sách Y-Sorting */
+  private collectNaturalBoulders(
+    w: number,
+    h: number,
+    input: RenderInput,
+    project: (at: LatLon) => [number, number],
+    pxPerMeter: number,
+    TILT_Y: number,
+    camLat: number,
+    camLon: number,
+    outEntities: Array<{ sortY: number; render: (ctx: CanvasRenderingContext2D) => void }>,
+  ): void {
+    const isNight = input.isNight ?? (input.phase === 'night' || input.phase === 'bloodmoon');
+    const WORLD_ORIGIN_LAT = 21.0;
+    const WORLD_ORIGIN_LON = 105.8;
+
+    const camWorldX = (camLon - WORLD_ORIGIN_LON) / metersToLonDegrees(1, camLat);
+    const camWorldY = (camLat - WORLD_ORIGIN_LAT) / metersToLatDegrees(1);
+
     const stepRock = 36; // Lưới 36m cho các khối đá
     const spanRocksX = (w / 2 + Math.abs(this.panX) + 40 * this.dpr) / pxPerMeter + stepRock;
     const spanRocksY = (h / 2 + Math.abs(this.panY) + 40 * this.dpr) / (pxPerMeter * TILT_Y) + stepRock;
 
-    const startRockX = Math.floor((centerWorldX - spanRocksX) / stepRock) * stepRock;
-    const endRockX = Math.ceil((centerWorldX + spanRocksX) / stepRock) * stepRock;
-    const startRockY = Math.floor((centerWorldY - spanRocksY) / stepRock) * stepRock;
-    const endRockY = Math.ceil((centerWorldY + spanRocksY) / stepRock) * stepRock;
+    const startRockX = Math.floor((camWorldX - spanRocksX) / stepRock) * stepRock;
+    const endRockX = Math.ceil((camWorldX + spanRocksX) / stepRock) * stepRock;
+    const startRockY = Math.floor((camWorldY - spanRocksY) / stepRock) * stepRock;
+    const endRockY = Math.ceil((camWorldY + spanRocksY) / stepRock) * stepRock;
 
     for (let wy = startRockY; wy <= endRockY; wy += stepRock) {
       for (let wx = startRockX; wx <= endRockX; wx += stepRock) {
@@ -1675,176 +1824,182 @@ export class MapView {
         const jitterX = (Math.sin(wx * 3.7 + wy * 8.1) * 0.38) * stepRock;
         const jitterY = (Math.cos(wx * 7.3 + wy * 4.9) * 0.38) * stepRock;
 
-        const sx = w / 2 + (wx + jitterX - centerWorldX) * pxPerMeter + this.panX;
-        const sy = h / 2 - (wy + jitterY - centerWorldY) * pxPerMeter * TILT_Y + this.panY;
+        const sx = w / 2 + (wx + jitterX - camWorldX) * pxPerMeter + this.panX;
+        const sy = h / 2 - (wy + jitterY - camWorldY) * pxPerMeter * TILT_Y + this.panY;
 
         if (sx < -40 || sx > w + 40 || sy < -40 || sy > h + 40) continue;
 
         const rockScale = (1.4 + rand * 1.5) * this.dpr; // Kích thước khối đá
         const rockType = Math.floor(rand * 3); // 3 kiểu khối đá phong phú
 
-        ctx.save();
-        ctx.translate(sx, sy);
-
-        if (rockType === 0) {
-          // KIỂU 1: Tảng Đá Sa Thạch Cổ Đại Có Rêu (Ancient Mossy Boulder)
-          // 1. Bóng đổ 2.5D dưới chân tảng đá
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
-          ctx.beginPath();
-          ctx.ellipse(3 * rockScale, 2 * rockScale, 9 * rockScale, 4.5 * rockScale, 0.2, 0, Math.PI * 2);
-          ctx.fill();
-
-          // 2. Mặt đáy & cạnh khuất bóng (Mặt Đông Nam tối)
-          ctx.fillStyle = isNight ? '#1e293b' : '#475569';
-          ctx.beginPath();
-          ctx.moveTo(-7 * rockScale, 1 * rockScale);
-          ctx.lineTo(-2 * rockScale, 5 * rockScale);
-          ctx.lineTo(8 * rockScale, 4 * rockScale);
-          ctx.lineTo(10 * rockScale, -1 * rockScale);
-          ctx.lineTo(5 * rockScale, -8 * rockScale);
-          ctx.lineTo(-4 * rockScale, -9 * rockScale);
-          ctx.closePath();
-          ctx.fill();
-
-          // 3. Mặt sườn chính giữa (Midtone Facet)
-          ctx.fillStyle = isNight ? '#334155' : '#64748b';
-          ctx.beginPath();
-          ctx.moveTo(-7 * rockScale, 1 * rockScale);
-          ctx.lineTo(-4 * rockScale, -9 * rockScale);
-          ctx.lineTo(2 * rockScale, -6 * rockScale);
-          ctx.lineTo(4 * rockScale, 3 * rockScale);
-          ctx.lineTo(-2 * rockScale, 5 * rockScale);
-          ctx.closePath();
-          ctx.fill();
-
-          // 4. Mặt đỉnh đón nắng hướng Tây Bắc (Top Sunlit Facet)
-          ctx.fillStyle = isNight ? '#475569' : '#94a3b8';
-          ctx.beginPath();
-          ctx.moveTo(-4 * rockScale, -9 * rockScale);
-          ctx.lineTo(5 * rockScale, -8 * rockScale);
-          ctx.lineTo(2 * rockScale, -4 * rockScale);
-          ctx.lineTo(-1 * rockScale, -5 * rockScale);
-          ctx.closePath();
-          ctx.fill();
-
-          // 5. Đường gân đá nứt sắc nét (Chiseled Rock Ridge)
-          ctx.strokeStyle = isNight ? '#0f172a' : '#334155';
-          ctx.lineWidth = 1.0 * this.dpr;
-          ctx.beginPath();
-          ctx.moveTo(-4 * rockScale, -9 * rockScale);
-          ctx.lineTo(2 * rockScale, -6 * rockScale);
-          ctx.lineTo(4 * rockScale, 3 * rockScale);
-          ctx.stroke();
-
-          // 6. Rêu xanh cổ phong hoá bám trên lưng đá (Emerald Moss Crest)
-          ctx.fillStyle = isNight ? '#166534' : '#65a30d';
-          ctx.beginPath();
-          ctx.ellipse(-1 * rockScale, -7.5 * rockScale, 3.2 * rockScale, 1.4 * rockScale, -0.25, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = isNight ? '#22c55e' : '#84cc16';
-          ctx.fillRect(-2 * rockScale, -8.2 * rockScale, 1.8 * rockScale, 0.9 * rockScale);
-
-          // 7. Bụi cỏ nhỏ dưới chân tảng đá
-          ctx.fillStyle = isNight ? '#15803d' : '#4d9b26';
-          ctx.fillRect(-8 * rockScale, 0, 1.5 * rockScale, 2.5 * rockScale);
-          ctx.fillRect(7 * rockScale, 2 * rockScale, 1.5 * rockScale, 2.2 * rockScale);
-
-        } else if (rockType === 1) {
-          // KIỂU 2: Cụm 2 Khối Đá Cuội Tròn Nổi Khối (Dual Rounded Pebble Outcrop)
-          // Bóng đổ
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
-          ctx.beginPath();
-          ctx.ellipse(2 * rockScale, 2 * rockScale, 8 * rockScale, 3.8 * rockScale, 0.1, 0, Math.PI * 2);
-          ctx.fill();
-
-          // Hòn đá phụ nhỏ bên trái
-          ctx.fillStyle = isNight ? '#243044' : '#576579';
-          ctx.beginPath();
-          ctx.ellipse(-4 * rockScale, 0, 4 * rockScale, 3 * rockScale, -0.2, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = isNight ? '#3b495e' : '#8291a4';
-          ctx.beginPath();
-          ctx.ellipse(-4.8 * rockScale, -1.2 * rockScale, 2.2 * rockScale, 1.5 * rockScale, -0.2, 0, Math.PI * 2);
-          ctx.fill();
-
-          // Hòn đá chính lớn ở giữa nhô cao
-          ctx.fillStyle = isNight ? '#1e293b' : '#475569';
-          ctx.beginPath();
-          ctx.ellipse(2 * rockScale, -1 * rockScale, 5.8 * rockScale, 4.5 * rockScale, 0.15, 0, Math.PI * 2);
-          ctx.fill();
-
-          // Mặt trên đón sáng
-          ctx.fillStyle = isNight ? '#334155' : '#718298';
-          ctx.beginPath();
-          ctx.ellipse(1 * rockScale, -2.5 * rockScale, 4.2 * rockScale, 2.8 * rockScale, 0.15, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = isNight ? '#475569' : '#a1b2c6';
-          ctx.beginPath();
-          ctx.arc(0.5 * rockScale, -3.8 * rockScale, 1.8 * rockScale, 0, Math.PI * 2);
-          ctx.fill();
-
-          // Đốm rêu nhỏ
-          ctx.fillStyle = isNight ? '#166534' : '#4d9b26';
-          ctx.fillRect(1 * rockScale, -4.5 * rockScale, 2.0 * rockScale, 1.0 * rockScale);
-
-        } else {
-          // KIỂU 3: Mỏm Đá Sa Thạch Nâu Đất Góc Cạnh (Angular Sandstone Monolith)
-          // Bóng đổ
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.26)';
-          ctx.beginPath();
-          ctx.ellipse(3 * rockScale, 3 * rockScale, 8.5 * rockScale, 4.0 * rockScale, 0.25, 0, Math.PI * 2);
-          ctx.fill();
-
-          // Mặt tối bên phải
-          ctx.fillStyle = isNight ? '#261c14' : '#573d23';
-          ctx.beginPath();
-          ctx.moveTo(0, -9 * rockScale);
-          ctx.lineTo(7 * rockScale, -4 * rockScale);
-          ctx.lineTo(8 * rockScale, 2 * rockScale);
-          ctx.lineTo(2 * rockScale, 5 * rockScale);
-          ctx.lineTo(0, -2 * rockScale);
-          ctx.closePath();
-          ctx.fill();
-
-          // Mặt sáng bên trái
-          ctx.fillStyle = isNight ? '#3d2e20' : '#88623a';
-          ctx.beginPath();
-          ctx.moveTo(0, -9 * rockScale);
-          ctx.lineTo(-6 * rockScale, -3 * rockScale);
-          ctx.lineTo(-5 * rockScale, 3 * rockScale);
-          ctx.lineTo(2 * rockScale, 5 * rockScale);
-          ctx.lineTo(0, -2 * rockScale);
-          ctx.closePath();
-          ctx.fill();
-
-          // Đỉnh vát chóp sáng
-          ctx.fillStyle = isNight ? '#554231' : '#b28452';
-          ctx.beginPath();
-          ctx.moveTo(0, -9 * rockScale);
-          ctx.lineTo(3 * rockScale, -6 * rockScale);
-          ctx.lineTo(-2 * rockScale, -5 * rockScale);
-          ctx.closePath();
-          ctx.fill();
-
-          // Gân đá sa thạch phân lớp
-          ctx.strokeStyle = isNight ? '#1a130d' : '#442d17';
-          ctx.lineWidth = 0.9 * this.dpr;
-          ctx.beginPath();
-          ctx.moveTo(-5 * rockScale, -1 * rockScale);
-          ctx.lineTo(1 * rockScale, 1.5 * rockScale);
-          ctx.stroke();
-        }
-
-        ctx.restore();
+        outEntities.push({
+          sortY: sy,
+          render: (ctx) => {
+            this.drawSingleBoulder(ctx, sx, sy, rockScale, rockType, isNight);
+          },
+        });
       }
     }
   }
 
+  private drawSingleBoulder(
+    ctx: CanvasRenderingContext2D,
+    sx: number,
+    sy: number,
+    rockScale: number,
+    rockType: number,
+    isNight: boolean,
+  ): void {
+    ctx.save();
+    ctx.translate(sx, sy);
+
+    if (rockType === 0) {
+      // KIỂU 1: Tảng Đá Sa Thạch Cổ Đại Có Rêu (Ancient Mossy Boulder)
+      // 1. Bóng đổ 2.5D dưới chân tảng đá
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
+      ctx.beginPath();
+      ctx.ellipse(3 * rockScale, 2 * rockScale, 9 * rockScale, 4.5 * rockScale, 0.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 2. Mặt đáy & cạnh khuất bóng (Mặt Đông Nam tối)
+      ctx.fillStyle = isNight ? '#1e293b' : '#475569';
+      ctx.beginPath();
+      ctx.moveTo(-7 * rockScale, 1 * rockScale);
+      ctx.lineTo(-2 * rockScale, 5 * rockScale);
+      ctx.lineTo(8 * rockScale, 4 * rockScale);
+      ctx.lineTo(10 * rockScale, -1 * rockScale);
+      ctx.lineTo(5 * rockScale, -8 * rockScale);
+      ctx.lineTo(-4 * rockScale, -9 * rockScale);
+      ctx.closePath();
+      ctx.fill();
+
+      // 3. Mặt sườn chính giữa (Midtone Facet)
+      ctx.fillStyle = isNight ? '#334155' : '#64748b';
+      ctx.beginPath();
+      ctx.moveTo(-7 * rockScale, 1 * rockScale);
+      ctx.lineTo(-4 * rockScale, -9 * rockScale);
+      ctx.lineTo(2 * rockScale, -6 * rockScale);
+      ctx.lineTo(4 * rockScale, 3 * rockScale);
+      ctx.lineTo(-2 * rockScale, 5 * rockScale);
+      ctx.closePath();
+      ctx.fill();
+
+      // 4. Mặt đỉnh đón nắng hướng Tây Bắc (Top Sunlit Facet)
+      ctx.fillStyle = isNight ? '#475569' : '#94a3b8';
+      ctx.beginPath();
+      ctx.moveTo(-4 * rockScale, -9 * rockScale);
+      ctx.lineTo(5 * rockScale, -8 * rockScale);
+      ctx.lineTo(2 * rockScale, -4 * rockScale);
+      ctx.lineTo(-1 * rockScale, -5 * rockScale);
+      ctx.closePath();
+      ctx.fill();
+
+      // 5. Đường gân đá nứt sắc nét (Chiseled Rock Ridge)
+      ctx.strokeStyle = isNight ? '#0f172a' : '#334155';
+      ctx.lineWidth = 1.0 * this.dpr;
+      ctx.beginPath();
+      ctx.moveTo(-4 * rockScale, -9 * rockScale);
+      ctx.lineTo(2 * rockScale, -6 * rockScale);
+      ctx.lineTo(4 * rockScale, 3 * rockScale);
+      ctx.stroke();
+
+      // 6. Rêu xanh cổ phong hoá bám trên lưng đá (Emerald Moss Crest)
+      ctx.fillStyle = isNight ? '#166534' : '#65a30d';
+      ctx.beginPath();
+      ctx.ellipse(-1 * rockScale, -7.5 * rockScale, 3.2 * rockScale, 1.4 * rockScale, -0.25, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = isNight ? '#22c55e' : '#84cc16';
+      ctx.fillRect(-2 * rockScale, -8.2 * rockScale, 1.8 * rockScale, 0.9 * rockScale);
+
+      // 7. Bụi cỏ nhỏ dưới chân tảng đá
+      ctx.fillStyle = isNight ? '#15803d' : '#4d9b26';
+      ctx.fillRect(-8 * rockScale, 0, 1.5 * rockScale, 2.5 * rockScale);
+      ctx.fillRect(7 * rockScale, 2 * rockScale, 1.5 * rockScale, 2.2 * rockScale);
+
+    } else if (rockType === 1) {
+      // KIỂU 2: Cụm 2 Khối Đá Cuội Tròn Nổi Khối (Dual Rounded Pebble Outcrop)
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+      ctx.beginPath();
+      ctx.ellipse(2 * rockScale, 2 * rockScale, 8 * rockScale, 3.8 * rockScale, 0.1, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = isNight ? '#243044' : '#576579';
+      ctx.beginPath();
+      ctx.ellipse(-4 * rockScale, 0, 4 * rockScale, 3 * rockScale, -0.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = isNight ? '#3b495e' : '#8291a4';
+      ctx.beginPath();
+      ctx.ellipse(-4.8 * rockScale, -1.2 * rockScale, 2.2 * rockScale, 1.5 * rockScale, -0.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = isNight ? '#1e293b' : '#475569';
+      ctx.beginPath();
+      ctx.ellipse(2 * rockScale, -1 * rockScale, 5.8 * rockScale, 4.5 * rockScale, 0.15, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = isNight ? '#334155' : '#718298';
+      ctx.beginPath();
+      ctx.ellipse(1 * rockScale, -2.5 * rockScale, 4.2 * rockScale, 2.8 * rockScale, 0.15, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = isNight ? '#475569' : '#a1b2c6';
+      ctx.beginPath();
+      ctx.arc(0.5 * rockScale, -3.8 * rockScale, 1.8 * rockScale, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = isNight ? '#166534' : '#4d9b26';
+      ctx.fillRect(1 * rockScale, -4.5 * rockScale, 2.0 * rockScale, 1.0 * rockScale);
+
+    } else {
+      // KIỂU 3: Mỏm Đá Sa Thạch Nâu Đất Góc Cạnh (Angular Sandstone Monolith)
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.26)';
+      ctx.beginPath();
+      ctx.ellipse(3 * rockScale, 3 * rockScale, 8.5 * rockScale, 4.0 * rockScale, 0.25, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = isNight ? '#261c14' : '#573d23';
+      ctx.beginPath();
+      ctx.moveTo(0, -9 * rockScale);
+      ctx.lineTo(7 * rockScale, -4 * rockScale);
+      ctx.lineTo(8 * rockScale, 2 * rockScale);
+      ctx.lineTo(2 * rockScale, 5 * rockScale);
+      ctx.lineTo(0, -2 * rockScale);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = isNight ? '#3d2e20' : '#88623a';
+      ctx.beginPath();
+      ctx.moveTo(0, -9 * rockScale);
+      ctx.lineTo(-6 * rockScale, -3 * rockScale);
+      ctx.lineTo(-5 * rockScale, 3 * rockScale);
+      ctx.lineTo(2 * rockScale, 5 * rockScale);
+      ctx.lineTo(0, -2 * rockScale);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = isNight ? '#554231' : '#b28452';
+      ctx.beginPath();
+      ctx.moveTo(0, -9 * rockScale);
+      ctx.lineTo(3 * rockScale, -6 * rockScale);
+      ctx.lineTo(-2 * rockScale, -5 * rockScale);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = isNight ? '#1a130d' : '#442d17';
+      ctx.lineWidth = 0.9 * this.dpr;
+      ctx.beginPath();
+      ctx.moveTo(-5 * rockScale, -1 * rockScale);
+      ctx.lineTo(1 * rockScale, 1.5 * rockScale);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
   // ================================================================
-  // 4e. TẦNG QUẦN XÃ DÃ THÚ & SINH CẢNH THIÊN NHIÊN (RENDER TRÊN MẶT ĐẤT VÀ MẶT ĐƯỜNG)
+  // 4e. TẦNG QUẦN XÃ DÃ THÚ & SINH CẢNH THIÊN NHIÊN (Y-SORTING RENDER TRÊN MẶT ĐẤT VÀ MẶT ĐƯỜNG)
   // ================================================================
 
-  private drawWildlifeAndEnvironment(
+  private collectWildlifeAndEnvironment(
     w: number,
     h: number,
     palette: typeof PALETTE.day,
@@ -1852,24 +2007,26 @@ export class MapView {
     project: (at: LatLon) => [number, number],
     pxPerMeter: number,
     TILT_Y: number,
+    camLat: number,
+    camLon: number,
+    outEntities: Array<{ sortY: number; render: (ctx: CanvasRenderingContext2D) => void }>,
   ): void {
     const WORLD_ORIGIN_LAT = 21.0;
     const WORLD_ORIGIN_LON = 105.8;
 
-    const centerWorldX = (input.center.lon - WORLD_ORIGIN_LON) / metersToLonDegrees(1, input.center.lat);
-    const centerWorldY = (input.center.lat - WORLD_ORIGIN_LAT) / metersToLatDegrees(1);
+    const camWorldX = (camLon - WORLD_ORIGIN_LON) / metersToLonDegrees(1, camLat);
+    const camWorldY = (camLat - WORLD_ORIGIN_LAT) / metersToLatDegrees(1);
 
     const stepWildlife = 125; // Khoảng cách ô sinh thái 125m: mật độ vừa vặn, sống động, khám phá là gặp khủng long
     const spanMetersX = (w / 2 + Math.abs(this.panX) + 60 * this.dpr) / pxPerMeter + stepWildlife * 2;
     const spanMetersY = (h / 2 + Math.abs(this.panY) + 60 * this.dpr) / (pxPerMeter * TILT_Y) + stepWildlife * 2;
 
-    const startWldX = Math.floor((centerWorldX - spanMetersX) / stepWildlife) * stepWildlife;
-    const endWldX = Math.ceil((centerWorldX + spanMetersX) / stepWildlife) * stepWildlife;
-    const startWldY = Math.floor((centerWorldY - spanMetersY) / stepWildlife) * stepWildlife;
-    const endWldY = Math.ceil((centerWorldY + spanMetersY) / stepWildlife) * stepWildlife;
+    const startWldX = Math.floor((camWorldX - spanMetersX) / stepWildlife) * stepWildlife;
+    const endWldX = Math.ceil((camWorldX + spanMetersX) / stepWildlife) * stepWildlife;
+    const startWldY = Math.floor((camWorldY - spanMetersY) / stepWildlife) * stepWildlife;
+    const endWldY = Math.ceil((camWorldY + spanMetersY) / stepWildlife) * stepWildlife;
 
-    const playerScreenX = w / 2 + this.panX;
-    const playerScreenY = h / 2 + this.panY;
+    const [playerScreenX, playerScreenY] = project(input.center);
 
     this.renderedBeasts = [];
 
@@ -1945,8 +2102,8 @@ export class MapView {
           }
         }
 
-        const sx = w / 2 + (drawWorldX - centerWorldX) * pxPerMeter + this.panX;
-        const sy = h / 2 - (drawWorldY - centerWorldY) * pxPerMeter * TILT_Y + this.panY;
+        const sx = w / 2 + (drawWorldX - camWorldX) * pxPerMeter + this.panX;
+        const sy = h / 2 - (drawWorldY - camWorldY) * pxPerMeter * TILT_Y + this.panY;
 
         if (sx < -90 * this.dpr || sx > w + 90 * this.dpr || sy < -90 * this.dpr || sy > h + 90 * this.dpr) {
           continue;
@@ -1960,65 +2117,72 @@ export class MapView {
 
         // VẼ TƯƠNG ỨNG TỪNG LOÀI KHỦNG LONG & DÃ THÚ 2.5D
         if (species) {
-          switch (species) {
-            case 'trex':
-              this.drawTRex(sx, sy, pxPerMeter, TILT_Y, distToPlayerMeters, beastObj);
-              break;
-            case 'croc':
-              this.drawSarcosuchus(sx, sy, pxPerMeter, TILT_Y, distToPlayerMeters, beastObj);
-              break;
-            case 'titanoboa':
-              this.drawTitanoboa(sx, sy, pxPerMeter, TILT_Y, distToPlayerMeters, beastObj);
-              break;
-            case 'plesiosaur':
-              this.drawPlesiosaur(sx, sy, pxPerMeter, TILT_Y, distToPlayerMeters, beastObj);
-              break;
-            case 'raptor':
-              this.drawVelociraptorPack(sx, sy, pxPerMeter, TILT_Y, distToPlayerMeters, beastObj);
-              break;
-            case 'spinosaurus':
-              this.drawSpinosaurus(sx, sy, pxPerMeter, TILT_Y, distToPlayerMeters, beastObj);
-              break;
-            case 'dilophosaurus':
-              this.drawDilophosaurus(sx, sy, pxPerMeter, TILT_Y, distToPlayerMeters, beastObj);
-              break;
-            case 'triceratops':
-              this.drawTriceratops(sx, sy, pxPerMeter, TILT_Y, distToPlayerMeters, beastObj);
-              break;
-            case 'ankylosaurus':
-              this.drawAnkylosaurus(sx, sy, pxPerMeter, TILT_Y, distToPlayerMeters, beastObj);
-              break;
-            case 'brachiosaurus':
-              this.drawBrachiosaurus(sx, sy, pxPerMeter, TILT_Y, distToPlayerMeters, beastObj);
-              break;
-            case 'pterosaur':
-              this.drawPterosaur(sx, sy, pxPerMeter, TILT_Y, distToPlayerMeters, beastObj);
-              break;
-            case 'lion':
-              this.drawCaveLionPride(sx, sy, pxPerMeter, TILT_Y, distToPlayerMeters, beastObj);
-              break;
-            case 'mammoth':
-              this.drawElephantHerd(sx, sy, pxPerMeter, TILT_Y, distToPlayerMeters, beastObj);
-              break;
-            case 'wolf':
-              this.drawDireWolfPack(sx, sy, pxPerMeter, TILT_Y, distToPlayerMeters, beastObj);
-              break;
-            case 'deer':
-              this.drawDeerHerd(sx, sy, pxPerMeter, TILT_Y, distToPlayerMeters, beastObj);
-              break;
-            case 'sabertooth':
-              this.drawSabertoothPredator(sx, sy, pxPerMeter, TILT_Y, distToPlayerMeters, beastObj);
-              break;
-            case 'bear':
-              this.drawCaveBear(sx, sy, pxPerMeter, TILT_Y, distToPlayerMeters, beastObj);
-              break;
-            case 'boar':
-              this.drawGiantBoar(sx, sy, pxPerMeter, TILT_Y, distToPlayerMeters, beastObj);
-              break;
-            case 'horse':
-              this.drawWildHorseHerd(sx, sy, pxPerMeter, TILT_Y, distToPlayerMeters, beastObj);
-              break;
-          }
+          const sType = species;
+          const bObj = beastObj;
+          outEntities.push({
+            sortY: sy,
+            render: () => {
+              switch (sType) {
+                case 'trex':
+                  this.drawTRex(sx, sy, pxPerMeter, TILT_Y, distToPlayerMeters, bObj);
+                  break;
+                case 'croc':
+                  this.drawSarcosuchus(sx, sy, pxPerMeter, TILT_Y, distToPlayerMeters, bObj);
+                  break;
+                case 'titanoboa':
+                  this.drawTitanoboa(sx, sy, pxPerMeter, TILT_Y, distToPlayerMeters, bObj);
+                  break;
+                case 'plesiosaur':
+                  this.drawPlesiosaur(sx, sy, pxPerMeter, TILT_Y, distToPlayerMeters, bObj);
+                  break;
+                case 'raptor':
+                  this.drawVelociraptorPack(sx, sy, pxPerMeter, TILT_Y, distToPlayerMeters, bObj);
+                  break;
+                case 'spinosaurus':
+                  this.drawSpinosaurus(sx, sy, pxPerMeter, TILT_Y, distToPlayerMeters, bObj);
+                  break;
+                case 'dilophosaurus':
+                  this.drawDilophosaurus(sx, sy, pxPerMeter, TILT_Y, distToPlayerMeters, bObj);
+                  break;
+                case 'triceratops':
+                  this.drawTriceratops(sx, sy, pxPerMeter, TILT_Y, distToPlayerMeters, bObj);
+                  break;
+                case 'ankylosaurus':
+                  this.drawAnkylosaurus(sx, sy, pxPerMeter, TILT_Y, distToPlayerMeters, bObj);
+                  break;
+                case 'brachiosaurus':
+                  this.drawBrachiosaurus(sx, sy, pxPerMeter, TILT_Y, distToPlayerMeters, bObj);
+                  break;
+                case 'pterosaur':
+                  this.drawPterosaur(sx, sy, pxPerMeter, TILT_Y, distToPlayerMeters, bObj);
+                  break;
+                case 'lion':
+                  this.drawCaveLionPride(sx, sy, pxPerMeter, TILT_Y, distToPlayerMeters, bObj);
+                  break;
+                case 'mammoth':
+                  this.drawElephantHerd(sx, sy, pxPerMeter, TILT_Y, distToPlayerMeters, bObj);
+                  break;
+                case 'wolf':
+                  this.drawDireWolfPack(sx, sy, pxPerMeter, TILT_Y, distToPlayerMeters, bObj);
+                  break;
+                case 'deer':
+                  this.drawDeerHerd(sx, sy, pxPerMeter, TILT_Y, distToPlayerMeters, bObj);
+                  break;
+                case 'sabertooth':
+                  this.drawSabertoothPredator(sx, sy, pxPerMeter, TILT_Y, distToPlayerMeters, bObj);
+                  break;
+                case 'bear':
+                  this.drawCaveBear(sx, sy, pxPerMeter, TILT_Y, distToPlayerMeters, bObj);
+                  break;
+                case 'boar':
+                  this.drawGiantBoar(sx, sy, pxPerMeter, TILT_Y, distToPlayerMeters, bObj);
+                  break;
+                case 'horse':
+                  this.drawWildHorseHerd(sx, sy, pxPerMeter, TILT_Y, distToPlayerMeters, bObj);
+                  break;
+              }
+            },
+          });
         } else {
           // Vẽ cảnh vật sinh thái phụ trợ (Rừng cây, mỏ đá, bụi quả, hóa thạch xương)
           if (biomeNoise < -0.22) {
@@ -2040,7 +2204,8 @@ export class MapView {
     }
   }
 
-  // ================================================================
+
+// ================================================================
   // CÁC HÀM VẼ QUẦN THỂ ĐỘNG VẬT HOANG DÃ 2.5D CỰC KỲ CHI TIẾT & SỐNG ĐỘNG
   // ================================================================
 
@@ -4847,12 +5012,16 @@ export class MapView {
     const { ctx } = this;
     const w = this.canvas.width;
     const h = this.canvas.height;
+    if (!pxPerMeter || !Number.isFinite(pxPerMeter) || pxPerMeter <= 0) return;
 
     for (const terr of HANOI_BEAST_TERRITORIES) {
+      if (!terr || !Number.isFinite(terr.lat) || !Number.isFinite(terr.lon)) continue;
       const [rawX, rawY] = project({ lat: terr.lat, lon: terr.lon });
+      if (!Number.isFinite(rawX) || !Number.isFinite(rawY)) continue;
       const x = Math.round(rawX);
       const y = Math.round(rawY);
       const radiusPx = terr.radiusMeters * pxPerMeter;
+      if (!Number.isFinite(radiusPx) || radiusPx <= 2) continue;
 
       if (x < -radiusPx || x > w + radiusPx || y < -radiusPx || y > h + radiusPx) continue;
 
@@ -4860,7 +5029,9 @@ export class MapView {
 
       // 1. Quầng Sương Mù Đỏ Thần Bí (Pulsating Red Mist)
       const pulse = Math.sin(this.tick / 15) * 0.15;
-      const mistGrad = ctx.createRadialGradient(x, y, radiusPx * 0.2, x, y, radiusPx);
+      const mistR0 = Math.max(0.1, radiusPx * 0.2);
+      const mistR1 = Math.max(mistR0 + 0.1, radiusPx);
+      const mistGrad = ctx.createRadialGradient(x, y, mistR0, x, y, mistR1);
       mistGrad.addColorStop(0, `rgba(225, 29, 72, ${0.35 + pulse})`);
       mistGrad.addColorStop(0.65, `rgba(190, 18, 60, ${0.20 + pulse * 0.5})`);
       mistGrad.addColorStop(1, 'rgba(136, 19, 55, 0)');
@@ -6120,7 +6291,7 @@ export class MapView {
       ctx.fill();
 
       // 2. Viên ngọc bích / Linh Phù nổi 3D
-      const rx = Math.round(x);
+      const rx = Math.round(safeX);
       const rdy = Math.round(dy);
       const orbGrad = ctx.createRadialGradient(rx - 3 * this.dpr, rdy - 3 * this.dpr, 2 * this.dpr, rx, rdy, 14 * this.dpr);
       if (inRange) {
@@ -6194,7 +6365,9 @@ export class MapView {
     const isFemale = input.gender === 'female';
 
     // Hệ số co giãn tỉ lệ thế giới khi zoom (Chuẩn mực RTS/RPG: nhân vật tương đương người thường ~1.75m, khủng long và thần thú to lớn vượt bậc)
-    const charScale = Math.max(0.14, Math.min(1.0, (pxPerMeter / 2.0) * 0.40));
+    const charScale = Math.max(0.14, Math.min(1.0, ((Number.isFinite(pxPerMeter) ? pxPerMeter : 10) / 2.0) * 0.40));
+    const safeX = Number.isFinite(x) ? x : 0;
+    const safeY = Number.isFinite(y) ? y : 0;
 
     // 1. TÍNH TOÁN ĐỘNG LỰC HỌC BƯỚC CHÂN (Bipedal Walk Kinematics)
     const isMoving = !!input.isMoving || (input.speedKmh ?? 0) > 0.3;
@@ -6219,12 +6392,17 @@ export class MapView {
     }
 
     const stride = Math.sin(this.walkPhase);
-    // Nhấp nhô cơ thể tự nhiên (Harmonic Body Bobbing)
-    const walkBob = (isMoving
-      ? Math.abs(Math.sin(this.walkPhase)) * (isSprinting ? 2.4 : 1.6)
-      : Math.sin(this.tick / 8) * 1.2) * this.dpr * charScale;
-    const py = y + walkBob;
-    const rx = Math.round(x);
+    // 1.1 HIỆU ỨNG BOUNCING (NHẤP NHÔ SIN) & SQUASH/STRETCH CHUẨN COZY 2.5D GAME
+    const bounceY = isMoving
+      ? -Math.abs(Math.sin(this.walkPhase)) * (isSprinting ? 5.5 : 3.8) * this.dpr * charScale
+      : Math.sin(this.tick * 0.06) * 0.8 * this.dpr * charScale;
+    
+    // Độ co giãn cơ thể (Squash & Stretch theo hàm Sin)
+    const squashX = isMoving ? 1.0 + Math.sin(this.walkPhase * 2) * 0.05 : 1.0 + Math.sin(this.tick * 0.06) * 0.015;
+    const squashY = isMoving ? 1.0 - Math.sin(this.walkPhase * 2) * 0.05 : 1.0 - Math.sin(this.tick * 0.06) * 0.015;
+
+    const py = safeY + bounceY;
+    const rx = Math.round(safeX);
     const rpy = Math.round(py);
 
     // Biên độ bước chân dài rộng, uyển chuyển (sải bước vươn dài hơn khi phi nước đại)
@@ -6347,14 +6525,16 @@ export class MapView {
 
     // 4. ĐUỐC LỬA BAN ĐÊM (World Space)
     if (input.hasTorch && input.isNight) {
-      const torchGrad = ctx.createRadialGradient(rx, Math.round(y), 8 * this.dpr * charScale, rx, Math.round(y), 32 * pxPerMeter);
+      const tR0 = Math.max(0.1, 8 * this.dpr * charScale);
+      const tR1 = Math.max(tR0 + 1, 32 * Math.max(1, pxPerMeter));
+      const torchGrad = ctx.createRadialGradient(rx, Math.round(safeY), tR0, rx, Math.round(safeY), tR1);
       torchGrad.addColorStop(0, 'rgba(251, 146, 60, 0.45)');
       torchGrad.addColorStop(0.5, 'rgba(234, 88, 12, 0.22)');
       torchGrad.addColorStop(0.85, 'rgba(194, 65, 12, 0.08)');
       torchGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
       ctx.fillStyle = torchGrad;
       ctx.beginPath();
-      ctx.ellipse(rx, Math.round(y), 32 * pxPerMeter, 32 * pxPerMeter * 0.72, 0, 0, Math.PI * 2);
+      ctx.ellipse(rx, Math.round(safeY), 32 * (pxPerMeter || 10), 32 * (pxPerMeter || 10) * 0.72, 0, 0, Math.PI * 2);
       ctx.fill();
     }
 
@@ -6363,7 +6543,7 @@ export class MapView {
     ctx.lineWidth = 1.8 * this.dpr;
     ctx.setLineDash([6 * this.dpr, 6 * this.dpr]);
     ctx.beginPath();
-    ctx.ellipse(rx, Math.round(y), 30 * pxPerMeter, 30 * pxPerMeter * 0.72, 0, 0, Math.PI * 2);
+    ctx.ellipse(rx, Math.round(safeY), 30 * (pxPerMeter || 10), 30 * (pxPerMeter || 10) * 0.72, 0, 0, Math.PI * 2);
     ctx.stroke();
     ctx.setLineDash([]);
 
@@ -6375,29 +6555,34 @@ export class MapView {
       : `rgba(245, 158, 11, ${0.75 * (1 - beaconTime)})`;
     ctx.lineWidth = 2 * this.dpr;
     ctx.beginPath();
-    ctx.ellipse(rx, Math.round(y), beaconR, beaconR * 0.72, 0, 0, Math.PI * 2);
+    ctx.ellipse(rx, Math.round(safeY), beaconR, beaconR * 0.72, 0, 0, Math.PI * 2);
     ctx.stroke();
 
-    // 7. Bóng đổ 3D dưới đất
-    ctx.fillStyle = 'rgba(28, 16, 6, 0.48)';
+    // 7. BÓNG ĐỔ ĐỘNG DƯỚI ĐẤT (DYNAMIC GROUND SHADOW - CO GIÃN THEO ĐỘ NẢY)
+    const shadowScale = isMoving ? 1.0 - Math.abs(Math.sin(this.walkPhase)) * 0.22 : 1.0;
+    const shadowAlpha = isMoving ? 0.38 - Math.abs(Math.sin(this.walkPhase)) * 0.12 : 0.42;
+    ctx.fillStyle = `rgba(15, 10, 5, ${shadowAlpha})`;
     ctx.beginPath();
-    ctx.ellipse(rx, Math.round(y + 12 * this.dpr * charScale), 16 * this.dpr * charScale, 7 * this.dpr * charScale, 0, 0, Math.PI * 2);
+    ctx.ellipse(rx, Math.round(safeY + 12 * this.dpr * charScale), 16 * this.dpr * charScale * shadowScale, 7 * this.dpr * charScale * shadowScale, 0, 0, Math.PI * 2);
     ctx.fill();
 
     // =========================================================================
     // 8. NÓN ÁNH SÁNG ĐỊNH HƯỚNG 360° TRÊN MẶT ĐẤT (Ground Directional Flashlight)
     // =========================================================================
     ctx.save();
-    ctx.translate(rx, Math.round(y + 6 * this.dpr * charScale));
+    ctx.translate(rx, Math.round(safeY + 6 * this.dpr * charScale));
     ctx.rotate(this.playerFacingAngle);
-    const coneGrad = ctx.createRadialGradient(0, 0, 4 * this.dpr * charScale, 0, -28 * this.dpr * charScale, 42 * this.dpr * charScale);
-    coneGrad.addColorStop(0, isFemale ? 'rgba(45, 212, 191, 0.45)' : 'rgba(245, 158, 11, 0.45)');
-    coneGrad.addColorStop(0.7, isFemale ? 'rgba(15, 118, 110, 0.15)' : 'rgba(180, 83, 9, 0.15)');
-    coneGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    const cR0 = Math.max(0.1, 4 * this.dpr * charScale);
+    const cR1 = Math.max(cR0 + 1, 55 * this.dpr * charScale);
+    const coneGrad = ctx.createRadialGradient(0, 0, cR0, 0, -20 * this.dpr * charScale, cR1);
+    coneGrad.addColorStop(0, 'rgba(254, 240, 138, 0.28)');
+    coneGrad.addColorStop(0.35, 'rgba(245, 158, 11, 0.14)');
+    coneGrad.addColorStop(0.70, 'rgba(217, 119, 6, 0.04)');
+    coneGrad.addColorStop(1.0, 'rgba(0, 0, 0, 0)');
     ctx.fillStyle = coneGrad;
     ctx.beginPath();
     ctx.moveTo(0, 0);
-    ctx.arc(0, 0, 44 * this.dpr * charScale, -Math.PI * 0.75, -Math.PI * 0.25);
+    ctx.arc(0, 0, 56 * this.dpr * charScale, -Math.PI * 0.75, -Math.PI * 0.25);
     ctx.closePath();
     ctx.fill();
     ctx.restore();
@@ -6415,8 +6600,11 @@ export class MapView {
 
     ctx.save();
     ctx.translate(rx, rpy);
-    // Co giãn nhân vật mượt mà theo độ zoom thế giới
-    ctx.scale((isFacingLeft ? -1 : 1) * charScale, charScale);
+    // Co giãn nhân vật mượt mà kết hợp Bouncing & Squash/Stretch
+    ctx.scale((isFacingLeft ? -1 : 1) * charScale * squashX, charScale * squashY);
+    // Viền mờ Soft Stroke / Ambient Occlusion giúp nhân vật tách bạch nổi bật 3D
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.38)';
+    ctx.shadowBlur = 4 * this.dpr;
 
     if (isFemale) {
       // ==================== NỮ THỔ DÂN TIỀN SỬ (THOÁT TỤC & KHỎE KHOẮN) ====================
@@ -6910,72 +7098,59 @@ export class MapView {
     // Cánh Linh Điểu sải rộng rực lửa
     ctx.fillStyle = '#f59e0b';
     ctx.strokeStyle = '#fef08a';
-    ctx.lineWidth = 1.2 * this.dpr;
+      ctx.moveTo(birdX + 2 * this.dpr, birdY);
+      ctx.quadraticCurveTo(birdX + 16 * this.dpr, birdY - wingFlap, birdX + 18 * this.dpr, birdY - wingFlap - 4 * this.dpr);
+      ctx.lineTo(birdX + 5 * this.dpr, birdY + 3 * this.dpr);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
 
-    // Cánh trái
-    ctx.beginPath();
-    ctx.moveTo(birdX - 2 * this.dpr, birdY);
-    ctx.quadraticCurveTo(birdX - 16 * this.dpr, birdY - wingFlap, birdX - 18 * this.dpr, birdY - wingFlap - 4 * this.dpr);
-    ctx.lineTo(birdX - 5 * this.dpr, birdY + 3 * this.dpr);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
+      // Đầu và mỏ vàng
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath();
+      ctx.arc(birdX + 7 * this.dpr, birdY - 2 * this.dpr, 3.5 * this.dpr, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.moveTo(birdX + 9 * this.dpr, birdY - 2 * this.dpr);
+      ctx.lineTo(birdX + 14 * this.dpr, birdY - 1 * this.dpr);
+      ctx.lineTo(birdX + 9 * this.dpr, birdY);
+      ctx.closePath();
+      ctx.fill();
 
-    // Cánh phải
-    ctx.beginPath();
-    ctx.moveTo(birdX + 2 * this.dpr, birdY);
-    ctx.quadraticCurveTo(birdX + 16 * this.dpr, birdY - wingFlap, birdX + 18 * this.dpr, birdY - wingFlap - 4 * this.dpr);
-    ctx.lineTo(birdX + 5 * this.dpr, birdY + 3 * this.dpr);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
+      // Đuôi phượng hoàng xòe 3 nhánh
+      ctx.strokeStyle = '#dc2626';
+      ctx.lineWidth = 1.6 * this.dpr;
+      ctx.beginPath();
+      ctx.moveTo(birdX - 7 * this.dpr, birdY + 1 * this.dpr);
+      ctx.lineTo(birdX - 18 * this.dpr, birdY + 6 * this.dpr);
+      ctx.moveTo(birdX - 7 * this.dpr, birdY + 1 * this.dpr);
+      ctx.lineTo(birdX - 17 * this.dpr, birdY + 11 * this.dpr);
+      ctx.stroke();
 
-    // Đầu và mỏ vàng
-    ctx.fillStyle = '#fef08a';
-    ctx.beginPath();
-    ctx.arc(birdX + 7 * this.dpr, birdY - 2 * this.dpr, 3.5 * this.dpr, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#ef4444';
-    ctx.beginPath();
-    ctx.moveTo(birdX + 9 * this.dpr, birdY - 2 * this.dpr);
-    ctx.lineTo(birdX + 14 * this.dpr, birdY - 1 * this.dpr);
-    ctx.lineTo(birdX + 9 * this.dpr, birdY);
-    ctx.closePath();
-    ctx.fill();
+      // Thẻ trạng thái du hành viễn chinh
+      const speedTag = `🦅 LINH ĐIỂU VIỄN CHINH • ${Math.round(speedKmh)} KM/H`;
+      ctx.font = `bold ${8.5 * this.dpr}px 'Be Vietnam Pro', system-ui, sans-serif`;
+      const tagW = Math.round(ctx.measureText(speedTag).width + 16 * this.dpr);
+      const tagH = Math.round(18 * this.dpr);
+      const tagX = Math.round(birdX - tagW / 2);
+      const tagY = Math.round(birdY - 24 * this.dpr);
 
-    // Đuôi phượng hoàng xòe 3 nhánh
-    ctx.strokeStyle = '#dc2626';
-    ctx.lineWidth = 1.6 * this.dpr;
-    ctx.beginPath();
-    ctx.moveTo(birdX - 7 * this.dpr, birdY + 1 * this.dpr);
-    ctx.lineTo(birdX - 18 * this.dpr, birdY + 6 * this.dpr);
-    ctx.moveTo(birdX - 7 * this.dpr, birdY + 1 * this.dpr);
-    ctx.lineTo(birdX - 17 * this.dpr, birdY + 11 * this.dpr);
-    ctx.stroke();
+      ctx.fillStyle = '#1c0e04';
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 1.4 * this.dpr;
+      ctx.beginPath();
+      ctx.roundRect(tagX, tagY, tagW, tagH, 4 * this.dpr);
+      ctx.fill();
+      ctx.stroke();
 
-    // Thẻ trạng thái du hành viễn chinh
-    const speedTag = `🦅 LINH ĐIỂU VIỄN CHINH • ${Math.round(speedKmh)} KM/H`;
-    ctx.font = `bold ${8.5 * this.dpr}px 'Be Vietnam Pro', system-ui, sans-serif`;
-    const tagW = Math.round(ctx.measureText(speedTag).width + 16 * this.dpr);
-    const tagH = Math.round(18 * this.dpr);
-    const tagX = Math.round(birdX - tagW / 2);
-    const tagY = Math.round(birdY - 24 * this.dpr);
+      ctx.fillStyle = '#fef08a';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(speedTag, birdX, Math.round(tagY + tagH / 2));
 
-    ctx.fillStyle = '#1c0e04';
-    ctx.strokeStyle = '#f59e0b';
-    ctx.lineWidth = 1.4 * this.dpr;
-    ctx.beginPath();
-    ctx.roundRect(tagX, tagY, tagW, tagH, 4 * this.dpr);
-    ctx.fill();
-    ctx.stroke();
-
-    ctx.fillStyle = '#fef08a';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(speedTag, birdX, Math.round(tagY + tagH / 2));
-
-    ctx.restore();
-  }
+      ctx.restore();
+    }
 
   private drawRain(w: number, h: number, intensity: number): void {
     const { ctx } = this;
@@ -7074,13 +7249,14 @@ export class MapView {
    * TẦNG CẢNH QUAN KỶ KHỦNG LONG ĐIỂM XUYẾT (PREHISTORIC ACCENTS & STEALTH BRUSHES)
    * Tinh tế, vừa đủ để tạo bối cảnh khủng long sống động mà không che khuất đường xá và địa điểm.
    */
-  private drawPrehistoricAccents(
+  private collectPrehistoricAccents(
     w: number,
     h: number,
     input: RenderInput,
     project: (at: LatLon) => [number, number],
     pxPerMeter: number,
     TILT_Y: number,
+    outEntities: Array<{ sortY: number; render: (ctx: CanvasRenderingContext2D) => void }>,
   ): void {
     const { ctx } = this;
     const playerScreenX = w / 2 + this.panX;
@@ -7100,7 +7276,8 @@ export class MapView {
 
         // Vùng sương ngọc bích huyền ảo bồng bềnh
         const pulse = 0.85 + 0.15 * Math.sin(this.tick * 0.04 + hashSeed(feature.id));
-        const brushGrad = ctx.createRadialGradient(0, 0, radius * 0.1, 0, 0, radius);
+        const safeRadius = Math.max(2, radius || 20);
+        const brushGrad = ctx.createRadialGradient(0, 0, Math.max(0.1, safeRadius * 0.1), 0, 0, safeRadius);
         brushGrad.addColorStop(0, `rgba(5, 150, 105, ${0.32 * pulse})`);
         brushGrad.addColorStop(0.55, `rgba(16, 185, 129, ${0.16 * pulse})`);
         brushGrad.addColorStop(1, 'rgba(16, 185, 129, 0)');
@@ -7209,7 +7386,9 @@ export class MapView {
         ctx.translate(fox, foy);
 
         // Hố đất trầm tích khai quật viễn cổ
-        const pitGrad = ctx.createRadialGradient(0, 0, boneSpanW * 0.2, 0, 0, boneSpanW * 0.6);
+        const pitR0 = Math.max(0.1, boneSpanW * 0.2);
+        const pitR1 = Math.max(pitR0 + 0.1, boneSpanW * 0.6);
+        const pitGrad = ctx.createRadialGradient(0, 0, pitR0, 0, 0, pitR1);
         pitGrad.addColorStop(0, 'rgba(69, 26, 3, 0.35)');
         pitGrad.addColorStop(0.7, 'rgba(120, 53, 15, 0.15)');
         pitGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');

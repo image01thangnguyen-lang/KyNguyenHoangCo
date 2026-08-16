@@ -8,7 +8,7 @@
  * không có lý do gì phải đi hỏi mạng trước. Cập nhật diễn ra bằng cách đổi CACHE_VERSION.
  */
 
-const CACHE_VERSION = 'khc-v0.6.5';
+const CACHE_VERSION = 'khc-v0.7.0';
 
 const CORE = '/packages/game-core';
 

@@ -299,6 +299,17 @@ export interface PlayerState {
   strengthLevel?: number;
   /** Cấp độ Thân Pháp / Tốc Độ Di Chuyển (1..10), mỗi cấp tăng tốc độ di chuyển của nhân vật */
   speedLevel?: number;
+  /** Toạ độ thực tế lần cuối nhân vật đứng khi lưu game / thoát game */
+  lastPosition?: { lat: number; lon: number } | null;
+  /** Trạng thái tự động hành trình / lên lộ trình đến điểm đến kể cả khi tắt game */
+  autoTravel?: {
+    target: { lat: number; lon: number; nameVi?: string };
+    startPos: { lat: number; lon: number };
+    startTimeMs: number;
+    speedKmh: number;
+    totalDistMeters: number;
+    isCompleted?: boolean;
+  } | null;
   createdAtMs: number;
 }
 

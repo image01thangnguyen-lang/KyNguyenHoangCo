@@ -79,6 +79,7 @@
               <button id="btn-notifications" class="btn-hud-icon" title="Thông báo">
                 🔔<span id="notif-badge" class="notif-badge" hidden></span>
               </button>
+              <button id="btn-open-hanoi-map" class="btn-hud-icon btn-hud-map" title="Bản đồ toàn Hà Nội & Tự hành trình" aria-label="Bản đồ Hà Nội">🗺️</button>
               <button id="btn-back-profiles" class="btn-hud-icon" title="Đổi hồ sơ">☰</button>
             </div>
           </div>
@@ -137,6 +138,21 @@
                 <button id="btn-open-treasure-modal" class="btn-treasure-action" title="Xem chi tiết mật thư">👁️ Chi tiết</button>
                 <button id="btn-claim-treasure-hud" class="btn-treasure-claim" hidden title="Khai quật kho báu!">🏆 KHAI QUẬT</button>
               </div>
+            </div>
+          </div>
+
+          <!-- Banner Tự Động Hành Trình (Auto-Travel HUD Card) -->
+          <div id="auto-travel-hud-banner" class="auto-travel-hud-banner" hidden>
+            <div class="auto-travel-hud-card">
+              <span class="auto-travel-hud-icon">🚶</span>
+              <div class="auto-travel-hud-body">
+                <div class="auto-travel-hud-title">ĐANG TỰ HÀNH TRÌNH: <strong id="auto-travel-target-name" style="color:#fef08a;">Hồ Gươm</strong></div>
+                <div class="auto-travel-hud-progress">
+                  <div class="auto-travel-progress-bar"><div id="auto-travel-progress-fill" class="auto-travel-progress-fill" style="width:0%;"></div></div>
+                  <span id="auto-travel-status-text" class="auto-travel-status-text">Đang di chuyển...</span>
+                </div>
+              </div>
+              <button id="btn-cancel-auto-travel" class="btn-auto-travel-cancel" title="Dừng hành trình">✕ Dừng</button>
             </div>
           </div>
 
@@ -1124,6 +1140,61 @@
         </div>
 
         <button id="btn-survival-guide-ok" class="btn btn--primary" style="width: 100%; margin-top: 14px; padding: 10px; font-weight: 700;">Đã hiểu!</button>
+      </div>
+    </div>
+
+    <!-- Lớp phủ: Bản Đồ Toàn Cảnh Hà Nội & Chọn Điểm Đến Tự Hành Trình (Hanoi Minimap) -->
+    <div id="overlay-hanoi-minimap" class="overlay overlay--hanoi-map" hidden>
+      <div class="card card--hanoi-map">
+        <div class="panel-head hanoi-map-panel-head">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 1.5rem;">🗺️</span>
+            <div>
+              <h2 style="margin: 0; font-size: 1.1rem; color: #fef08a;">Bản Đồ Toàn Cảnh Hà Nội</h2>
+              <small style="color: var(--ink-dim);">Chạm vào bản đồ hoặc danh sách để lên lộ trình tự hành</small>
+            </div>
+          </div>
+          <button id="btn-hanoi-map-close" class="drawer-close" title="Đóng">✕</button>
+        </div>
+
+        <div class="hanoi-map-body">
+          <!-- Canvas bản đồ vector toàn bộ tỉnh thành Hà Nội -->
+          <div class="hanoi-map-canvas-wrap">
+            <canvas id="hanoi-minimap-canvas" width="600" height="420"></canvas>
+            <div class="hanoi-map-legend">
+              <span class="legend-item"><span class="legend-dot legend-dot--player"></span> Bạn đang ở đây</span>
+              <span class="legend-item"><span class="legend-dot legend-dot--camp"></span> Doanh Trại</span>
+              <span class="legend-item"><span class="legend-dot legend-dot--target"></span> Điểm Đến</span>
+            </div>
+          </div>
+
+          <!-- Danh sách địa danh nổi tiếng & Bảng chọn điểm đến -->
+          <div class="hanoi-map-sidebar">
+            <div class="hanoi-dest-card" id="hanoi-selected-dest-card">
+              <div class="hanoi-dest-header">
+                <span id="hanoi-dest-icon" class="hanoi-dest-icon">📍</span>
+                <div class="hanoi-dest-title-wrap">
+                  <strong id="hanoi-dest-name">Chưa chọn điểm đến</strong>
+                  <span id="hanoi-dest-dist" class="hanoi-dest-dist">—</span>
+                </div>
+              </div>
+              <div class="hanoi-dest-meta" id="hanoi-dest-meta">
+                <span>⏱️ Thời gian dự kiến: <strong id="hanoi-dest-eta">—</strong></span>
+                <span>👣 Bước chân ước tính: <strong id="hanoi-dest-steps">—</strong></span>
+              </div>
+              <div class="hanoi-dest-actions">
+                <button id="btn-start-auto-travel" class="btn btn--primary btn-start-travel" disabled>
+                  🚀 BẮT ĐẦU TỰ HÀNH TRÌNH
+                </button>
+              </div>
+            </div>
+
+            <div class="hanoi-landmarks-title">🏛️ Địa danh &amp; Khu vực nổi bật</div>
+            <div id="hanoi-landmarks-list" class="hanoi-landmarks-list">
+              <!-- Danh sách địa danh được render động từ JS -->
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
