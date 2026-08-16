@@ -17,6 +17,7 @@ import {
   beginBloodMoon,
   bloodMoonStatus,
   buildView,
+  campDefensePower,
   cellAt,
   cellById,
   chapter,
@@ -47,6 +48,10 @@ import {
   putProfile,
   runNightDefense,
   sampleHanoiPack,
+  generateHanoiTreasureClue,
+  claimHanoiTreasure,
+  getHanoiExplorerTitle,
+  type TreasureClue,
   setActiveSlot,
   sleepAtCamp,
   slotSummaries,
@@ -63,6 +68,7 @@ import {
   unlockGame,
   updateSettings,
   upgradeCamp,
+  expandCampTerritory,
   wakeUp,
   weatherFor,
   startIncubation,
@@ -88,6 +94,10 @@ import {
   getSafeCapacity,
   MAX_STRENGTH_LEVEL,
   getStrengthUpgradeInfo,
+  upgradeSpeed,
+  getSpeedUpgradeInfo,
+  calcMovementSpeedKmh,
+  MAX_SPEED_LEVEL,
   maxWeightCapacity,
   processTransitMovement,
   canCollectOutpost,
@@ -98,6 +108,9 @@ import {
   relocateCamp,
   RELOCATE_CAMP_COST_MATERIALS,
   RELOCATE_CAMP_COST_GOLD,
+  updateDynamicBeastPacks,
+  huntDynamicBeastPack,
+  huntDynamicBeastRanged,
 } from '../../../packages/game-core/src/index.ts';
 import type {
   DifficultyId,
@@ -108,6 +121,7 @@ import type {
   SaveFile,
   StoryBeat,
   CoopRoom,
+  DynamicBeastPack,
 } from '../../../packages/game-core/src/index.ts';
 
 import { MapView, featureAtPoint } from './mapView.ts';
@@ -196,6 +210,391 @@ let geo: GeoWatcher | null = null;
 const now = (): number => Date.now() + app.timeOffsetMs;
 
 let worldDrops: WorldDrop[] = [];
+const dynamicBeasts = new Map<string, DynamicBeastPack>();
+let lastBeastAiTime = 0;
+
+// ================================================================
+// HỆ THỐNG TRANG BỊ VŨ KHÍ, TẤN CÔNG ĐỊNH HƯỚNG & KỸ NĂNG CHIẾN ĐẤU
+// ================================================================
+
+export interface WeaponDef {
+  id: string;
+  nameVi: string;
+  icon: string;
+  skillName: string;
+  skillIcon: string;
+  isRanged: boolean;
+  baseDmg: number;
+  skillDmg: number;
+}
+
+export const ALL_WEAPONS: WeaponDef[] = [
+  { id: 'divine_dragon_bow', nameVi: 'Thần Nỏ Long Vương', icon: '🏹', skillName: 'Mưa Tên Rồng', skillIcon: '🐉', isRanged: true, baseDmg: 65, skillDmg: 85 },
+  { id: 'bow', nameVi: 'Cung Tên Săn Bắn', icon: '🏹', skillName: 'Xuyên Phá', skillIcon: '🎯', isRanged: true, baseDmg: 34, skillDmg: 52 },
+  { id: 'iron_spear', nameVi: 'Giáo Sắt Săn Quái', icon: '🗡️', skillName: 'Lướt Đâm', skillIcon: '⚡', isRanged: false, baseDmg: 48, skillDmg: 72 },
+  { id: 'iron_axe', nameVi: 'Rìu Sắt Đốn Củi', icon: '🪓', skillName: 'Xoay Bão', skillIcon: '🌪️', isRanged: false, baseDmg: 28, skillDmg: 44 },
+  { id: 'stone_axe', nameVi: 'Rìu Đá Tiền Sử', icon: '🪓', skillName: 'Xoay Rìu', skillIcon: '🌪️', isRanged: false, baseDmg: 20, skillDmg: 32 },
+  { id: 'sharp_stone', nameVi: 'Đá Nhọn Ném Xa', icon: '🪨', skillName: 'Mưa Đá', skillIcon: '🌪️', isRanged: true, baseDmg: 14, skillDmg: 22 },
+  { id: 'fist', nameVi: 'Quyền Cước Tiền Sử', icon: '✊', skillName: 'Đạp Lùi', skillIcon: '💨', isRanged: false, baseDmg: 8, skillDmg: 16 },
+];
+
+let selectedWeaponIndex = 0;
+
+export function getAvailableWeaponsList(): WeaponDef[] {
+  if (!app.profile) return [ALL_WEAPONS[ALL_WEAPONS.length - 1]];
+  const carried = app.profile.player.carried;
+  const list = ALL_WEAPONS.filter((w) => {
+    if (w.id === 'fist') return true;
+    return (carried[w.id] ?? 0) > 0;
+  });
+  return list.length > 0 ? list : [ALL_WEAPONS[ALL_WEAPONS.length - 1]];
+}
+
+export function getCurrentEquippedWeapon(): WeaponDef {
+  const available = getAvailableWeaponsList();
+  if (selectedWeaponIndex >= available.length) {
+    selectedWeaponIndex = 0;
+  }
+  return available[selectedWeaponIndex];
+}
+
+export function cycleNextWeapon(): void {
+  const available = getAvailableWeaponsList();
+  if (available.length <= 1) {
+    toast(`🎒 Hiện tại bạn chỉ có ${available[0].nameVi}! Hãy chế tạo thêm vũ khí trong Lò Rèn/Menu Chế Tạo.`, 'warn');
+    return;
+  }
+  selectedWeaponIndex = (selectedWeaponIndex + 1) % available.length;
+  const curr = available[selectedWeaponIndex];
+  audio.play('click');
+  if (app.profile?.settings.haptics) buzz(25);
+  toast(`🗡️ Đã trang bị: ${curr.icon} ${curr.nameVi}!`, 'good');
+  updateCombatPadUI();
+}
+
+export function updateCombatPadUI(): void {
+  if (!app.profile) return;
+  const curr = getCurrentEquippedWeapon();
+  const carried = app.profile.player.carried;
+
+  const attackIcon = document.getElementById('combat-attack-icon');
+  const weaponIcon = document.getElementById('combat-weapon-icon');
+  const weaponAmmo = document.getElementById('combat-weapon-ammo');
+  const skillIcon = document.getElementById('combat-skill-icon');
+  const skillName = document.getElementById('combat-skill-name');
+
+  if (attackIcon) attackIcon.textContent = curr.icon;
+  if (weaponIcon) weaponIcon.textContent = curr.icon;
+  if (skillIcon) skillIcon.textContent = curr.skillIcon;
+  if (skillName) skillName.textContent = curr.skillName;
+
+  if (weaponAmmo) {
+    if (curr.id === 'bow') {
+      const arrows = carried['arrow'] ?? 0;
+      weaponAmmo.textContent = `x${arrows}`;
+      weaponAmmo.style.color = arrows > 0 ? '#fef08a' : '#ef4444';
+    } else if (curr.id === 'sharp_stone') {
+      const stones = carried['sharp_stone'] ?? 0;
+      weaponAmmo.textContent = `x${stones}`;
+      weaponAmmo.style.color = stones > 0 ? '#fef08a' : '#ef4444';
+    } else if (curr.id === 'divine_dragon_bow') {
+      weaponAmmo.textContent = '∞ TÊN';
+      weaponAmmo.style.color = '#38bdf8';
+    } else {
+      weaponAmmo.textContent = 'ĐỔI';
+      weaponAmmo.style.color = '#fef08a';
+    }
+  }
+}
+
+/** Bắn / Phóng vũ khí bay thẳng theo góc quay mặt của người chơi */
+export function fireDirectionalProjectile(
+  type: 'arrow' | 'stone',
+  playerWorldX: number,
+  playerWorldY: number,
+  playerScreenX: number,
+  playerScreenY: number,
+  angleRad: number,
+  maxDistMeters: number,
+  baseDamage: number,
+): void {
+  if (!app.profile) return;
+  const nowMs = Date.now();
+  const canvas = mapView?.canvas;
+  const w = canvas?.width ?? 400;
+  const h = canvas?.height ?? 800;
+  const pxPerMeter = ((Math.min(w, h) / 75) * (mapView?.zoomFactor ?? 1));
+  const TILT_Y = 0.72;
+
+  // Vector hướng bay: angleRad (0 = Bắc/lên (+Y), PI/2 = Đông/phải (+X))
+  const dirX = Math.sin(angleRad);
+  const dirY = Math.cos(angleRad);
+
+  // Tìm dã thú va chạm trên đường bay
+  let closestBeast: DynamicBeastPack | null = null;
+  let closestDist = maxDistMeters;
+
+  for (const beast of dynamicBeasts.values()) {
+    if (beast.isDefeated) continue;
+    const toBx = beast.currentWorldX - playerWorldX;
+    const toBy = beast.currentWorldY - playerWorldY;
+
+    // Chiếu toạ độ lên tia
+    const projLen = toBx * dirX + toBy * dirY;
+    if (projLen > 0 && projLen <= maxDistMeters) {
+      const perpDist = Math.hypot(toBx - projLen * dirX, toBy - projLen * dirY);
+      if (perpDist <= 2.2) { // Hitbox quái 2.2m
+        if (projLen < closestDist) {
+          closestDist = projLen;
+          closestBeast = beast;
+        }
+      }
+    }
+  }
+
+  const endDist = closestBeast ? closestDist : maxDistMeters;
+  const endWorldX = playerWorldX + dirX * endDist;
+  const endWorldY = playerWorldY + dirY * endDist;
+
+  const targetScreenX = playerScreenX + (endWorldX - playerWorldX) * pxPerMeter;
+  const targetScreenY = playerScreenY - (endWorldY - playerWorldY) * (pxPerMeter * TILT_Y);
+
+  mapView?.spawnProjectile(
+    type,
+    playerScreenX,
+    playerScreenY - 12 * (mapView?.dpr ?? 1),
+    targetScreenX,
+    targetScreenY,
+    baseDamage,
+    () => {
+      if (closestBeast && !closestBeast.isDefeated) {
+        audio.play('strike');
+        if (app.profile?.settings.haptics) buzz([0, 50, 40, 80]);
+
+        const dmg = Math.round(baseDamage * (0.85 + Math.random() * 0.3));
+        closestBeast.currentHp = Math.max(0, closestBeast.currentHp - dmg);
+        closestBeast.isAggro = true;
+        closestBeast.isChasing = true;
+
+        mapView?.triggerBeastHit(`💥 -${dmg} HP`, targetScreenX, targetScreenY - 24 * (mapView?.dpr ?? 1));
+        mapView?.spawnImpactSparks(targetScreenX, targetScreenY, type === 'arrow');
+
+        if (closestBeast.currentHp <= 0) {
+          closestBeast.isDefeated = true;
+          closestBeast.respawnAt = nowMs + 5 * 60 * 1000;
+          for (const loot of closestBeast.lootTable) {
+            const qty = Math.floor(loot.min + Math.random() * (loot.max - loot.min + 1));
+            app.profile!.player.carried[loot.itemId] = (app.profile!.player.carried[loot.itemId] || 0) + qty;
+          }
+          audio.play('quest_complete');
+          toast(`⚔️ Đã hạ gục ${closestBeast.nameVi}!`, 'good');
+        } else {
+          toast(`🗡️ Bắn trúng ${closestBeast.nameVi}! (-${dmg} HP)`, 'good');
+        }
+        persist();
+        sync();
+        render();
+      }
+    },
+  );
+}
+
+/** Thực thi Tấn Công Thường hoặc Kỹ Năng Vũ Khí theo hướng quay mặt của người chơi */
+export function executeCombatAttack(isSkill = false): void {
+  if (!app.profile) return;
+  const player = app.profile.player;
+  const nowMs = Date.now();
+  const weapon = getCurrentEquippedWeapon();
+  const angle = currentMovementHeading; // radians
+
+  const { render: playerAt } = currentPosition();
+  const WORLD_ORIGIN_LAT = 21.0;
+  const WORLD_ORIGIN_LON = 105.8;
+  const playerWorldX = (playerAt.lon - WORLD_ORIGIN_LON) / metersToLonDegrees(1, playerAt.lat);
+  const playerWorldY = (playerAt.lat - WORLD_ORIGIN_LAT) / metersToLatDegrees(1);
+
+  const canvas = mapView?.canvas;
+  const w = canvas?.width ?? 400;
+  const h = canvas?.height ?? 800;
+  const playerScreenX = w / 2 + (mapView?.panX ?? 0);
+  const playerScreenY = h / 2 + (mapView?.panY ?? 0);
+  const screenAngle = Math.atan2(-Math.cos(angle) * 0.72, Math.sin(angle));
+
+  // 1. VŨ KHÍ TẦM XA: CUNG TÊN / THẦN NỎ
+  if (weapon.id === 'bow' || weapon.id === 'divine_dragon_bow') {
+    const isDivine = weapon.id === 'divine_dragon_bow';
+    const arrowCount = player.carried['arrow'] ?? 0;
+    if (arrowCount <= 0 && !isDivine) {
+      toast('🏹 Đã hết Mũi Tên trong túi đồ! Hãy chế tạo thêm tại Menu Chế Tạo.', 'bad');
+      audio.play('strike');
+      return;
+    }
+
+    if (isSkill) {
+      // Kỹ năng: Bắn 3 mũi tên hình cánh quạt
+      const cost = isDivine ? 0 : Math.min(2, arrowCount);
+      if (cost > 0) {
+        player.carried['arrow'] = (player.carried['arrow'] ?? 0) - cost;
+        if (player.carried['arrow'] === 0) delete player.carried['arrow'];
+      }
+      audio.play('arrow_shot');
+      if (app.profile.settings.haptics) buzz([0, 40, 30, 80]);
+
+      const angles = [angle - 0.22, angle, angle + 0.22];
+      for (const a of angles) {
+        fireDirectionalProjectile('arrow', playerWorldX, playerWorldY, playerScreenX, playerScreenY, a, 26, isDivine ? 65 : 42);
+      }
+      toast(`🎯 DÙNG CHIÊU: Mưa Tên Xuyên Phá!`, 'good');
+    } else {
+      if (!isDivine) {
+        player.carried['arrow'] = (player.carried['arrow'] ?? 0) - 1;
+        if (player.carried['arrow'] === 0) delete player.carried['arrow'];
+      }
+      audio.play('arrow_shot');
+      if (app.profile.settings.haptics) buzz([0, 30, 20, 50]);
+
+      fireDirectionalProjectile('arrow', playerWorldX, playerWorldY, playerScreenX, playerScreenY, angle, 24, weapon.baseDmg);
+    }
+    persist();
+    sync();
+    render();
+    return;
+  }
+
+  // 2. VŨ KHÍ TẦM XA: ĐÁ NHỌN
+  if (weapon.id === 'sharp_stone') {
+    const stoneCount = player.carried['sharp_stone'] ?? 0;
+    if (stoneCount <= 0) {
+      toast('🪨 Đã hết Đá Nhọn trong túi đồ!', 'bad');
+      return;
+    }
+
+    if (isSkill) {
+      const cost = Math.min(2, stoneCount);
+      player.carried['sharp_stone'] = (player.carried['sharp_stone'] ?? 0) - cost;
+      if (player.carried['sharp_stone'] === 0) delete player.carried['sharp_stone'];
+      audio.play('throw_stone');
+
+      const angles = [angle - 0.28, angle, angle + 0.28];
+      for (const a of angles) {
+        fireDirectionalProjectile('stone', playerWorldX, playerWorldY, playerScreenX, playerScreenY, a, 16, 18);
+      }
+      toast(`🌪️ DÙNG CHIÊU: Mưa Đá Tán Xạ!`, 'good');
+    } else {
+      player.carried['sharp_stone'] = (player.carried['sharp_stone'] ?? 0) - 1;
+      if (player.carried['sharp_stone'] === 0) delete player.carried['sharp_stone'];
+      audio.play('throw_stone');
+
+      fireDirectionalProjectile('stone', playerWorldX, playerWorldY, playerScreenX, playerScreenY, angle, 15, weapon.baseDmg);
+    }
+    persist();
+    sync();
+    render();
+    return;
+  }
+
+  // 3. VŨ KHÍ CẬN CHIẾN: GIÁO SẮT / RÌU SẮT / RÌU ĐÁ / TAY KHÔNG
+  let baseDmg = weapon.baseDmg;
+  let attackRange = 3.5;
+  let animType: 'slash' | 'thrust' | 'whirlwind' | 'kick' = 'slash';
+
+  if (weapon.id === 'iron_spear') {
+    baseDmg = isSkill ? weapon.skillDmg : weapon.baseDmg;
+    attackRange = isSkill ? 7.2 : 5.6;
+    animType = 'thrust';
+  } else if (weapon.id === 'iron_axe' || weapon.id === 'stone_axe') {
+    baseDmg = isSkill ? weapon.skillDmg : weapon.baseDmg;
+    attackRange = isSkill ? 5.2 : 4.2;
+    animType = isSkill ? 'whirlwind' : 'slash';
+  } else {
+    baseDmg = isSkill ? weapon.skillDmg : weapon.baseDmg;
+    attackRange = isSkill ? 4.2 : 3.0;
+    animType = isSkill ? 'kick' : 'slash';
+  }
+
+  // Tiêu hao thể lực nhẹ
+  player.survival.stamina = Math.max(0, (player.survival.stamina ?? 100) - (isSkill ? 6 : 3));
+
+  // Kích hoạt hoạt ảnh chém/đâm trên Canvas
+  mapView?.triggerMeleeAttackVisual(playerScreenX, playerScreenY, screenAngle, animType);
+  audio.play('strike');
+  if (app.profile.settings.haptics) buzz([0, 50, 40, 90]);
+
+  // Quét kiểm tra tất cả quái vật trúng đòn theo hình nón hướng nhìn
+  let hitCount = 0;
+  for (const beast of dynamicBeasts.values()) {
+    if (beast.isDefeated) continue;
+    const dx = beast.currentWorldX - playerWorldX;
+    const dy = beast.currentWorldY - playerWorldY;
+    const dist = Math.hypot(dx, dy);
+
+    if (dist <= attackRange) {
+      const targetAngle = Math.atan2(dx, dy);
+      let angleDiff = Math.abs(targetAngle - angle);
+      while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+      angleDiff = Math.abs(angleDiff);
+
+      if (animType === 'whirlwind' || angleDiff <= (Math.PI / 3)) {
+        hitCount++;
+        const dmg = Math.round(baseDmg * (0.88 + Math.random() * 0.24));
+        beast.currentHp = Math.max(0, beast.currentHp - dmg);
+        beast.isAggro = true;
+        beast.isChasing = true;
+
+        // Đẩy lùi nhẹ quái
+        const pushDist = isSkill ? 2.8 : 1.2;
+        beast.currentWorldX += Math.sin(targetAngle) * pushDist;
+        beast.currentWorldY += Math.cos(targetAngle) * pushDist;
+
+        const pxPerM = ((Math.min(w, h) / 75) * (mapView?.zoomFactor ?? 1));
+        const bsX = playerScreenX + (beast.currentWorldX - playerWorldX) * pxPerM;
+        const bsY = playerScreenY - (beast.currentWorldY - playerWorldY) * (pxPerM * 0.72);
+
+        mapView?.triggerBeastHit(`💥 -${dmg} HP`, bsX, bsY - 24);
+        mapView?.spawnImpactSparks(bsX, bsY, false);
+
+        if (beast.currentHp <= 0) {
+          beast.isDefeated = true;
+          beast.respawnAt = nowMs + 5 * 60 * 1000;
+          for (const loot of beast.lootTable) {
+            const qty = Math.floor(loot.min + Math.random() * (loot.max - loot.min + 1));
+            player.carried[loot.itemId] = (player.carried[loot.itemId] || 0) + qty;
+          }
+          audio.play('quest_complete');
+          toast(`⚔️ Đã hạ gục ${beast.nameVi}!`, 'good');
+        }
+      }
+    }
+  }
+
+  if (hitCount === 0) {
+    toast(`⚔️ ${isSkill ? `DÙNG CHIÊU: ${weapon.skillName}` : `Tấn công bằng ${weapon.nameVi}`}!`, 'good');
+  }
+
+  persist();
+  sync();
+  render();
+}
+
+export function handleHuntBeast(beast: DynamicBeastPack, clickScreenX?: number, clickScreenY?: number): void {
+  if (!app.profile) return;
+  const nowMs = Date.now();
+  const { render: playerAt } = currentPosition();
+  const WORLD_ORIGIN_LAT = 21.0;
+  const WORLD_ORIGIN_LON = 105.8;
+  const playerWorldX = (playerAt.lon - WORLD_ORIGIN_LON) / metersToLonDegrees(1, playerAt.lat);
+  const playerWorldY = (playerAt.lat - WORLD_ORIGIN_LAT) / metersToLatDegrees(1);
+  const dist = Math.hypot(beast.currentWorldX - playerWorldX, beast.currentWorldY - playerWorldY);
+
+  if (dist > 35.0) {
+    toast(`🏹 ${beast.nameVi} đang ở quá xa (cách ${Math.round(dist)}m)! Hãy tiến lại gần (≤32m) để nhắm bắn.`, 'warn');
+    return;
+  }
+
+  // Tự động xoay nhân vật về hướng con quái
+  currentMovementHeading = Math.atan2(beast.currentWorldX - playerWorldX, beast.currentWorldY - playerWorldY);
+  executeCombatAttack(false);
+}
 
 /** Danh mục tài nguyên rơi hợp lệ theo vùng — 100% chuẩn khớp với data/items.json */
 const POOL_BY_ZONE: Record<string, { id: string; name: string }[]> = {
@@ -362,6 +761,170 @@ function claimNearOutpostSupply(): void {
   }
 }
 
+// ---------------------------------------------------------------- MẬT THƯ TẦM BẢO & RÈN LUYỆN TRÍ NHỚ ĐƯỜNG PHỐ HÀ NỘI
+
+let lastTreasureVibratedId: string | null = null;
+
+function updateHanoiTreasureHud(playerPos: LatLon): void {
+  if (!app.profile) return;
+  const banner = document.getElementById('hanoi-treasure-hud-banner');
+  if (!banner) return;
+
+  const nowMs = Date.now();
+  let clue: TreasureClue | null = app.profile.activeTreasureClue ?? null;
+
+  // Nếu chưa có manh mối hoặc manh mối đã hết hạn (> 48h), tạo mới
+  if (!clue || (clue.expiresAtMs && clue.expiresAtMs <= nowMs)) {
+    const pack = sampleHanoiPack();
+    clue = generateHanoiTreasureClue(playerPos, pack.pois, nowMs, clue?.targetPoiId);
+    if (clue) {
+      app.profile.activeTreasureClue = clue;
+      persist();
+    }
+  }
+
+  if (!clue) {
+    banner.hidden = true;
+    return;
+  }
+
+  banner.hidden = false;
+  const dist = distanceMeters(playerPos, { lat: clue.targetLat, lon: clue.targetLon });
+  const roundedDist = Math.round(dist);
+
+  const titleEl = document.getElementById('treasure-card-title');
+  const distEl = document.getElementById('treasure-card-distance');
+  const hintEl = document.getElementById('treasure-card-hint');
+  const claimBtn = document.getElementById('btn-claim-treasure-hud');
+
+  if (titleEl) titleEl.textContent = clue.targetNameVi;
+  if (distEl) distEl.textContent = `~${roundedDist}m`;
+
+  if (dist <= 35) {
+    if (hintEl) hintEl.textContent = '✨ ĐÃ ĐẾN NƠI! Khai quật báu vật ngay!';
+    if (claimBtn) claimBtn.hidden = false;
+
+    if (lastTreasureVibratedId !== clue.id) {
+      lastTreasureVibratedId = clue.id;
+      if (app.profile.settings.haptics) buzz([0, 150, 80, 250]);
+      audio.play('quest_complete');
+      toast(`🎉 Bạn đã tìm đến ${clue.targetNameVi}! Bấm KHAI QUẬT để nhận thưởng!`, 'good');
+    }
+  } else {
+    if (hintEl) hintEl.textContent = 'Tự dùng trí nhớ tìm đường đến địa danh để nhận thưởng!';
+    if (claimBtn) claimBtn.hidden = true;
+  }
+}
+
+function openHanoiTreasureModal(): void {
+  if (!app.profile) return;
+  const modal = document.getElementById('overlay-hanoi-treasure');
+  if (!modal) return;
+
+  const { render: playerAt } = currentPosition();
+  const nowMs = Date.now();
+  let clue: TreasureClue | null = app.profile.activeTreasureClue ?? null;
+
+  if (!clue) {
+    const pack = sampleHanoiPack();
+    clue = generateHanoiTreasureClue(playerAt, pack.pois, nowMs);
+    if (clue) {
+      app.profile.activeTreasureClue = clue;
+      persist();
+    }
+  }
+
+  if (!clue) return;
+
+  const dist = Math.round(distanceMeters(playerAt, { lat: clue.targetLat, lon: clue.targetLon }));
+  const titleInfo = getHanoiExplorerTitle(app.profile.treasuresClaimedCount ?? 0);
+
+  const tierTitleEl = document.getElementById('treasure-modal-tier-title');
+  const badgeEl = document.getElementById('treasure-modal-explorer-badge');
+  const nameEl = document.getElementById('treasure-modal-target-name');
+  const distEl = document.getElementById('treasure-modal-target-distance');
+  const storyEl = document.getElementById('treasure-modal-story-desc');
+  const rewardsEl = document.getElementById('treasure-modal-rewards-list');
+  const memoryPtsEl = document.getElementById('treasure-modal-memory-pts');
+  const claimBtn = document.getElementById('btn-treasure-modal-claim');
+
+  if (tierTitleEl) tierTitleEl.textContent = clue.rewardTitleVi;
+  if (badgeEl) badgeEl.textContent = `${titleInfo.badgeEmoji} ${titleInfo.titleVi} (${app.profile.treasuresClaimedCount ?? 0} Kho Báu)`;
+  if (nameEl) nameEl.textContent = clue.targetNameVi;
+  if (distEl) distEl.textContent = `Khoảng cách hiện tại: ~${dist}m (Ước tính lúc phát: ~${clue.initialDistanceMeters}m)`;
+  if (storyEl) storyEl.textContent = clue.rewardDescriptionVi;
+  if (memoryPtsEl) memoryPtsEl.textContent = `+${clue.memoryScore} Điểm Thổ Địa (Tổng: ${app.profile.treasureMemoryScore ?? 0}đ)`;
+
+  if (rewardsEl) {
+    rewardsEl.innerHTML = '';
+    for (const [itemId, qty] of Object.entries(clue.rewards)) {
+      const def = getItem(itemId as any);
+      const pill = document.createElement('div');
+      pill.className = 'treasure-reward-pill';
+      pill.innerHTML = `<strong>${def?.icon ?? '📦'} ${def?.nameVi ?? itemId}</strong>: <span>+${qty}</span>`;
+      rewardsEl.appendChild(pill);
+    }
+  }
+
+  if (claimBtn) {
+    if (dist <= 35) {
+      claimBtn.hidden = false;
+      claimBtn.textContent = `🏆 Khai Quật Kho Báu Ngay!`;
+    } else {
+      claimBtn.hidden = true;
+    }
+  }
+
+  modal.hidden = false;
+}
+
+function handleClaimHanoiTreasure(): void {
+  if (!app.profile || !app.profile.activeTreasureClue) return;
+  const { render: playerAt } = currentPosition();
+  const res = claimHanoiTreasure(app.profile, app.profile.activeTreasureClue, playerAt, Date.now());
+
+  if (res.ok) {
+    persist();
+    audio.play('quest_complete');
+    if (app.profile.settings.haptics) buzz([40, 60, 40, 80]);
+    toast(res.messageVi, 'good');
+
+    const modal = document.getElementById('overlay-hanoi-treasure');
+    if (modal) modal.hidden = true;
+
+    // Tự động sinh manh mối mới cho điểm tiếp theo
+    const pack = sampleHanoiPack();
+    const newClue = generateHanoiTreasureClue(playerAt, pack.pois, Date.now());
+    if (newClue) {
+      app.profile.activeTreasureClue = newClue;
+      persist();
+    }
+
+    updateHanoiTreasureHud(playerAt);
+    sync();
+  } else {
+    toast(res.messageVi, 'bad');
+  }
+}
+
+function handleRefreshHanoiTreasure(): void {
+  if (!app.profile) return;
+  const { render: playerAt } = currentPosition();
+  const pack = sampleHanoiPack();
+  const currentId = app.profile.activeTreasureClue?.targetPoiId;
+  const newClue = generateHanoiTreasureClue(playerAt, pack.pois, Date.now(), currentId);
+  if (newClue) {
+    app.profile.activeTreasureClue = newClue;
+    persist();
+    audio.play('button_click');
+    toast(`📜 Đã nhận Mật Thư mới: ${newClue.targetNameVi} (~${newClue.initialDistanceMeters}m)`, 'good');
+    openHanoiTreasureModal();
+    updateHanoiTreasureHud(playerAt);
+  } else {
+    toast('Không tìm thấy địa danh phù hợp lân cận.', 'bad');
+  }
+}
+
 function checkRadioNarrative(speedKmh: number, at?: LatLon): void {
   if (!app.profile || !app.profile.settings.narrationAudio) return;
   const nowMs = Date.now();
@@ -483,7 +1046,7 @@ let currentRadarMode: 'none' | 'ready' | 'navigating' = 'none';
 let currentRadarDropId: string | null = null;
 
 function updateDropRadarPointerOnly(): void {
-  if (!lastActiveDrop || lastDropDist > 65 || lastDropDist <= 35 || !lastPlayerPos) return;
+  if (!lastActiveDrop || lastDropDist > 65 || lastDropDist < 5.0 || !lastPlayerPos) return;
   const pointer = document.getElementById('drop-radar-pointer-svg');
   const textEl = document.getElementById('drop-radar-turn-text');
   if (!pointer || !textEl) return;
@@ -510,10 +1073,10 @@ function updateDropRadar(drop: WorldDrop | null, dist?: number, playerPos?: LatL
 
   banner.hidden = false;
   const roundedDist = Math.round(dist);
-  const targetMode = dist <= 35 ? 'ready' : 'navigating';
+  const targetMode = dist < 5.0 ? 'ready' : 'navigating';
 
   if (targetMode === 'ready') {
-    // Đã vào bán kính nhặt (<= 35m)
+    // Đã vào bán kính nhặt (< 5m)
     // QUAN TRỌNG: Chỉ render HTML một lần duy nhất khi chuyển trạng thái, KHÔNG render 18 lần/giây để tránh xoá nút khi người dùng đang ấn ngón tay vào
     if (currentRadarMode !== 'ready' || currentRadarDropId !== drop.id) {
       currentRadarMode = 'ready';
@@ -523,10 +1086,10 @@ function updateDropRadar(drop: WorldDrop | null, dist?: number, playerPos?: LatL
         <div class="drop-radar__icon" style="font-size:1.6rem;">✨</div>
         <div class="drop-radar__info">
           <div id="drop-radar-ready-title" style="font-weight:800;font-size:0.95rem;color:#86efac;">
-            🖐️ ĐÃ ĐẾN GẦN! (Cách ${roundedDist}m)
+            🖐️ ĐÃ ĐẾN GẦN! (Cách ${dist.toFixed(1)}m)
           </div>
           <div class="drop-radar__sub" style="color:#d1fae5;font-size:0.8rem;margin-top:2px;">
-            Đã trong tầm với! Chạm vào đây để nhặt
+            Đã trong tầm với (< 5m)! Chạm vào đây để nhặt
           </div>
         </div>
         <button id="btn-radar-collect" class="btn btn--tiny btn--primary" style="background:#16a34a;border-color:#4ade80;font-weight:800;padding:8px 16px;font-size:0.92rem;white-space:nowrap;box-shadow:0 0 12px rgba(74,222,128,0.5);touch-action:manipulation;cursor:pointer;">🖐️ Nhặt (${drop.qty})</button>
@@ -550,10 +1113,10 @@ function updateDropRadar(drop: WorldDrop | null, dist?: number, playerPos?: LatL
     } else {
       // Chỉ cập nhật khoảng cách số mà không phá huỷ DOM
       const title = document.getElementById('drop-radar-ready-title');
-      if (title) title.textContent = `🖐️ ĐÃ ĐẾN GẦN! (Cách ${roundedDist}m)`;
+      if (title) title.textContent = `🖐️ ĐÃ ĐẾN GẦN! (Cách ${dist.toFixed(1)}m)`;
     }
   } else {
-    // Đang ở khoảng cách phát hiện (~36m - 75m): hiển thị la bàn cảm biến chỉ hướng
+    // Đang ở khoảng cách tìm kiếm (>= 5m): hiển thị la bàn cảm biến chỉ hướng
     if (currentRadarMode !== 'navigating' || currentRadarDropId !== drop.id) {
       currentRadarMode = 'navigating';
       currentRadarDropId = drop.id;
@@ -590,16 +1153,158 @@ function updateDropRadar(drop: WorldDrop | null, dist?: number, playerPos?: LatL
   }
 }
 
+let currentBeastRadarId: string | null = null;
+
+function updateBeastHuntRadar(beast: DynamicBeastPack, dist: number): void {
+  const banner = document.getElementById('drop-radar-banner');
+  if (!banner || !app.profile) return;
+
+  banner.hidden = false;
+  const isMeleeRange = dist <= 8.5;
+  const hasBow = (app.profile.player.carried['bow'] ?? 0) > 0 || (app.profile.player.carried['divine_dragon_bow'] ?? 0) > 0;
+  const arrowCount = app.profile.player.carried['arrow'] ?? 0;
+  const stoneCount = app.profile.player.carried['sharp_stone'] ?? 0;
+  const hasRangedAmmo = (hasBow && arrowCount > 0) || stoneCount > 0;
+
+  if (isMeleeRange) {
+    if (currentRadarMode !== 'ready' || currentBeastRadarId !== beast.id) {
+      currentRadarMode = 'ready';
+      currentBeastRadarId = beast.id;
+      banner.className = 'drop-radar-banner drop-radar-banner--ready';
+      banner.style.borderColor = '#ef4444';
+      banner.style.boxShadow = '0 0 16px rgba(239, 68, 68, 0.4)';
+      banner.innerHTML = `
+        <div class="drop-radar__icon" style="font-size:1.6rem;">${beast.iconEmoji}</div>
+        <div class="drop-radar__info">
+          <div id="drop-radar-ready-title" style="font-weight:800;font-size:0.95rem;color:#fca5a5;">
+            🗡️ ${beast.nameVi.toUpperCase()} (${beast.currentHp}/${beast.maxHp} HP)
+          </div>
+          <div class="drop-radar__sub" style="color:#fee2e2;font-size:0.8rem;margin-top:2px;">
+            Đã vào tầm cận chiến (Cách ${dist.toFixed(1)}m)! Chạm để tấn công nhận thịt 🥩
+          </div>
+        </div>
+        <button id="btn-radar-hunt" class="btn btn--tiny btn--primary" style="background:#dc2626;border-color:#f87171;font-weight:800;padding:8px 16px;font-size:0.92rem;white-space:nowrap;box-shadow:0 0 12px rgba(239,68,68,0.6);touch-action:manipulation;cursor:pointer;">🗡️ Tấn công</button>
+      `;
+
+      const handleAttack = (e: Event) => {
+        e.stopPropagation();
+        handleHuntBeast(beast);
+      };
+
+      const btn = document.getElementById('btn-radar-hunt');
+      if (btn) {
+        btn.onclick = handleAttack;
+        btn.ontouchend = handleAttack;
+      }
+      banner.onclick = handleAttack;
+      banner.ontouchend = handleAttack;
+    } else {
+      const title = document.getElementById('drop-radar-ready-title');
+      if (title) title.textContent = `🗡️ ${beast.nameVi.toUpperCase()} (${beast.currentHp}/${beast.maxHp} HP)`;
+    }
+  } else if (dist <= 30.0 && hasRangedAmmo) {
+    const isBow = hasBow && arrowCount > 0;
+    const weaponBtnLabel = isBow ? `🏹 Bắn Cung (${arrowCount})` : `🪨 Ném Đá (${stoneCount})`;
+    const weaponColor = isBow ? '#ea580c' : '#475569';
+    const weaponBorder = isBow ? '#fb923c' : '#94a3b8';
+
+    if (currentRadarMode !== 'ready' || currentBeastRadarId !== beast.id) {
+      currentRadarMode = 'ready';
+      currentBeastRadarId = beast.id;
+      banner.className = 'drop-radar-banner drop-radar-banner--ready';
+      banner.style.borderColor = weaponBorder;
+      banner.style.boxShadow = `0 0 16px rgba(${isBow ? '234, 88, 12' : '71, 85, 105'}, 0.45)`;
+      banner.innerHTML = `
+        <div class="drop-radar__icon" style="font-size:1.6rem;">${isBow ? '🏹' : '🪨'}</div>
+        <div class="drop-radar__info">
+          <div id="drop-radar-ready-title" style="font-weight:800;font-size:0.95rem;color:#fef08a;">
+            🎯 ${beast.nameVi.toUpperCase()} (${beast.currentHp}/${beast.maxHp} HP)
+          </div>
+          <div class="drop-radar__sub" style="color:#e2e8f0;font-size:0.8rem;margin-top:2px;">
+            Trong tầm bắn tỉa (Cách ${dist.toFixed(1)}m)! Chạm để ${isBow ? 'bắn tên 🏹' : 'ném đá 🪨'}
+          </div>
+        </div>
+        <button id="btn-radar-hunt" class="btn btn--tiny btn--primary" style="background:${weaponColor};border-color:${weaponBorder};font-weight:800;padding:8px 14px;font-size:0.9rem;white-space:nowrap;box-shadow:0 0 12px rgba(251,146,60,0.5);touch-action:manipulation;cursor:pointer;">${weaponBtnLabel}</button>
+      `;
+
+      const handleAttack = (e: Event) => {
+        e.stopPropagation();
+        handleHuntBeast(beast);
+      };
+
+      const btn = document.getElementById('btn-radar-hunt');
+      if (btn) {
+        btn.onclick = handleAttack;
+        btn.ontouchend = handleAttack;
+      }
+      banner.onclick = handleAttack;
+      banner.ontouchend = handleAttack;
+    } else {
+      const title = document.getElementById('drop-radar-ready-title');
+      if (title) title.textContent = `🎯 ${beast.nameVi.toUpperCase()} (${beast.currentHp}/${beast.maxHp} HP)`;
+    }
+  } else {
+    if (currentRadarMode !== 'navigating' || currentBeastRadarId !== beast.id) {
+      currentRadarMode = 'navigating';
+      currentBeastRadarId = beast.id;
+      banner.className = 'drop-radar-banner';
+      banner.style.borderColor = '#f59e0b';
+      banner.style.boxShadow = 'none';
+      banner.onclick = null;
+      banner.ontouchend = null;
+      banner.innerHTML = `
+        <div class="drop-radar__compass-box" style="font-size:1.4rem;">
+          ${beast.iconEmoji}
+        </div>
+        <div class="drop-radar__info">
+          <div style="font-weight:800; font-size:0.95rem; color:#fef08a;">
+            ⚠️ Phát Hiện ${beast.nameVi} • Cách <strong>${Math.round(dist)}m</strong>
+          </div>
+          <div class="drop-radar__sub" style="color:#e5e7eb; font-size:0.8rem; margin-top:2px;">
+            ${hasRangedAmmo ? 'Đang vào tầm nhắm bắn' : (beast.isPredator ? 'Dã thú hung dữ! Hãy chế tạo Cung Tên hoặc nhặt Đá Nhọn' : 'Động vật ăn cỏ nhút nhát, hãy áp sát nhanh')}
+          </div>
+        </div>
+      `;
+    }
+  }
+}
+
 function checkDropProximityAndAlert(): void {
+  const { render: at, position: pos } = currentPosition();
+  const playerPos = pos ?? at;
+
   if (worldDrops.length === 0) {
     lastVibratedDropId = null;
+
+    // Kiểm tra xem có dã thú nào ở gần (<= 30m) không để hiện thanh săn bắt
+    const WORLD_ORIGIN_LAT = 21.0;
+    const WORLD_ORIGIN_LON = 105.8;
+    const playerWorldX = (playerPos.lon - WORLD_ORIGIN_LON) / metersToLonDegrees(1, playerPos.lat);
+    const playerWorldY = (playerPos.lat - WORLD_ORIGIN_LAT) / metersToLatDegrees(1);
+
+    let nearestBeast: DynamicBeastPack | null = null;
+    let minBeastDist = 30.0;
+
+    for (const beast of dynamicBeasts.values()) {
+      if (beast.isDefeated) continue;
+      const d = Math.hypot(beast.currentWorldX - playerWorldX, beast.currentWorldY - playerWorldY);
+      if (d < minBeastDist) {
+        minBeastDist = d;
+        nearestBeast = beast;
+      }
+    }
+
+    if (nearestBeast) {
+      updateBeastHuntRadar(nearestBeast, minBeastDist);
+      return;
+    }
+
+    currentBeastRadarId = null;
     updateDropRadar(null);
     return;
   }
 
   const drop = worldDrops[0];
-  const { render: at, position: pos } = currentPosition();
-  const playerPos = pos ?? at;
   const dist = distanceMeters(playerPos, { lat: drop.lat, lon: drop.lon });
 
   // 1. Nếu vật phẩm nằm trong bán kính phát hiện (<= 60m): kích hoạt rung cảnh báo
@@ -684,56 +1389,10 @@ function getDynamicDropPool(zone: string, campLevel: number, activePetId?: strin
  * Sinh DUY NHẤT 1 cụm vật phẩm quanh người chơi trong tầm phát hiện ~18m - 46m.
  * Tích hợp sự kiện Rương báu 8.000 bước chân mỗi ngày!
  */
-function spawnSingleWorldDropNear(center: LatLon, zone: string): void {
-  try {
-    if (!center || worldDrops.length > 0) return;
-
-    const campLevel = app.profile?.player?.camp?.level ?? 1;
-    const activePet = app.profile?.player?.pets?.find((p) => p.isActive);
-    const todayKey = typeof toLocalTime === 'function' ? toLocalTime(now()).day : new Date().toISOString().slice(0, 10);
-    const totalStepsToday = app.profile?.player?.steps?.totalSteps ?? 0;
-    const last8kChestDay = (app.profile?.player as any)?.last8kChestDay;
-
-    // Sinh toạ độ ngẫu nhiên xung quanh người chơi ở bán kính 18m - 46m
-    const dist = 18 + Math.random() * 28;
-    const angle = Math.random() * Math.PI * 2;
-    const dLat = (dist * Math.cos(angle)) * metersToLatDegrees(1);
-    const dLon = (dist * Math.sin(angle)) * metersToLonDegrees(1, center.lat);
-
-    // Kiểm tra mốc 8.000 bước chân: Thả Rương báu tiền sử nếu chưa nhận hôm nay
-    if (totalStepsToday >= 8000 && last8kChestDay !== todayKey) {
-      worldDrops = [{
-        id: `milestone_8k_${todayKey}`,
-        itemId: 'ancient_chest',
-        nameVi: '🎁 Rương báu 8.000 bước (tiền sử)',
-        qty: 1,
-        lat: center.lat + dLat,
-        lon: center.lon + dLon,
-        spawnedAtMs: now(),
-      }];
-      checkDropProximityAndAlert();
-      return;
-    }
-
-    const pool = getDynamicDropPool(zone, campLevel, activePet?.petId);
-    const item = pool[Math.floor(Math.random() * pool.length)] ?? { id: 'dry_branch', name: 'Cành khô' };
-    const isStarter = (app.profile?.player?.lifetime?.steps ?? 0) === 0;
-    const qty = isStarter ? 1 : (1 + Math.floor(Math.random() * 2)); // Tân thủ: 1 món; Đi bộ: 1-2 món
-
-    worldDrops = [{
-      id: `drop_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-      itemId: item.id,
-      nameVi: item.name,
-      qty,
-      lat: center.lat + dLat,
-      lon: center.lon + dLon,
-      spawnedAtMs: now(),
-    }];
-
-    checkDropProximityAndAlert();
-  } catch (err) {
-    console.warn('spawnSingleWorldDropNear error:', err);
-  }
+function spawnSingleWorldDropNear(_center: LatLon, _zone: string): void {
+  // Đã bỏ kịch bản nhặt đồ rơi gần chân theo yêu cầu (quá dễ).
+  // Chuyển sang cơ chế Mật Thư Cổ Đồ Hà Nội (500m - 1km) và Khai thác POI thực tế.
+  worldDrops = [];
 }
 
 function collectWorldDrop(drop: WorldDrop): void {
@@ -743,9 +1402,9 @@ function collectWorldDrop(drop: WorldDrop): void {
   const playerPos = pos ?? at;
   const dist = distanceMeters(playerPos, { lat: drop.lat, lon: drop.lon });
 
-  // Bán kính nhặt 35m (đủ rộng cho vỉa hè và bù trừ sai số GPS ngoài trời)
-  if (dist > 35) {
-    toast(`Vật phẩm ở cách ~${Math.round(dist)}m. Hãy đi lại gần hơn (dưới 35m) để nhặt!`, 'warn');
+  // Bán kính nhặt < 5m
+  if (dist >= 5.0) {
+    toast(`Vật phẩm ở cách ~${dist.toFixed(1)}m. Hãy đi lại gần hơn (< 5m) để nhặt!`, 'warn');
     return;
   }
 
@@ -806,10 +1465,20 @@ function getHomeCampCenter(): LatLon | null {
   return { lat: cell.centerLat, lon: cell.centerLon };
 }
 
+let virtualPlayerPos: LatLon = { lat: 21.0068, lon: 105.8431 };
 let smoothRenderPos: LatLon | null = null;
 let devMockPosition: LatLon | null = null;
 let mapPickMode: 'set_home' | 'relocate_camp' | null = null;
 let relocateTargetPos: LatLon | null = null;
+
+let joystickVector = { x: 0, y: 0 };
+let currentMovementHeading = 0; // radians: 0 = North, PI/2 = East, PI = South, -PI/2 = West
+const activeKeys: Record<string, boolean> = {};
+let lastMoveTickMs = performance.now();
+
+// ===== HỆ THỐNG PHI NƯỚC ĐẠI (AUTO-SPRINT) =====
+// Giữ cần gạt Joystick hoặc phím WASD liên tục > 1 giây → tự động Phi Nước Đại (Sprint)
+let isCurrentlySprinting = false; // Đã bỏ chế độ chạy nhanh theo yêu cầu cân bằng với quái vật
 
 function openRelocateCampModal(targetPos?: LatLon): void {
   if (!app.profile) return;
@@ -836,37 +1505,186 @@ export function isNativeApk(): boolean {
   );
 }
 
-/** Vị trí dùng để tính toán & vẽ: GPS thật với nội suy êm dịu 60 FPS khi người chơi bước đi. */
+/** Vị trí dùng để tính toán & vẽ: Di chuyển trực quan bằng Virtual Joystick / Phím bấm, độc lập hoàn toàn với GPS thật. */
 function currentPosition(): { position: LatLon | null; render: LatLon; hasFix: boolean } {
-  const state = geo?.current();
-  let targetPos: LatLon;
-  let hasFix = false;
-
-  if (devMockPosition) {
-    targetPos = devMockPosition;
-    hasFix = true;
-  } else if (state?.position && geo?.hasFreshFix()) {
-    targetPos = state.position;
-    hasFix = true;
-  } else {
-    const steps = app.profile?.player?.lifetime?.steps ?? 0;
-    targetPos = steps > 0 ? simulatedWalk(FALLBACK_POSITION, steps) : FALLBACK_POSITION;
-    hasFix = false;
-  }
-
-  if (!smoothRenderPos) {
-    smoothRenderPos = { ...targetPos };
-  } else {
-    // Nội suy êm dịu giúp nhân vật lướt bước đi tự nhiên ngay trên giao diện bản đồ
-    smoothRenderPos.lat += (targetPos.lat - smoothRenderPos.lat) * 0.15;
-    smoothRenderPos.lon += (targetPos.lon - smoothRenderPos.lon) * 0.15;
-  }
-
+  const targetPos = devMockPosition ?? virtualPlayerPos;
   return {
     position: targetPos,
-    render: smoothRenderPos,
-    hasFix,
+    render: targetPos,
+    hasFix: true,
   };
+}
+
+/** Khởi tạo bộ điều khiển Cần Gạt Ảo (Virtual Joystick) & Bàn phím WASD / Mũi tên */
+function setupVirtualJoystick(): void {
+  const container = document.getElementById('virtual-joystick-container');
+  const stick = document.getElementById('joystick-stick');
+  const base = document.getElementById('joystick-base');
+  if (!container || !stick || !base) return;
+
+  const maxRadius = 34; // bán kính gạt tối đa (px)
+  let pointerId: number | null = null;
+  let baseCenterX = 0;
+  let baseCenterY = 0;
+
+  const updateStickPos = (clientX: number, clientY: number) => {
+    let dx = clientX - baseCenterX;
+    let dy = clientY - baseCenterY;
+    const dist = Math.hypot(dx, dy);
+
+    if (dist > maxRadius) {
+      dx = (dx / dist) * maxRadius;
+      dy = (dy / dist) * maxRadius;
+    }
+
+    stick.style.transform = `translate(${dx}px, ${dy}px)`;
+
+    const normalizedDist = Math.min(1, dist / maxRadius);
+    if (dist < 4) {
+      joystickVector = { x: 0, y: 0 };
+    } else {
+      joystickVector = {
+        x: (dx / dist) * normalizedDist,
+        y: (-dy / dist) * normalizedDist, // +y là hướng Bắc (lên trên)
+      };
+    }
+  };
+
+  const handlePointerDown = (e: PointerEvent) => {
+    if (pointerId !== null) return;
+    pointerId = e.pointerId;
+    stick.classList.add('is-dragging');
+    const rect = base.getBoundingClientRect();
+    baseCenterX = rect.left + rect.width / 2;
+    baseCenterY = rect.top + rect.height / 2;
+    base.setPointerCapture(pointerId);
+    updateStickPos(e.clientX, e.clientY);
+    bumpInteraction();
+  };
+
+  const handlePointerMove = (e: PointerEvent) => {
+    if (pointerId === e.pointerId) {
+      updateStickPos(e.clientX, e.clientY);
+      bumpInteraction();
+    }
+  };
+
+  const handlePointerUp = (e: PointerEvent) => {
+    if (pointerId === e.pointerId) {
+      pointerId = null;
+      stick.classList.remove('is-dragging');
+      stick.style.transform = 'translate(0px, 0px)';
+      joystickVector = { x: 0, y: 0 };
+      try {
+        base.releasePointerCapture(e.pointerId);
+      } catch {}
+    }
+  };
+
+  base.addEventListener('pointerdown', handlePointerDown);
+  base.addEventListener('pointermove', handlePointerMove);
+  base.addEventListener('pointerup', handlePointerUp);
+  base.addEventListener('pointercancel', handlePointerUp);
+
+  // Bàn phím WASD / Mũi tên cho PC
+  window.addEventListener('keydown', (e) => {
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+    activeKeys[e.code] = true;
+    bumpInteraction();
+  });
+
+  window.addEventListener('keyup', (e) => {
+    activeKeys[e.code] = false;
+  });
+}
+
+let isAimingInPad = false;
+
+/** Khởi tạo cụm nút Chiến Đấu (Combat Pad) bên phải: Chạm để đánh, Kéo rê để ngắm 360 độ (Drag-to-Aim) */
+function setupCombatPad(): void {
+  const btnAttack = document.getElementById('btn-combat-attack');
+  const btnSkill = document.getElementById('btn-combat-skill');
+  const btnSwitch = document.getElementById('btn-combat-weapon-switch');
+
+  const wireAimButton = (button: HTMLElement | null, isSkill: boolean) => {
+    if (!button) return;
+    let pointerId: number | null = null;
+    let startX = 0;
+    let startY = 0;
+
+    button.addEventListener('pointerdown', (e) => {
+      if (pointerId !== null) return;
+      pointerId = e.pointerId;
+      startX = e.clientX;
+      startY = e.clientY;
+      isAimingInPad = true;
+      try {
+        button.setPointerCapture(pointerId);
+      } catch {}
+      bumpInteraction();
+    });
+
+    button.addEventListener('pointermove', (e) => {
+      if (pointerId === e.pointerId) {
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        const dist = Math.hypot(dx, dy);
+        if (dist > 8) {
+          // Góc ngắm theo vector kéo ngón tay: +dx là sang phải (+X), -dy là lên trên (+Y)
+          currentMovementHeading = Math.atan2(dx, -dy);
+          bumpInteraction();
+        }
+      }
+    });
+
+    const handleRelease = (e: PointerEvent) => {
+      if (pointerId === e.pointerId) {
+        pointerId = null;
+        isAimingInPad = false;
+        try {
+          button.releasePointerCapture(e.pointerId);
+        } catch {}
+        bumpInteraction();
+        executeCombatAttack(isSkill);
+      }
+    };
+
+    button.addEventListener('pointerup', handleRelease);
+    button.addEventListener('pointercancel', handleRelease);
+  };
+
+  wireAimButton(btnAttack, false);
+  wireAimButton(btnSkill, true);
+
+  if (btnSwitch) {
+    btnSwitch.onclick = (e) => {
+      e.stopPropagation();
+      bumpInteraction();
+      cycleNextWeapon();
+    };
+  }
+
+  // Phím tắt chiến đấu trên máy tính
+  window.addEventListener('keydown', (e) => {
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+    if (app.activeTab !== 'map' || isAnyMajorOverlayOpen()) return;
+
+    if (e.code === 'Space' || e.code === 'KeyJ') {
+      e.preventDefault();
+      bumpInteraction();
+      executeCombatAttack(false);
+    } else if (e.code === 'KeyK') {
+      e.preventDefault();
+      bumpInteraction();
+      executeCombatAttack(true);
+    } else if (e.code === 'KeyQ') {
+      e.preventDefault();
+      bumpInteraction();
+      cycleNextWeapon();
+    }
+  });
+
+  updateCombatPadUI();
 }
 
 // ---------------------------------------------------------------- khởi động
@@ -891,13 +1709,40 @@ function boot(): void {
 }
 
 function renderProfileScreen(): void {
-  el('screen-game').hidden = true;
-  el('screen-profiles').hidden = false;
+  const screenGame = document.getElementById('screen-game');
+  const screenProfiles = document.getElementById('screen-profiles');
+  if (screenGame) screenGame.hidden = true;
+  if (screenProfiles) screenProfiles.hidden = false;
 
-  const list = el('slot-list');
+  const list = document.getElementById('slot-list');
+  if (!list) return;
   list.replaceChildren();
 
-  for (const summary of slotSummaries(app.save)) {
+  let summaries: ReturnType<typeof slotSummaries> = [];
+  try {
+    summaries = slotSummaries(app.save);
+  } catch (err) {
+    console.error('Lỗi khi đọc danh sách hồ sơ:', err);
+    try {
+      app.save = createSaveFile(now());
+      persist();
+      summaries = slotSummaries(app.save);
+    } catch {
+      summaries = [
+        { slot: 0, empty: true },
+        { slot: 1, empty: true },
+      ];
+    }
+  }
+
+  if (!summaries || summaries.length === 0) {
+    summaries = [
+      { slot: 0, empty: true },
+      { slot: 1, empty: true },
+    ];
+  }
+
+  for (const summary of summaries) {
     if (summary.empty) {
       const button = document.createElement('button');
       button.className = 'slot slot--empty';
@@ -912,8 +1757,8 @@ function renderProfileScreen(): void {
       card.innerHTML = `
         <div class="slot__avatar">${avatarSvg(summary.gender ?? 'male')}</div>
         <div class="slot__main">
-          <div class="slot__name">${summary.displayName}</div>
-          <div class="slot__meta">Trại cấp ${summary.campLevel} · Chương ${summary.chapterIndex} · ${summary.lifetimeSteps?.toLocaleString('vi-VN')} bước</div>
+          <div class="slot__name">${summary.displayName ?? `Hồ sơ ${summary.slot + 1}`}</div>
+          <div class="slot__meta">Trại cấp ${summary.campLevel ?? 1} · Chương ${summary.chapterIndex ?? 1} · ${(summary.lifetimeSteps ?? 0).toLocaleString('vi-VN')} bước</div>
         </div>
         <button class="slot__del" title="Xoá hồ sơ này" aria-label="Xoá hồ sơ">🗑️</button>`;
 
@@ -1012,6 +1857,15 @@ function enterProfile(slot: number): void {
   app.profile = activeProfile(app.save);
   if (!app.profile) return;
 
+  // Khởi tạo vị trí nhân vật tại Doanh Trại (hoặc toạ độ mặc định)
+  const homePos = getHomeCampCenter();
+  if (homePos) {
+    virtualPlayerPos = { ...homePos };
+  } else {
+    virtualPlayerPos = { lat: 21.0068, lon: 105.8431 };
+  }
+  smoothRenderPos = { ...virtualPlayerPos };
+
   el('screen-profiles').hidden = true;
   el('screen-game').hidden = false;
 
@@ -1038,9 +1892,33 @@ function enterProfile(slot: number): void {
         toast(result.messageVi, 'bad');
       }
     };
+    mapView.onCampClick = () => {
+      audio.play('click');
+      switchTab('camp');
+    };
+    mapView.onStationClick = (_stationId) => {
+      audio.play('click');
+      switchTab('craft');
+    };
+    mapView.onFarmPlotClick = (plotIndex, plot) => {
+      if (!app.profile) return;
+      if (plot.readyToHarvest) {
+        // Thu hoạch ngay lập tức từ góc nhìn bản đồ!
+        handlers.onHarvestPlot(plotIndex);
+      } else {
+        // Mở khu Nông Trại trong tab Doanh Trại
+        audio.play('click');
+        switchTab('camp');
+        const farmBox = document.getElementById('camp-farming');
+        farmBox?.scrollIntoView({ behavior: 'smooth' });
+      }
+    };
     mapView.onFeatureClick = (feat) => {
       audio.play('click');
       openPoiExploreSheet(feat);
+    };
+    mapView.onBeastClick = (beast, screenX, screenY) => {
+      handleHuntBeast(beast, screenX, screenY);
     };
     mapView.onMapClick = (latLon) => {
       if (mapPickMode === 'set_home') {
@@ -1099,6 +1977,7 @@ function enterProfile(slot: number): void {
         }
       }
       checkNearOutpostSupply();
+      updateHanoiTreasureHud(at);
       sync();
     });
     geo.start();
@@ -1108,6 +1987,35 @@ function enterProfile(slot: number): void {
   const btnClaimSupply = document.getElementById('btn-claim-outpost-supply');
   if (btnClaimSupply) {
     btnClaimSupply.onclick = () => claimNearOutpostSupply();
+  }
+
+  // Mật Thư Cổ Đồ & Rèn Luyện Trí Nhớ Đường Phố Hà Nội
+  const btnOpenTreasureModal = document.getElementById('btn-open-treasure-modal');
+  if (btnOpenTreasureModal) {
+    btnOpenTreasureModal.onclick = () => openHanoiTreasureModal();
+  }
+
+  const btnClaimTreasureHud = document.getElementById('btn-claim-treasure-hud');
+  if (btnClaimTreasureHud) {
+    btnClaimTreasureHud.onclick = () => handleClaimHanoiTreasure();
+  }
+
+  const btnTreasureModalClose = document.getElementById('btn-treasure-modal-close');
+  if (btnTreasureModalClose) {
+    btnTreasureModalClose.onclick = () => {
+      const modal = document.getElementById('overlay-hanoi-treasure');
+      if (modal) modal.hidden = true;
+    };
+  }
+
+  const btnTreasureModalClaim = document.getElementById('btn-treasure-modal-claim');
+  if (btnTreasureModalClaim) {
+    btnTreasureModalClaim.onclick = () => handleClaimHanoiTreasure();
+  }
+
+  const btnTreasureModalRefresh = document.getElementById('btn-treasure-modal-refresh');
+  if (btnTreasureModalRefresh) {
+    btnTreasureModalRefresh.onclick = () => handleRefreshHanoiTreasure();
   }
 
   // Nút Cấp quyền GPS
@@ -1486,7 +2394,7 @@ function enterProfile(slot: number): void {
   }
 
   const { render: at } = currentPosition();
-  spawnSingleWorldDropNear(at, app.view?.location?.zone ?? 'wilderness');
+  updateHanoiTreasureHud(at);
 
   sync();
   startLoops();
@@ -1793,12 +2701,100 @@ function startLoops(): void {
 
     // Tự động tạm dừng render hoàn toàn (0 FPS) khi ở tab khác, chế độ bỏ túi hoặc mở popup lớn
     if (app.activeTab !== 'map' || isPocketModeActive || isAnyMajorOverlayOpen()) {
+      lastMoveTickMs = timestamp;
       return;
     }
 
-    // Nhịp render thông minh: 10 FPS khi đứng yên (máy cực mát, 0% nóng), 18 FPS khi vuốt chạm bản đồ
-    const isInteracting = timestamp - lastUserInteractionTime < 1500;
-    const targetFps = isInteracting ? 18 : 10;
+    // 1. TÍNH TOÁN DI CHUYỂN TỪ VIRTUAL JOYSTICK & BÀN PHÍM WASD
+    const moveDt = Math.min(0.1, (timestamp - lastMoveTickMs) / 1000);
+    lastMoveTickMs = timestamp;
+
+    let inputX = joystickVector.x;
+    let inputY = joystickVector.y;
+
+    let keyX = 0;
+    let keyY = 0;
+    if (activeKeys['KeyW'] || activeKeys['ArrowUp']) keyY += 1;
+    if (activeKeys['KeyS'] || activeKeys['ArrowDown']) keyY -= 1;
+    if (activeKeys['KeyA'] || activeKeys['ArrowLeft']) keyX -= 1;
+    if (activeKeys['KeyD'] || activeKeys['ArrowRight']) keyX += 1;
+
+    if (keyX !== 0 || keyY !== 0) {
+      const klen = Math.hypot(keyX, keyY);
+      inputX = keyX / klen;
+      inputY = keyY / klen;
+    }
+
+    const moveMag = Math.hypot(inputX, inputY);
+    const isMoving = moveMag > 0.05;
+
+    isCurrentlySprinting = false;
+
+    if (isMoving && app.profile && moveDt > 0) {
+      bumpInteraction();
+      currentMovementHeading = Math.atan2(inputX, inputY);
+      currentDeviceHeading = (currentMovementHeading * 180) / Math.PI;
+      // Tốc độ di chuyển chuẩn mực cân bằng hợp lý với tốc độ dã thú tiền sử (~15 - 18 km/h)
+      const spdKmh = calcMovementSpeedKmh(app.profile.player);
+      currentMovementSpeedKmh = spdKmh;
+      const spdMs = spdKmh * (1000 / 3600);
+      const distMeters = spdMs * Math.min(1, moveMag) * moveDt;
+
+      // Dịch chuyển toạ độ địa lý (1 độ vĩ tuyến ~ 111.139m)
+      const deltaLat = (distMeters * inputY) / 111139;
+      const deltaLon = (distMeters * inputX) / (111139 * Math.cos((virtualPlayerPos.lat * Math.PI) / 180));
+
+      virtualPlayerPos.lat += deltaLat;
+      virtualPlayerPos.lon += deltaLon;
+
+      // Tích luỹ quãng đường để quy đổi thành bước chân thật
+      pedometer.addGpsDistanceWalked(distMeters);
+      checkNearOutpostSupply();
+      updateHanoiTreasureHud(virtualPlayerPos);
+    } else {
+      currentMovementSpeedKmh = 0;
+    }
+
+    // 2. CẬP NHẬT AI DÃ THÚ TRUY ĐUỔI TRONG PHẠM VI LÃNH ĐỊA
+    if (app.profile && dynamicBeasts.size > 0) {
+      const { render: playerAt } = currentPosition();
+      const WORLD_ORIGIN_LAT = 21.0;
+      const WORLD_ORIGIN_LON = 105.8;
+      const playerWorldX = (playerAt.lon - WORLD_ORIGIN_LON) / metersToLonDegrees(1, playerAt.lat);
+      const playerWorldY = (playerAt.lat - WORLD_ORIGIN_LAT) / metersToLatDegrees(1);
+      const beastDt = Math.min(0.2, (timestamp - (lastBeastAiTime || timestamp)) / 1000);
+      lastBeastAiTime = timestamp;
+
+      if (beastDt > 0) {
+        updateDynamicBeastPacks(dynamicBeasts, playerWorldX, playerWorldY, beastDt, Date.now(), (beast, dmg) => {
+          if (!app.profile) return;
+          const curHp = app.profile.player.survival.hp ?? 100;
+          const nextHp = Math.max(0, curHp - dmg);
+          app.profile.player.survival.hp = nextHp;
+          mapView?.triggerPlayerHit(dmg);
+          audio.play('strike');
+          if (app.profile.settings.haptics) buzz([0, 100, 60, 160]);
+
+          if (nextHp <= 0) {
+            toast(`💀 Bạn bị ${beast.nameVi} đánh ngất và được cứu về Doanh Trại!`, 'bad');
+            const campCenter = getHomeCampCenter() || { lat: 21.0068, lon: 105.8431 };
+            virtualPlayerPos = { ...campCenter };
+            app.profile.player.survival.hp = 35;
+            persist();
+            sync();
+            render();
+          } else {
+            toast(`💥 Bị ${beast.nameVi} cào xé! (-${dmg} HP) — Hãy chạy nhanh ra xa!`, 'bad');
+            persist();
+            render();
+          }
+        });
+      }
+    }
+
+    // Nhịp render: 60 FPS khi di chuyển/tương tác, 10 FPS khi đứng yên
+    const isInteracting = isMoving || timestamp - lastUserInteractionTime < 1500;
+    const targetFps = isInteracting ? 60 : 10;
     const frameInterval = 1000 / targetFps;
 
     const elapsed = timestamp - lastFrameTime;
@@ -1814,23 +2810,13 @@ function startLoops(): void {
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       // Màn hình tắt / khóa máy:
-      // 1. Tạm dừng GPS & Compass
-      geo?.pause();
-      pauseCompass();
-      // 2. Giãn nhịp sync lên 30s để CPU ngủ sâu, tiết kiệm pin
       syncIntervalMs = 30_000;
       scheduleSyncTimer();
     } else {
       // Mở sáng màn hình:
-      // 1. Khôi phục nhịp sync 5s và đồng bộ bước chân ngay
       syncIntervalMs = 5_000;
       scheduleSyncTimer();
       sync();
-      // 2. Chỉ bật lại GPS & Compass nếu đang ở tab bản đồ
-      if (app.activeTab === 'map') {
-        geo?.resume();
-        resumeCompass();
-      }
     }
   });
 }
@@ -1874,28 +2860,17 @@ function sync(): void {
     }
   }
 
-  // Chỉ sinh đồ rơi khi người chơi thực sự đi bộ (newSteps > 0), hoặc đúng 1 lần đầu làm quen cho tân thủ 0 bước
-  const isFirstEverSpawn = worldDrops.length === 0 && (app.profile?.player?.lifetime?.steps ?? 0) === 0;
-  if (steps.newSteps > 0 || isFirstEverSpawn) {
-    const { render: at } = currentPosition();
-    spawnSingleWorldDropNear(at, app.view.location?.zone ?? 'wilderness');
-  }
-
-  // Cập nhật kiểm tra khoảng cách đồ rơi theo chu kỳ sync (5 giây/lần), không chạy 18 lần/giây trong render loop
-  checkDropProximityAndAlert();
+  worldDrops = [];
+  updateHanoiTreasureHud(position);
 
   for (const message of result.eventsVi) {
-    if (message.includes('Đồng hồ máy')) continue; // Đã gom vào icon Chuông 🔔
+    if (message.includes('Đồng hồ máy') || message.includes('lượt nhặt')) continue; // Đã loại bỏ hoàn toàn thông báo nhặt đồ thụ động theo yêu cầu
     toast(message);
     if (message.includes('Xong nhiệm vụ')) {
       audio.play('quest_complete');
     }
   }
   if (result.knockedOut) buzz([140, 70, 140]);
-  if (result.pickups > 0) {
-    audio.play('pickup');
-    if (app.profile.settings.haptics) buzz(14);
-  }
 
   if (result.beats.length > 0 && app.profile.settings.narrationAudio) {
     audio.play('beat_notify');
@@ -2022,6 +2997,48 @@ function render(forceAll = false): void {
 
   const pedoEl = document.getElementById('pedo-source');
   if (pedoEl) pedoEl.textContent = describeSource(pedometer.currentSource);
+
+  // Cập nhật biểu tượng và số lượng đạn trên Cụm Nút Chiến Đấu bên phải
+  updateCombatPadUI();
+
+  // Đảm bảo Joystick & Cụm Nút Chiến Đấu tự động ẩn/hiện chính xác theo tab hiện hành
+  updateControlsVisibility();
+}
+
+let lastBeastDamageTime = 0;
+
+function checkBeastAttackDamage(beast: { nameVi: string; distMeters: number }): void {
+  if (!app.profile) return;
+  const nowMs = performance.now();
+  if (beast.distMeters <= 8.5 && nowMs - lastBeastDamageTime >= 1200) {
+    lastBeastDamageTime = nowMs;
+    const dmg = 5;
+    const curHp = app.profile.player.survival.hp ?? 100;
+    const nextHp = Math.max(0, curHp - dmg);
+    app.profile.player.survival.hp = nextHp;
+
+    // Kích hoạt hiệu ứng hình ảnh số máu trừ & viền đỏ trên MapView
+    mapView?.triggerPlayerHit(dmg);
+
+    // Âm thanh & Rung
+    audio.play('strike');
+    if (app.profile.settings.haptics) buzz([0, 100, 60, 160]);
+
+    if (nextHp <= 0) {
+      // Hết máu: Bị đánh ngất và hồi sinh tại Căn Cứ Doanh Trại
+      toast(`💀 Bạn bị ${beast.nameVi} đánh ngất và được dân làng cứu về Doanh Trại!`, 'bad');
+      const campCenter = getHomeCampCenter() || { lat: 21.0068, lon: 105.8431 };
+      virtualPlayerPos = { ...campCenter };
+      app.profile.player.survival.hp = 35; // Hồi 35 HP
+      persist();
+      sync();
+      render();
+    } else {
+      toast(`💥 Bị ${beast.nameVi} cào xé! (-${dmg} HP) — Hãy chạy nhanh ra xa!`, 'bad');
+      persist();
+      render();
+    }
+  }
 }
 
 function drawMap(): void {
@@ -2036,19 +3053,29 @@ function drawMap(): void {
   mapView.render({
     center: at,
     features: cachedCombinedFeatures,
+    playerWeightKg: 72,
     phase: app.view.phase,
     weather,
     gender: app.profile.player.gender ?? 'male',
     hasFix,
     homeCellCenter: getHomeCampCenter(),
+    camp: app.profile.player.camp,
+    campDefense: campDefensePower(app.profile.player.camp),
     activePoiId: app.view.location?.insidePoi?.id ?? null,
     drops: worldDrops,
     traps: app.profile.player.traps,
+    dynamicBeasts,
     activePetId: app.profile.player.pets?.find((p: any) => p.isActive)?.petId ?? null,
     strengthLevel: app.profile.player.strengthLevel ?? 1,
     speedKmh: currentMovementSpeedKmh,
+    isMoving: currentMovementSpeedKmh > 0.2 || Math.hypot(joystickVector.x, joystickVector.y) > 0.05,
+    moveHeading: currentMovementHeading,
     hasTorch,
     isNight,
+    isSprinting: isCurrentlySprinting,
+    aimHeading: currentMovementHeading,
+    isAiming: isAimingInPad,
+    aimWeaponType: getCurrentEquippedWeapon().isRanged ? (getCurrentEquippedWeapon().id === 'sharp_stone' ? 'stone' : 'bow') : (getCurrentEquippedWeapon().id === 'iron_spear' ? 'spear' : 'axe'),
   });
 }
 
@@ -2215,6 +3242,21 @@ const handlers: Handlers = {
     toast(result.messageVi, result.ok ? 'good' : 'bad');
     if (result.ok) audio.play('quest_complete');
     afterAction();
+  },
+
+  onExpandCampTerritory() {
+    if (!app.profile) return;
+    const result = expandCampTerritory(app.profile.player.camp, app.profile.player, now());
+    if (result.success) {
+      app.profile.player = result.player;
+      persist();
+      audio.play('quest_complete');
+      toast(result.messageVi, 'good');
+      sync();
+      render();
+    } else {
+      toast(result.messageVi, 'bad');
+    }
   },
 
   onUpgradeArtisan() {
@@ -2697,6 +3739,22 @@ const handlers: Handlers = {
     }
   },
 
+  onUpgradeSpeed() {
+    if (!app.profile) return;
+    const res = upgradeSpeed(app.profile.player);
+    if (res.success) {
+      app.profile.player = res.player;
+      persist();
+      audio.play('quest_complete');
+      buzz([0, 100, 50, 200]);
+      toast(res.messageVi, 'good');
+      render();
+    } else {
+      audio.play('denied');
+      toast(res.messageVi, 'bad');
+    }
+  },
+
   onOpenRelocateCamp() {
     openRelocateCampModal();
   },
@@ -2814,6 +3872,49 @@ function afterAction(): void {
   render();
 }
 
+/** Tự động ẩn Cần Gạt Ảo & Cụm Nút Chiến Đấu khi mở Túi Đồ, Chế Tạo, Doanh Trại hoặc bất kỳ Popup/Drawer nào */
+export function updateControlsVisibility(): void {
+  const joystick = document.getElementById('virtual-joystick-container');
+  const combatPad = document.getElementById('combat-pad-container');
+  const actionBtn = document.getElementById('btn-open-actions');
+  const dockContainer = document.getElementById('dock-container');
+
+  const isMapTab = app.activeTab === 'map';
+  const hasProfile = Boolean(app.profile);
+
+  // Kiểm tra xem có overlay/modal/dialog/drawer nào đang mở không
+  const isBackdropVisible = !el('drawer-backdrop').hidden;
+  const isCoopVisible = !el('overlay-coop-battle').hidden;
+  const isDemoVisible = !el('overlay-demo').hidden;
+  const isPocketVisible = !el('overlay-pocket-mode').hidden;
+  const isProfileScreenVisible = !el('screen-profiles').hidden;
+
+  const isAnyOverlayOrDrawerOpen =
+    !hasProfile ||
+    isProfileScreenVisible ||
+    !isMapTab ||
+    isBackdropVisible ||
+    isCoopVisible ||
+    isDemoVisible ||
+    isPocketVisible;
+
+  const shouldShowControls = hasProfile && isMapTab && !isAnyOverlayOrDrawerOpen;
+
+  if (joystick) {
+    joystick.classList.toggle('is-hidden', !shouldShowControls);
+  }
+  if (combatPad) {
+    combatPad.classList.toggle('is-hidden', !shouldShowControls);
+  }
+  if (actionBtn) {
+    actionBtn.style.display = shouldShowControls ? 'flex' : 'none';
+  }
+  if (dockContainer) {
+    // Menu thu gọn chính giữa
+    dockContainer.style.display = isAnyOverlayOrDrawerOpen && !isMapTab ? 'none' : 'flex';
+  }
+}
+
 function switchTab(targetTab: string): void {
   if (app.activeTab !== targetTab) {
     audio.play('click');
@@ -2822,6 +3923,15 @@ function switchTab(targetTab: string): void {
   const isMap = targetTab === 'map';
   const backdrop = el('drawer-backdrop');
   backdrop.hidden = isMap;
+
+  // Tự động thu gọn Menu về nút tròn khi mở Drawer
+  const dockContainer = document.getElementById('dock-container');
+  if (dockContainer) {
+    dockContainer.classList.add('is-collapsed');
+  }
+
+  // Cập nhật trạng thái hiển thị của Joystick và Cụm Nút Chiến Đấu
+  updateControlsVisibility();
 
   // Pause GPS & Compass khi rời tab bản đồ, resume khi quay lại — tiết kiệm pin tối đa
   if (isMap) {
@@ -2909,9 +4019,48 @@ function wireStaticControls(): void {
     togglePocketMode(false);
   };
 
-  el('btn-recenter').onclick = () => {
+  el('btn-recenter').onclick = (e) => {
+    e.stopPropagation();
     mapView?.recenterAndResetZoom();
+    audio.play('click');
   };
+
+  // Cụm Menu Thu Gọn Bên Phải Màn Hình (Right Floating Menu)
+  const btnToggleDock = document.getElementById('btn-toggle-dock');
+  const btnCloseDock = document.getElementById('btn-close-dock');
+  const dockContainer = document.getElementById('dock-container');
+
+  const setDockCollapsed = (collapsed: boolean) => {
+    if (!dockContainer) return;
+    dockContainer.classList.toggle('is-collapsed', collapsed);
+  };
+
+  if (btnToggleDock) {
+    btnToggleDock.onclick = (e) => {
+      e.stopPropagation();
+      setDockCollapsed(false);
+      audio.play('click');
+    };
+  }
+
+  if (btnCloseDock) {
+    btnCloseDock.onclick = (e) => {
+      e.stopPropagation();
+      setDockCollapsed(true);
+      audio.play('click');
+    };
+  }
+
+  // Tự động thu gọn Menu về nút tròn bên phải khi bấm ra ngoài
+  document.addEventListener('click', (e) => {
+    if (dockContainer && !dockContainer.contains(e.target as Node)) {
+      setDockCollapsed(true);
+    }
+  });
+
+  // Khởi tạo Cần Gạt Ảo, Cụm Nút Chiến Đấu & Bàn phím
+  setupVirtualJoystick();
+  setupCombatPad();
 
   el('btn-back-profiles').onclick = handlers.onSwitchProfile;
 
@@ -2957,6 +4106,7 @@ function wireStaticControls(): void {
 
     const player = app.profile.player;
     const strLvl = player.strengthLevel ?? 1;
+    const spdLvl = player.speedLevel ?? 1;
     const isFemale = app.profile.gender === 'female';
     const nameEl = el('hero-profile-name');
     const titleEl = el('hero-profile-title');
@@ -2976,6 +4126,7 @@ function wireStaticControls(): void {
     const tier = strLvl >= 9 ? 5 : strLvl >= 7 ? 4 : strLvl >= 5 ? 3 : strLvl >= 3 ? 2 : 1;
     bigAvatar.className = `hero-avatar-frame hero-avatar-frame--tier-${tier}`;
 
+    // 1. Thể Lực
     const maxW = maxWeightCapacity(player.pets, player.carried, strLvl);
     strLevelEl.textContent = `💪 Thể Lực Cấp ${strLvl} / ${MAX_STRENGTH_LEVEL}`;
     capEl.innerHTML = `Sức chứa ba lô: <strong>${maxW}kg</strong> (Cơ bản ${45 + (strLvl - 1) * 5}kg)`;
@@ -2991,6 +4142,32 @@ function wireStaticControls(): void {
         handlers.onUpgradeStrength?.();
         openHeroProfile();
       };
+    }
+
+    // 2. Thân Pháp & Tốc Độ Di Chuyển
+    const spdLevelEl = document.getElementById('hero-profile-speed-level');
+    const spdValEl = document.getElementById('hero-profile-speed-val');
+    const spdStatEl = document.getElementById('hero-profile-speed-stat');
+    const btnUpgradeSpeed = document.getElementById('btn-hero-upgrade-speed') as HTMLButtonElement | null;
+    const currentSpeedKmh = calcMovementSpeedKmh(player);
+
+    if (spdLevelEl) spdLevelEl.textContent = `⚡ Thân Pháp Cấp ${spdLvl} / ${MAX_SPEED_LEVEL}`;
+    if (spdValEl) spdValEl.innerHTML = `Vận tốc di chuyển: <strong>${currentSpeedKmh} km/h</strong>`;
+    if (spdStatEl) spdStatEl.textContent = `${currentSpeedKmh} km/h`;
+
+    if (btnUpgradeSpeed) {
+      const spdInfo = getSpeedUpgradeInfo(spdLvl);
+      if (spdInfo.isMax) {
+        btnUpgradeSpeed.textContent = 'Đạt Max Cấp 10';
+        btnUpgradeSpeed.disabled = true;
+      } else {
+        btnUpgradeSpeed.innerHTML = `Nâng Cấp ${spdLvl + 1} (💰 ${spdInfo.costCoin} Vàng)`;
+        btnUpgradeSpeed.disabled = false;
+        btnUpgradeSpeed.onclick = () => {
+          handlers.onUpgradeSpeed?.();
+          openHeroProfile();
+        };
+      }
     }
 
     const artisanRank = getArtisanRank(player.artisanLevel ?? 1);

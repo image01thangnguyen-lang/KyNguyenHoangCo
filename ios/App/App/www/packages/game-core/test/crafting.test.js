@@ -14,6 +14,8 @@ import {
   relocateCamp,
   RELOCATE_CAMP_COST_MATERIALS,
   RELOCATE_CAMP_COST_GOLD,
+  getCampExpansionInfo,
+  expandCampTerritory,
 } from '../src/crafting.js';
 import {
   dropFraction,
@@ -412,6 +414,45 @@ test('DI DỜI DOANH TRẠI: Đổi vị trí căn cứ bằng nguyên liệu ho
   assert.equal(resGold.player.camp.homeCell, 'c_210600_1058200');
   assert.equal(resGold.player.carried.ancient_coin, 10); // 60 - 50 = 10
 });
+
+test('MỞ RỘNG DIỆN TÍCH DOANH TRẠI: Mua thêm ô đất bằng đồng vàng cổ để tăng luống trồng và không gian xây dựng', () => {
+  const camp = createCampState(T0);
+  assert.equal(camp.gridSize ?? 3, 3);
+
+  const info1 = getCampExpansionInfo(camp);
+  assert.equal(info1.currentGridSize, 3);
+  assert.equal(info1.currentTiles, 9);
+  assert.equal(info1.nextGridSize, 4);
+  assert.equal(info1.nextTiles, 16);
+  assert.equal(info1.costGold, 50);
+
+  const player              = {
+    id: 'p1',
+    displayName: 'Thổ Dân',
+    survival: { satiety: 100, hydration: 100, hp: 100, sickness: null, asleep: false, lastTickMs: T0 },
+    carried: { ancient_coin: 60 },
+    safeStorage: {},
+    camp,
+    steps: { todaySteps: 0, lastStepMs: T0, history: {}, totalSteps: 0 },
+    lifetime: { steps: 0, daysPlayed: 1, craftCount: 0, nightDefenseWins: 0, bloodMoonWins: 0, totalGatherActions: 0 },
+    knownRecipes: [],
+    safeVaultLevel: 1,
+    createdAtMs: T0,
+  };
+
+  // 1. Mở rộng từ 3x3 (9 ô) lên 4x4 (16 ô) tốn 50 vàng
+  const res1 = expandCampTerritory(player.camp, player, T0);
+  assert.equal(res1.success, true);
+  assert.equal(res1.camp.gridSize, 4);
+  assert.equal(res1.player.carried.ancient_coin, 10); // 60 - 50 = 10
+  assert.equal(res1.camp.farmPlots?.length, 6); // Lưới 4x4 mở 6 luống trồng
+
+  // 2. Không đủ vàng để mở rộng tiếp lên 5x5 (cần 120 vàng, chỉ còn 10)
+  const resFail = expandCampTerritory(res1.camp, res1.player, T0);
+  assert.equal(resFail.success, false);
+  assert.match(resFail.messageVi, /Không đủ Đồng Vàng Cổ/);
+});
+
 
 
 

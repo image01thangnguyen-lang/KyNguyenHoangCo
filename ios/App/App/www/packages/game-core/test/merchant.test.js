@@ -21,23 +21,23 @@ test('THƯƠNG NHÂN NPC: Bán tài nguyên kiếm Đồng Vàng Cổ', () => {
 
   assert.equal(countOf(player.carried, 'ancient_coin'), 0);
 
-  // Bán 3 thịt nướng (giá 4 vàng / miếng = 12 vàng)
+  // Bán 3 thịt nướng (giá 2 vàng / miếng = 6 vàng)
   const sell1 = sellItemToNpc(player, 'grilled_meat', 3);
   assert.equal(sell1.success, true);
-  assert.equal(sell1.goldChange, 12);
+  assert.equal(sell1.goldChange, 6);
   player = sell1.player;
 
   assert.equal(countOf(player.carried, 'grilled_meat'), 2);
-  assert.equal(countOf(player.carried, 'ancient_coin'), 12);
+  assert.equal(countOf(player.carried, 'ancient_coin'), 6);
 
-  // Bán 2 quặng vàng (giá 12 vàng / quặng = 24 vàng)
+  // Bán 2 quặng vàng (giá 4 vàng / quặng = 8 vàng)
   const sell2 = sellItemToNpc(player, 'gold_ore', 2);
   assert.equal(sell2.success, true);
-  assert.equal(sell2.goldChange, 24);
+  assert.equal(sell2.goldChange, 8);
   player = sell2.player;
 
   assert.equal(countOf(player.carried, 'gold_ore'), 0);
-  assert.equal(countOf(player.carried, 'ancient_coin'), 36);
+  assert.equal(countOf(player.carried, 'ancient_coin'), 14);
 });
 
 test('THƯƠNG NHÂN NPC: Bán đồ không hợp lệ hoặc không đủ số lượng', () => {

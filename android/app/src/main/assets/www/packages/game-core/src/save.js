@@ -84,6 +84,14 @@ export function defaultSettings()           {
                                                                                       
                         
                        
+                                                             
+                                  
+                                     
+                                 
+                                      
+                               
+                                        
+                                   
  
 
                            
@@ -122,6 +130,7 @@ export function createProfile(displayName        , nowMs        , gender        
     lifetime: emptyLifetime(),
     knownRecipes: [],
     strengthLevel: 1,
+    speedLevel: 1,
     createdAtMs: nowMs,
   };
 
@@ -138,6 +147,9 @@ export function createProfile(displayName        , nowMs        , gender        
     pendingSteps: 0,
     lastActiveDay: dayKey(nowMs),
     lastPlayedMs: nowMs,
+    activeTreasureClue: null,
+    treasuresClaimedCount: 0,
+    treasureMemoryScore: 0,
   };
 }
 
@@ -332,17 +344,23 @@ export function setActiveSlot(save          , slot        )           {
  
 
 export function slotSummaries(save          )                {
+  if (!save || !Array.isArray(save.profiles)) {
+    return [
+      { slot: 0, empty: true },
+      { slot: 1, empty: true },
+    ];
+  }
   return save.profiles.map((profile, slot) => {
-    if (!profile) return { slot, empty: true };
+    if (!profile || !profile.player) return { slot, empty: true };
     return {
       slot,
       empty: false,
-      displayName: profile.player.displayName,
+      displayName: profile.player.displayName ?? `Hồ sơ ${slot + 1}`,
       gender: profile.player.gender ?? 'male',
-      campLevel: profile.player.camp.level,
-      chapterIndex: profile.story.chapterIndex,
-      lifetimeSteps: profile.player.lifetime.steps,
-      lastPlayedMs: profile.lastPlayedMs,
+      campLevel: profile.player.camp?.level ?? 1,
+      chapterIndex: profile.story?.chapterIndex ?? 1,
+      lifetimeSteps: profile.player.lifetime?.steps ?? 0,
+      lastPlayedMs: profile.lastPlayedMs ?? Date.now(),
     };
   });
 }

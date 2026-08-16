@@ -39,8 +39,28 @@ export function getCropDef(cropId: string): CropDef {
   return found;
 }
 
-/** Số lượng luống đất trồng theo cấp độ doanh trại. */
-export function farmPlotsForCampLevel(campLevel: number): number {
+/** Số lượng luống đất trồng tối đa theo kích thước lưới ô vuông khu trại. */
+export function farmPlotsForGridSize(gridSize = 3): number {
+  switch (gridSize) {
+    case 3:
+      return 3;
+    case 4:
+      return 6;
+    case 5:
+      return 10;
+    case 6:
+      return 15;
+    case 7:
+    default:
+      return Math.min(25, Math.floor(gridSize * gridSize * 0.45));
+  }
+}
+
+/** Số lượng luống đất trồng theo cấp độ doanh trại hoặc kích thước ô vuông. */
+export function farmPlotsForCampLevel(campLevel: number, gridSize?: number): number {
+  if (gridSize && gridSize >= 3) {
+    return farmPlotsForGridSize(gridSize);
+  }
   switch (campLevel) {
     case 1:
       return 2;
@@ -53,8 +73,8 @@ export function farmPlotsForCampLevel(campLevel: number): number {
 }
 
 /** Khởi tạo danh sách luống đất ban đầu cho doanh trại. */
-export function createInitialFarmPlots(campLevel: number): FarmPlot[] {
-  const count = farmPlotsForCampLevel(campLevel);
+export function createInitialFarmPlots(campLevel: number, gridSize?: number): FarmPlot[] {
+  const count = farmPlotsForCampLevel(campLevel, gridSize);
   const plots: FarmPlot[] = [];
   for (let i = 0; i < count; i++) {
     plots.push({
@@ -77,8 +97,9 @@ export function tickFarmPlots(
   campLevel: number,
   nowMs: number,
   isRaining: boolean,
+  gridSize?: number,
 ): FarmPlot[] {
-  const targetCount = farmPlotsForCampLevel(campLevel);
+  const targetCount = farmPlotsForCampLevel(campLevel, gridSize);
   const updated: FarmPlot[] = [];
 
   for (let i = 0; i < targetCount; i++) {

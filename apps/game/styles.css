@@ -107,8 +107,11 @@ h3 {
 .screen--center {
   align-items: center;
   justify-content: center;
-  gap: 24px;
-  padding: calc(28px + var(--safe-t)) 20px calc(28px + var(--safe-b));
+  gap: 20px;
+  min-height: 100dvh;
+  height: auto;
+  overflow-y: auto;
+  padding: calc(24px + var(--safe-t)) 20px calc(24px + var(--safe-b));
   text-align: center;
   background: radial-gradient(circle at 50% 25%, rgba(224, 122, 60, 0.18) 0%, rgba(14, 12, 10, 0.95) 75%), var(--bg);
 }
@@ -831,12 +834,13 @@ h3 {
 /* ---------------------------------------------------------------- Thanh La Bàn Radar Chỉ Hướng Vật Phẩm */
 .drop-radar-banner {
   position: fixed;
-  bottom: calc(var(--safe-b) + 78px);
-  top: auto;
-  left: 12px;
-  right: 12px;
-  max-width: 440px;
-  margin: 0 auto;
+  top: calc(var(--safe-t) + 72px);
+  bottom: auto;
+  left: 50%;
+  transform: translateX(-50%) translateZ(0);
+  width: calc(100vw - 28px);
+  max-width: 420px;
+  margin: 0;
   z-index: 50;
   display: flex;
   align-items: center;
@@ -850,7 +854,7 @@ h3 {
   font-size: 12.5px;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  animation: radarFloat 2.8s infinite ease-in-out;
+  animation: radarFloatTop 2.8s infinite ease-in-out;
   pointer-events: auto;
 }
 
@@ -884,12 +888,12 @@ h3 {
   will-change: transform;
 }
 
-@keyframes radarFloat {
+@keyframes radarFloatTop {
   0%, 100% {
-    transform: translateY(0);
+    transform: translateX(-50%) translateY(0);
   }
   50% {
-    transform: translateY(-3px);
+    transform: translateX(-50%) translateY(-3px);
   }
 }
 
@@ -937,29 +941,268 @@ h3 {
   line-height: 1.5;
 }
 
-/* ---------------------------------------------------------------- Thanh Dock nút nổi nằm ngang ở đáy màn hình (5 nút chức năng) */
+/* ---------------------------------------------------------------- Cụm Menu Thu Gọn Bên Phải Màn Hình (Right Floating Menu) */
 
-.floating-dock {
+.dock-container {
   position: fixed !important;
-  bottom: calc(var(--safe-b) + 12px) !important;
+  bottom: calc(var(--safe-b) + 16px) !important;
   left: 50% !important;
-  transform: translateX(-50%) translateZ(0) !important;
-  top: auto !important;
   right: auto !important;
+  transform: translateX(-50%) !important;
   z-index: 35 !important;
   display: flex !important;
-  flex-direction: row !important;
-  gap: 10px !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  pointer-events: auto;
+}
+
+/* Nút Tròn Nhỏ Thu Gọn Nổi Ở Giữa Đáy Màn Hình */
+.btn-dock-floating {
+  position: relative !important;
+  width: 52px !important;
+  height: 52px !important;
+  border-radius: 50% !important;
+  background: radial-gradient(circle at 35% 35%, #9a3412, #431407 80%) !important;
+  border: 2.2px solid #f59e0b !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8), 0 0 16px rgba(245, 158, 11, 0.5) !important;
+  display: flex !important;
+  flex-direction: column !important;
   align-items: center !important;
   justify-content: center !important;
-  padding: 8px 14px !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+  color: #fff !important;
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.22s ease !important;
+  user-select: none;
+}
+
+.btn-dock-floating:hover {
+  transform: scale(1.12) !important;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.9), 0 0 24px rgba(245, 158, 11, 0.8) !important;
+}
+
+.btn-dock-floating:active {
+  transform: scale(0.92) !important;
+}
+
+.btn-dock-floating__icon {
+  font-size: 22px !important;
+  line-height: 1 !important;
+  filter: drop-shadow(0 0 5px #f59e0b);
+}
+
+.btn-dock-floating__label {
+  font-size: 8.5px !important;
+  font-weight: 900 !important;
+  color: #fef08a !important;
+  margin-top: 1px !important;
+  line-height: 1 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+/* Trạng thái THU GỌN (is-collapsed): Ẩn dock ngang, hiện nút tròn nhỏ */
+.dock-container.is-collapsed .floating-dock {
+  display: none !important;
+}
+
+.dock-container.is-collapsed .btn-dock-floating {
+  display: flex !important;
+}
+
+/* Trạng thái MỞ RỘNG: Ẩn nút tròn, mở thanh dock ngang xòe ra ở giữa */
+.dock-container:not(.is-collapsed) .btn-dock-floating {
+  display: none !important;
+}
+
+.dock-container:not(.is-collapsed) .floating-dock {
+  display: flex !important;
+  animation: expandFromCenter 0.24s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes expandFromCenter {
+  0% {
+    opacity: 0;
+    transform: scale(0.7) translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* ---------------------------------------------------------------- Cụm Nút Chiến Đấu & Kỹ Năng (Combat Pad - Bên Phải) */
+.combat-pad-container {
+  position: fixed;
+  bottom: calc(var(--safe-b) + 16px);
+  right: 18px;
+  z-index: 32;
+  width: 140px;
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.btn-combat-btn {
+  position: absolute;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s ease, filter 0.15s ease;
+}
+
+.btn-combat-btn:active {
+  transform: scale(0.9);
+}
+
+/* Nút Tấn Công Chính (Lớn nhất, nằm góc dưới bên phải) */
+.btn-combat-attack {
+  bottom: 0px;
+  right: 0px;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ef4444, #b91c1c 55%, #450a0a 100%);
+  border: 2.5px solid #fef08a;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85), inset 0 2px 4px rgba(255, 255, 255, 0.5), 0 0 16px rgba(239, 68, 68, 0.65);
+  z-index: 2;
+}
+
+.btn-combat-attack:hover {
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.95), inset 0 2px 4px rgba(255, 255, 255, 0.7), 0 0 24px rgba(239, 68, 68, 0.9);
+  filter: brightness(1.1);
+}
+
+.combat-attack-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.combat-attack-icon {
+  font-size: 26px;
+  line-height: 1;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6));
+}
+
+.combat-attack-label {
+  font-size: 9px;
+  font-weight: 900;
+  color: #fef08a;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+  line-height: 1;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+/* Nút Kỹ Năng Vũ Khí (Nằm chếch lên trên bên trái nút đánh chính) */
+.btn-combat-skill {
+  top: 8px;
+  left: 4px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #0284c7, #0369a1 60%, #082f49 100%);
+  border: 2px solid #38bdf8;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.75), inset 0 1px 3px rgba(255, 255, 255, 0.4), 0 0 12px rgba(56, 189, 248, 0.5);
+  z-index: 3;
+}
+
+.btn-combat-skill:hover {
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.85), inset 0 2px 4px rgba(255, 255, 255, 0.6), 0 0 18px rgba(56, 189, 248, 0.8);
+  filter: brightness(1.12);
+}
+
+.combat-skill-icon {
+  font-size: 20px;
+  line-height: 1;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.7));
+}
+
+.combat-skill-name {
+  font-size: 7.5px;
+  font-weight: 800;
+  color: #e0f2fe;
+  letter-spacing: 0.3px;
+  margin-top: 1px;
+  line-height: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+
+/* Nút Đổi Nhanh Vũ Khí (Nằm phía trên nút đánh chính) */
+.btn-combat-weapon-switch {
+  top: 0px;
+  right: 18px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #d97706, #b45309 60%, #451a03 100%);
+  border: 1.8px solid #f59e0b;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.7), inset 0 1px 2px rgba(255, 255, 255, 0.3), 0 0 10px rgba(245, 158, 11, 0.4);
+  z-index: 3;
+}
+
+.btn-combat-weapon-switch:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.8), 0 0 14px rgba(245, 158, 11, 0.7);
+}
+
+.combat-weapon-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.combat-weapon-ammo {
+  font-size: 8px;
+  font-weight: 900;
+  color: #fef08a;
+  line-height: 1;
+  margin-top: 1px;
+}
+
+.floating-dock {
+  position: relative !important;
+  bottom: auto !important;
+  left: auto !important;
+  transform: none !important;
+  top: auto !important;
+  right: auto !important;
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 8px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 8px 12px !important;
   background: linear-gradient(180deg, rgba(28, 20, 14, 0.98), rgba(14, 10, 7, 0.98)) !important;
-  border: 1.5px solid rgba(245, 158, 11, 0.45) !important;
+  border: 1.5px solid rgba(245, 158, 11, 0.5) !important;
   border-radius: 999px !important;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.85), 0 0 16px rgba(245, 158, 11, 0.15) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.85), 0 0 16px rgba(245, 158, 11, 0.2) !important;
   max-width: calc(100vw - 20px) !important;
   backdrop-filter: blur(12px) !important;
-  will-change: transform;
+}
+
+.btn-dock-close {
+  background: radial-gradient(circle, #3a150c, #1f0a05) !important;
+  border-color: rgba(239, 68, 68, 0.6) !important;
+}
+
+.btn-dock-close .btn__icon {
+  color: #f87171 !important;
+  font-size: 15px !important;
+  font-weight: 900 !important;
 }
 
 .floating-dock .tabbar__btn {
@@ -1042,12 +1285,84 @@ h3 {
   display: none !important;
 }
 
+/* ---------------------------------------------------------------- Cần Gạt Ảo (Virtual Joystick & Touch D-Pad) */
+
+.virtual-joystick-container {
+  position: fixed;
+  bottom: calc(var(--safe-b) + 24px);
+  left: 20px;
+  z-index: 32;
+  width: 124px;
+  height: 124px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+  opacity: 0.88;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.virtual-joystick-container:hover,
+.virtual-joystick-container:active {
+  opacity: 1;
+}
+
+.joystick-base {
+  position: relative;
+  width: 114px;
+  height: 114px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(42, 29, 19, 0.88) 0%, rgba(18, 13, 9, 0.94) 80%);
+  border: 2px solid rgba(245, 158, 11, 0.55);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.75), inset 0 0 16px rgba(245, 158, 11, 0.2), 0 0 12px rgba(245, 158, 11, 0.25);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.joystick-hint {
+  position: absolute;
+  font-size: 10px;
+  color: rgba(254, 240, 138, 0.45);
+  font-weight: 900;
+  pointer-events: none;
+}
+
+.joystick-hint--u { top: 6px; }
+.joystick-hint--d { bottom: 6px; }
+.joystick-hint--l { left: 8px; }
+.joystick-hint--r { right: 8px; }
+
+.joystick-stick {
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #f59e0b, #b45309 60%, #451a03 100%);
+  border: 2px solid #fef08a;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.8), inset 0 2px 4px rgba(255, 255, 255, 0.4), 0 0 10px rgba(245, 158, 11, 0.6);
+  cursor: grab;
+  will-change: transform;
+  transition: transform 0.08s ease-out;
+}
+
+.joystick-stick.is-dragging {
+  cursor: grabbing;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.9), inset 0 2px 4px rgba(255, 255, 255, 0.6), 0 0 16px rgba(245, 158, 11, 0.9);
+  transition: none;
+}
+
+
+
 /* Nút Trọng Tâm Về Giữa Bản Đồ */
 .btn-recenter {
-  position: absolute;
-  bottom: calc(var(--safe-b) + 76px);
-  right: 14px;
-  z-index: 30;
+  position: fixed;
+  bottom: calc(var(--safe-b, 10px) + 168px);
+  right: 18px;
+  z-index: 80;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -2473,10 +2788,10 @@ h3 {
 /* ---------------------------------------------------------------- Cụm nút Zoom & Recenter bản đồ */
 
 .map-controls {
-  position: absolute;
-  right: 14px;
-  bottom: calc(76px + var(--safe-b));
-  z-index: 25;
+  position: fixed;
+  right: 18px;
+  bottom: calc(var(--safe-b, 10px) + 168px);
+  z-index: 80;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -4236,12 +4551,15 @@ h3 {
 }
 
 .outpost-supply-banner {
-  position: absolute;
-  bottom: 84px;
-  left: 12px;
-  right: 12px;
-  z-index: 22;
-  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  position: fixed;
+  top: calc(var(--safe-t) + 72px);
+  bottom: auto;
+  left: 50%;
+  transform: translateX(-50%) translateZ(0);
+  width: calc(100vw - 28px);
+  max-width: 420px;
+  z-index: 48;
+  animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .outpost-supply-card {
@@ -4365,9 +4683,551 @@ h3 {
   }
 }
 
+/* ================================================================
+   HỆ THỐNG MẬT THƯ TẦM BẢO & RÈN LUYỆN TRÍ NHỚ ĐƯỜNG PHỐ HÀ NỘI
+   ================================================================ */
 
+.hanoi-treasure-hud-banner {
+  position: absolute;
+  top: 140px;
+  left: 12px;
+  right: 12px;
+  max-width: 440px;
+  margin: 0 auto;
+  z-index: 25;
+  pointer-events: auto;
+  animation: slideDownBanner 0.4s ease-out;
+}
 
+.hanoi-treasure-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, rgba(30, 20, 10, 0.92), rgba(15, 23, 42, 0.95));
+  border: 1.5px solid rgba(245, 158, 11, 0.6);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65), 0 0 16px rgba(245, 158, 11, 0.2);
+  backdrop-filter: blur(10px);
+}
 
+.treasure-scroll-icon {
+  font-size: 26px;
+  filter: drop-shadow(0 2px 6px rgba(245, 158, 11, 0.5));
+  animation: gentlePulse 2.5s infinite ease-in-out;
+}
 
+@keyframes gentlePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.12); }
+}
 
+.treasure-card-body {
+  flex: 1;
+  min-width: 0;
+}
 
+.treasure-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.treasure-tag-badge {
+  font-size: 10px;
+  font-weight: 800;
+  color: #fef08a;
+  background: rgba(180, 83, 9, 0.6);
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  padding: 1px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+.treasure-card-distance {
+  font-size: 11px;
+  font-weight: 700;
+  color: #6ee7b7;
+}
+
+.treasure-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.treasure-card-hint {
+  font-size: 11px;
+  color: #cbd5e1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.treasure-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-treasure-action {
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  color: #fef08a;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.btn-treasure-action:hover {
+  background: rgba(245, 158, 11, 0.35);
+  transform: translateY(-1px);
+}
+
+.btn-treasure-claim {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  border: 1.5px solid #fef08a;
+  color: #1c1917;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.8);
+  animation: claimGlow 1.2s infinite alternate;
+}
+
+@keyframes claimGlow {
+  from { box-shadow: 0 0 8px rgba(245, 158, 11, 0.5); transform: scale(1); }
+  to { box-shadow: 0 0 18px rgba(245, 158, 11, 1); transform: scale(1.04); }
+}
+
+/* Modal chi tiết Mật Thư */
+.card--hanoi-treasure {
+  max-width: 440px;
+  background: linear-gradient(170deg, #1c1917 0%, #0f172a 100%);
+  border: 1.5px solid rgba(245, 158, 11, 0.5);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8), 0 0 25px rgba(245, 158, 11, 0.25);
+}
+
+.treasure-target-box {
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px dashed rgba(245, 158, 11, 0.4);
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.treasure-target-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #f59e0b;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.treasure-target-name {
+  font-size: 18px;
+  font-weight: 800;
+  color: #fef08a;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+.treasure-target-dist {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+.treasure-story-box {
+  background: rgba(0, 0, 0, 0.35);
+  border-left: 3px solid #f59e0b;
+  padding: 10px 12px;
+  border-radius: 0 8px 8px 0;
+  margin-bottom: 12px;
+}
+
+.treasure-story-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fef08a;
+  margin-bottom: 4px;
+}
+
+.treasure-story-text {
+  font-size: 12px;
+  color: #e2e8f0;
+  line-height: 1.45;
+}
+
+.treasure-rewards-box {
+  margin-bottom: 12px;
+}
+
+.treasure-rewards-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #f59e0b;
+  margin-bottom: 6px;
+}
+
+.treasure-rewards-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.treasure-reward-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 5px 9px;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #f8fafc;
+}
+
+/* ================================================================
+   CẦN GẠT ẢO, CỤM CHIẾN ĐẤU VÀ MENU DOCK CHÍNH GIỮA (MOBA/RPG CONTROLS)
+   ================================================================ */
+
+/* 1. Cần Gạt Ảo (Bên Trái) */
+.virtual-joystick-container {
+  position: fixed;
+  bottom: calc(var(--safe-b, 10px) + 16px);
+  left: 16px;
+  z-index: 70;
+  touch-action: none;
+  user-select: none;
+  transition: opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1), transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), visibility 0.22s;
+}
+
+.virtual-joystick-container.is-hidden,
+.combat-pad-container.is-hidden {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateY(24px) scale(0.82) !important;
+  visibility: hidden !important;
+}
+
+.joystick-base {
+  width: 94px;
+  height: 94px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(35, 27, 19, 0.78) 0%, rgba(12, 9, 6, 0.9) 100%);
+  border: 2px solid rgba(241, 218, 167, 0.35);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65), inset 0 0 12px rgba(241, 218, 167, 0.1);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.joystick-hint {
+  position: absolute;
+  font-size: 9px;
+  color: rgba(241, 218, 167, 0.45);
+  pointer-events: none;
+}
+.joystick-hint--u { top: 4px; left: 50%; transform: translateX(-50%); }
+.joystick-hint--d { bottom: 4px; left: 50%; transform: translateX(-50%); }
+.joystick-hint--l { left: 4px; top: 50%; transform: translateY(-50%); }
+.joystick-hint--r { right: 4px; top: 50%; transform: translateY(-50%); }
+
+.joystick-stick {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #f59e0b 0%, #b45309 100%);
+  border: 2px solid #fde68a;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.7), 0 0 10px rgba(245, 158, 11, 0.45);
+  pointer-events: none;
+  transition: transform 0.05s ease-out;
+}
+.joystick-stick.is-dragging {
+  background: radial-gradient(circle, #fbbf24 0%, #d97706 100%);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.8), 0 0 16px rgba(251, 191, 36, 0.75);
+}
+
+/* 2. Cụm Nút Chiến Đấu & Kỹ Năng Vũ Khí (Bên Phải) */
+.combat-pad-container {
+  position: fixed;
+  bottom: calc(var(--safe-b, 10px) + 12px);
+  right: 14px;
+  z-index: 70;
+  width: 146px;
+  height: 146px;
+  pointer-events: auto;
+  user-select: none;
+  touch-action: none;
+  transition: opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1), transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), visibility 0.22s;
+}
+
+.btn-combat-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.12s ease;
+}
+.btn-combat-btn:active,
+.btn-combat-btn.is-aiming {
+  transform: scale(0.92);
+  filter: brightness(1.25);
+}
+
+/* Nút Tấn Công Chính */
+.btn-combat-attack {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #dc2626 0%, #991b1b 65%, #450a0a 100%);
+  border: 2.5px solid #fca5a5;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.75), 0 0 16px rgba(220, 38, 38, 0.55);
+}
+.combat-attack-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+}
+.combat-attack-icon {
+  font-size: 24px;
+  line-height: 1;
+}
+.combat-attack-label {
+  font-size: 10px;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: 0.5px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+/* Nút Kỹ Năng Vũ Khí */
+.btn-combat-skill {
+  position: absolute;
+  top: 18px;
+  right: 80px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #0284c7 0%, #0369a1 70%, #082f49 100%);
+  border: 2px solid #7dd3fc;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.7), 0 0 12px rgba(2, 132, 199, 0.5);
+}
+.combat-skill-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+.combat-skill-name {
+  font-size: 8px;
+  font-weight: 800;
+  color: #e0f2fe;
+  max-width: 44px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Nút Đổi Nhanh Vũ Khí */
+.btn-combat-weapon-switch {
+  position: absolute;
+  top: 0;
+  right: 22px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #475569 0%, #1e293b 80%, #0f172a 100%);
+  border: 1.8px solid #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.65), 0 0 8px rgba(148, 163, 184, 0.35);
+}
+.combat-weapon-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+.combat-weapon-ammo {
+  font-size: 8px;
+  font-weight: 800;
+  color: #fef08a;
+}
+
+/* 3. Cụm Menu Ở Chính Giữa Màn Hình (Center Floating Dock) */
+.dock-container {
+  position: fixed;
+  bottom: calc(var(--safe-b, 10px) + 16px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 75;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: auto;
+}
+
+.btn-dock-floating {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #d97706 0%, #92400e 75%, #451a03 100%);
+  border: 2px solid #fde68a;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.75), 0 0 14px rgba(217, 119, 6, 0.5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  cursor: pointer;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.btn-dock-floating:active {
+  transform: scale(0.92);
+}
+.btn-dock-floating__icon {
+  font-size: 18px;
+  line-height: 1;
+}
+.btn-dock-floating__label {
+  font-size: 9px;
+  font-weight: 800;
+  color: #fef08a;
+}
+
+.floating-dock {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(18, 14, 10, 0.94);
+  border: 1.5px solid rgba(241, 218, 167, 0.38);
+  border-radius: 24px;
+  padding: 6px 12px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.8), 0 0 16px rgba(241, 218, 167, 0.15);
+  animation: popInDock 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dock-container.is-collapsed .floating-dock {
+  display: none !important;
+}
+.dock-container:not(.is-collapsed) .btn-dock-floating {
+  display: none !important;
+}
+
+.btn-dock-close {
+  background: rgba(239, 68, 68, 0.2) !important;
+  border-color: rgba(239, 68, 68, 0.4) !important;
+}
+
+@keyframes popInDock {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ================================================================
+   4. CỤM ĐIỀU KHIỂN BẢN ĐỒ & NÚT VỀ GẦN (MAP CONTROLS & RECENTER)
+   Nằm ở góc phải màn hình, phía TRÊN cụm nút đánh/đổi vũ khí (z-index cao, không bị che)
+   ================================================================ */
+.map-controls {
+  position: fixed;
+  bottom: calc(var(--safe-b, 10px) + 168px);
+  right: 18px;
+  z-index: 85;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.map-ctrl-btn {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 20px;
+  background: rgba(24, 18, 12, 0.92);
+  border: 1.5px solid rgba(245, 158, 11, 0.65);
+  color: #fef08a;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.75), 0 0 12px rgba(245, 158, 11, 0.35);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+  animation: recenterPopIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.map-ctrl-btn[hidden] {
+  display: none !important;
+}
+
+.map-ctrl-btn:hover {
+  background: rgba(45, 30, 15, 0.96);
+  border-color: #fbbf24;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85), 0 0 16px rgba(251, 191, 36, 0.55);
+  transform: translateY(-2px) scale(1.04);
+}
+
+.map-ctrl-btn:active {
+  transform: scale(0.94);
+}
+
+.map-ctrl-btn__icon {
+  font-size: 14px;
+  line-height: 1;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
+}
+
+.map-ctrl-btn__label {
+  line-height: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+
+@keyframes recenterPopIn {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.85);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

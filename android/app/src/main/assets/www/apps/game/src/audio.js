@@ -20,7 +20,9 @@
           
             
            
-           
+          
+                
+                  
 
                                                                     
 
@@ -347,16 +349,64 @@ class SoundSynthesizer {
           const osc = ctx.createOscillator();
           const g = ctx.createGain();
           osc.type = 'sine';
-          osc.frequency.setValueAtTime(f, t + idx * 0.07);
-          g.gain.setValueAtTime(0.3, t + idx * 0.07);
-          g.gain.exponentialRampToValueAtTime(0.01, t + idx * 0.07 + 0.35);
+          osc.frequency.setValueAtTime(f, t + idx * 0.06);
+          g.gain.setValueAtTime(0.3, t + idx * 0.06);
+          g.gain.exponentialRampToValueAtTime(0.001, t + idx * 0.06 + 0.3);
           osc.connect(g);
           g.connect(this.sfxGain );
-          osc.start(t + idx * 0.07);
-          osc.stop(t + idx * 0.07 + 0.35);
+          osc.start(t + idx * 0.06);
+          osc.stop(t + idx * 0.06 + 0.3);
         });
         break;
       }
+
+      case 'arrow_shot': {
+        // Tiếng bật dây cung giòn giã + tiếng mũi tên xé gió vút bay
+        const twang = ctx.createOscillator();
+        const twangGain = ctx.createGain();
+        twang.type = 'triangle';
+        twang.frequency.setValueAtTime(520, t);
+        twang.frequency.exponentialRampToValueAtTime(140, t + 0.12);
+        twangGain.gain.setValueAtTime(0.6, t);
+        twangGain.gain.exponentialRampToValueAtTime(0.01, t + 0.12);
+        twang.connect(twangGain);
+        twangGain.connect(this.sfxGain);
+        twang.start(t);
+        twang.stop(t + 0.12);
+
+        // Vệt gió xé không khí
+        const whoosh = ctx.createOscillator();
+        const whooshGain = ctx.createGain();
+        whoosh.type = 'sine';
+        whoosh.frequency.setValueAtTime(800, t + 0.04);
+        whoosh.frequency.exponentialRampToValueAtTime(320, t + 0.28);
+        whooshGain.gain.setValueAtTime(0.35, t + 0.04);
+        whooshGain.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+        whoosh.connect(whooshGain);
+        whooshGain.connect(this.sfxGain);
+        whoosh.start(t + 0.04);
+        whoosh.stop(t + 0.28);
+        break;
+      }
+
+      case 'throw_stone': {
+        // Tiếng vung tay ném đá vèo vèo
+        const whoosh = ctx.createOscillator();
+        const g = ctx.createGain();
+        whoosh.type = 'sine';
+        whoosh.frequency.setValueAtTime(380, t);
+        whoosh.frequency.exponentialRampToValueAtTime(160, t + 0.18);
+        g.gain.setValueAtTime(0.45, t);
+        g.gain.exponentialRampToValueAtTime(0.01, t + 0.18);
+        whoosh.connect(g);
+        g.connect(this.sfxGain);
+        whoosh.start(t);
+        whoosh.stop(t + 0.18);
+        break;
+      }
+
+      default:
+        break;
     }
   }
 

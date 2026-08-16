@@ -122,6 +122,25 @@
           <!-- Thanh La Bàn Radar Chỉ Hướng Vật Phẩm Phát Hiện Được -->
           <div id="drop-radar-banner" class="drop-radar-banner" hidden></div>
 
+          <!-- Thanh Mật Thư Tầm Bảo & Rèn Luyện Trí Nhớ Đường Phố Hà Nội (500m - 1km) -->
+          <div id="hanoi-treasure-hud-banner" class="hanoi-treasure-hud-banner" hidden>
+            <div class="hanoi-treasure-card">
+              <span class="treasure-scroll-icon">📜</span>
+              <div class="treasure-card-body">
+                <div class="treasure-card-header">
+                  <span class="treasure-tag-badge">MẬT THƯ HÀ THÀNH</span>
+                  <span id="treasure-card-distance" class="treasure-card-distance">~750m</span>
+                </div>
+                <div id="treasure-card-title" class="treasure-card-title">Chùa Trấn Quốc</div>
+                <div id="treasure-card-hint" class="treasure-card-hint">Tự dùng trí nhớ tìm đường đến địa danh để nhận thưởng!</div>
+              </div>
+              <div class="treasure-card-actions">
+                <button id="btn-open-treasure-modal" class="btn-treasure-action" title="Xem chi tiết mật thư">👁️ Chi tiết</button>
+                <button id="btn-claim-treasure-hud" class="btn-treasure-claim" hidden title="Khai quật kho báu!">🏆 KHAI QUẬT</button>
+              </div>
+            </div>
+          </div>
+
           <!-- Banner Trạng Thái Du Hành Viễn Chinh (Linh Điểu khi đi xe buýt/xe máy) -->
           <div id="transit-hud-banner" class="transit-hud-banner" hidden>
             <div class="transit-hud-card">
@@ -209,6 +228,7 @@
           </div>
           <div class="drawer-content">
             <div id="camp-summary" class="camp-summary"></div>
+            <div id="camp-territory" class="camp-territory"></div>
             <div id="camp-stats" class="camp-stats"></div>
             <div id="camp-pets" class="camp-pets"></div>
             <div id="camp-farming" class="camp-farming"></div>
@@ -262,6 +282,7 @@
             <div class="bag-summary-bar" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
               <span id="bag-item-count" class="chip">0 vật phẩm</span>
               <button id="btn-bag-upgrade-strength" class="btn btn--tiny" style="background:linear-gradient(135deg,#d97706,#b45309);border-color:#f59e0b;color:#fff;font-weight:700;">💪 Nâng Thể Lực (+5kg)</button>
+              <button id="btn-bag-upgrade-speed" class="btn btn--tiny" style="background:linear-gradient(135deg,#0284c7,#0369a1);border-color:#38bdf8;color:#fff;font-weight:700;">⚡ Nâng Thân Pháp (+Tốc độ)</button>
               <button id="btn-bag-quick-safe" class="btn btn--tiny btn--primary" style="margin-left:auto;">⚡ Cất nhanh đồ quý</button>
             </div>
             <div id="inv-bag" class="inventory"></div>
@@ -291,34 +312,84 @@
         </button>
       </div>
 
-      <!-- Thanh Dock nút nổi nằm ngang ở đáy màn hình (6 nút chức năng) -->
-      <nav class="tabbar floating-dock">
-        <button id="btn-open-actions" class="tabbar__btn" data-tab="actions" title="Hành động">
-          <span class="btn__icon">⚡</span>
-          <span class="btn__label">Hành động</span>
-          <span id="action-count-badge" class="action-count-badge" hidden>0</span>
+      <!-- Cần Gạt Ảo Điều Khiển Nhân Vật (Bên Trái) -->
+      <div id="virtual-joystick-container" class="virtual-joystick-container" aria-label="Cần điều khiển di chuyển nhân vật">
+        <div id="joystick-base" class="joystick-base">
+          <span class="joystick-hint joystick-hint--u">▲</span>
+          <span class="joystick-hint joystick-hint--d">▼</span>
+          <span class="joystick-hint joystick-hint--l">◀</span>
+          <span class="joystick-hint joystick-hint--r">▶</span>
+          <div id="joystick-stick" class="joystick-stick"></div>
+        </div>
+      </div>
+
+      <!-- Cụm Nút Chiến Đấu & Kỹ Năng Vũ Khí (Bên Phải - Đối Xứng Với Joystick) -->
+      <div id="combat-pad-container" class="combat-pad-container" aria-label="Cụm nút chiến đấu và kỹ năng">
+        <!-- Nút Đổi Nhanh Vũ Khí -->
+        <button id="btn-combat-weapon-switch" class="btn-combat-btn btn-combat-weapon-switch" title="Đổi vũ khí (Phím Q)" aria-label="Đổi vũ khí">
+          <span id="combat-weapon-icon" class="combat-weapon-icon">🏹</span>
+          <span id="combat-weapon-ammo" class="combat-weapon-ammo">x15</span>
         </button>
-        <button class="tabbar__btn" data-tab="bag" title="Túi đồ">
-          <span class="btn__icon">👝</span>
-          <span class="btn__label">Túi</span>
+
+        <!-- Nút Dùng Kỹ Năng Vũ Khí -->
+        <button id="btn-combat-skill" class="btn-combat-btn btn-combat-skill" title="Kỹ năng vũ khí (Phím K)" aria-label="Kỹ năng">
+          <span id="combat-skill-icon" class="combat-skill-icon">🎯</span>
+          <span id="combat-skill-name" class="combat-skill-name">Xuyên Phá</span>
+          <span id="combat-skill-cooldown" class="combat-skill-cooldown" hidden></span>
         </button>
-        <button class="tabbar__btn" data-tab="camp" title="Doanh trại">
-          <span class="btn__icon">🏕️</span>
-          <span class="btn__label">Trại</span>
+
+        <!-- Nút Tấn Công Chính (To, Nổi Bật) -->
+        <button id="btn-combat-attack" class="btn-combat-btn btn-combat-attack" title="Tấn công theo hướng quay mặt (Phím Space / J)" aria-label="Tấn công">
+          <div class="combat-attack-inner">
+            <span id="combat-attack-icon" class="combat-attack-icon">⚔️</span>
+            <span id="combat-attack-label" class="combat-attack-label">ĐÁNH</span>
+          </div>
+          <span class="combat-attack-ring"></span>
         </button>
-        <button class="tabbar__btn" data-tab="craft" title="Chế tạo">
-          <span class="btn__icon">🪓</span>
-          <span class="btn__label">Chế tạo</span>
+      </div>
+
+      <!-- Cụm Menu Ở Chính Giữa Màn Hình (Center Bottom Menu Dock) -->
+      <div id="dock-container" class="dock-container is-collapsed">
+        <!-- Nút Tròn Nhỏ Thu Gọn Nổi Ở Giữa (Center Floating Menu Button) -->
+        <button id="btn-toggle-dock" class="btn-dock-floating" title="Mở Menu Chức Năng" aria-label="Mở Menu">
+          <span class="btn-dock-floating__icon">🎒</span>
+          <span class="btn-dock-floating__label">Menu</span>
+          <span id="dock-action-badge" class="action-count-badge" hidden>0</span>
         </button>
-        <button class="tabbar__btn" data-tab="log" title="Nhật ký">
-          <span class="btn__icon">📜</span>
-          <span class="btn__label">Nhật ký</span>
-        </button>
-        <button class="tabbar__btn" data-tab="settings" title="Cài đặt">
-          <span class="btn__icon">⚙️</span>
-          <span class="btn__label">Cài đặt</span>
-        </button>
-      </nav>
+
+        <!-- Thanh Menu Đầy Đủ Mở Rộng Ở Giữa -->
+        <nav id="floating-dock" class="tabbar floating-dock">
+          <button id="btn-close-dock" class="tabbar__btn btn-dock-close" title="Thu gọn Menu" aria-label="Thu gọn Menu">
+            <span class="btn__icon">✕</span>
+            <span class="btn__label">Đóng</span>
+          </button>
+          <button id="btn-open-actions" class="tabbar__btn" data-tab="actions" title="Hành động">
+            <span class="btn__icon">⚡</span>
+            <span class="btn__label">Hành động</span>
+            <span id="action-count-badge" class="action-count-badge" hidden>0</span>
+          </button>
+          <button class="tabbar__btn" data-tab="bag" title="Túi đồ">
+            <span class="btn__icon">👝</span>
+            <span class="btn__label">Túi</span>
+          </button>
+          <button class="tabbar__btn" data-tab="camp" title="Doanh trại">
+            <span class="btn__icon">🏕️</span>
+            <span class="btn__label">Trại</span>
+          </button>
+          <button class="tabbar__btn" data-tab="craft" title="Chế tạo">
+            <span class="btn__icon">🪓</span>
+            <span class="btn__label">Chế tạo</span>
+          </button>
+          <button class="tabbar__btn" data-tab="log" title="Nhật ký">
+            <span class="btn__icon">📜</span>
+            <span class="btn__label">Nhật ký</span>
+          </button>
+          <button class="tabbar__btn" data-tab="settings" title="Cài đặt">
+            <span class="btn__icon">⚙️</span>
+            <span class="btn__label">Cài đặt</span>
+          </button>
+        </nav>
+      </div>
 
       <!-- Bộ mô phỏng bước chân: máy tính để bàn không có cảm biến (Chỉ dùng cho Dev/PC) -->
       <div id="pedometer-panel" class="pedo">
@@ -708,6 +779,52 @@
       </div>
     </div>
 
+    <!-- Lớp phủ: Mật Thư Cổ Đồ & Rèn Luyện Trí Nhớ Đường Phố Hà Nội -->
+    <div id="overlay-hanoi-treasure" class="overlay" hidden>
+      <div class="card card--hanoi-treasure">
+        <div class="panel-head">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:1.8rem;">📜</span>
+            <div>
+              <h2 id="treasure-modal-tier-title" style="margin:0;font-size:1.15rem;color:#fef08a;">Mật Thư Cổ Đồ Hà Nội</h2>
+              <div id="treasure-modal-explorer-badge" style="font-size:0.8rem;color:var(--gold-faint);margin-top:2px;">🧭 Tân Thủ Dạo Phố</div>
+            </div>
+          </div>
+          <button id="btn-treasure-modal-close" class="drawer-close" title="Đóng">✕</button>
+        </div>
+
+        <div class="treasure-modal-body">
+          <div class="treasure-target-box">
+            <div class="treasure-target-label">🎯 ĐỊA DANH MỤC TIÊU (TỰ TÌM THEO TRÍ NHỚ):</div>
+            <div id="treasure-modal-target-name" class="treasure-target-name">Chùa Trấn Quốc</div>
+            <div id="treasure-modal-target-distance" class="treasure-target-dist">Ước tính cách vị trí ban đầu: ~750m</div>
+          </div>
+
+          <div class="treasure-story-box">
+            <div class="treasure-story-title">📖 Lời Đồn Thương Nhân Cổ:</div>
+            <div id="treasure-modal-story-desc" class="treasure-story-text">
+              Người ta đồn rằng tại vùng đất này có chôn giấu một báu vật tiền sử. Không có bản đồ chỉ sẵn lối đi, hãy dùng sự thông thạo và trí nhớ đường sá Hà Nội của bạn để sải bước tới đó!
+            </div>
+          </div>
+
+          <div class="treasure-rewards-box">
+            <div class="treasure-rewards-title">🎁 Chiến Lợi Phẩm Dự Kiến:</div>
+            <div id="treasure-modal-rewards-list" class="treasure-rewards-grid"></div>
+          </div>
+
+          <div class="treasure-memory-box">
+            <span>🧠 Điểm rèn luyện trí nhớ:</span>
+            <strong id="treasure-modal-memory-pts" style="color:#6ee7b7;">+100 Điểm Thổ Địa</strong>
+          </div>
+        </div>
+
+        <div class="card-actions" style="margin-top:14px;display:flex;gap:8px;">
+          <button id="btn-treasure-modal-claim" class="btn btn--primary" style="flex:2;" hidden>🏆 Khai Quật Kho Báu Ngay!</button>
+          <button id="btn-treasure-modal-refresh" class="btn btn--ghost" style="flex:1;font-size:0.82rem;">🔄 Đổi Điểm Khác</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Lớp phủ: Chi tiết Công Thức Chế Tạo (Craft Inspection Modal) -->
     <div id="overlay-craft-inspect" class="overlay" hidden>
       <div class="card card--craft-inspect">
@@ -831,10 +948,27 @@
                 <div class="hero-strength-hint">✨ Mỗi cấp tăng thêm +5kg tải trọng mang theo</div>
               </div>
             </div>
-            <button id="btn-hero-upgrade-strength" class="btn btn--primary btn-hero-upgrade">Nâng cấp</button>
+            <button id="btn-hero-upgrade-strength" class="btn btn--primary btn-hero-upgrade">Nâng cấp Thể Lực</button>
+          </div>
+
+          <!-- Khối Nâng Cấp Thân Pháp & Tốc Độ Di Chuyển -->
+          <div class="hero-strength-card hero-speed-card" style="border-color: rgba(56, 189, 248, 0.4); background: linear-gradient(135deg, rgba(3, 105, 161, 0.15), rgba(12, 74, 110, 0.25));">
+            <div class="hero-strength-card__top">
+              <div class="hero-avatar-frame" style="width:58px;height:58px;font-size:30px;background:rgba(2,132,199,0.25);border-color:#38bdf8;">⚡</div>
+              <div class="hero-strength-card__info">
+                <div class="hero-strength-title" id="hero-profile-speed-level" style="color:#7dd3fc;">⚡ Thân Pháp Cấp 1 / 10</div>
+                <div class="hero-strength-sub" id="hero-profile-speed-val">Vận tốc di chuyển: <strong>5.0 km/h</strong></div>
+                <div class="hero-strength-hint" style="color:#bae6fd;">✨ Tăng tốc độ chạy trên bản đồ, né quái và khám phá nhanh hơn</div>
+              </div>
+            </div>
+            <button id="btn-hero-upgrade-speed" class="btn btn--primary btn-hero-upgrade" style="background:linear-gradient(135deg,#0284c7,#0369a1);border-color:#38bdf8;">Nâng cấp Thân Pháp</button>
           </div>
 
           <div class="hero-stats-grid">
+            <div class="hero-stat-box">
+              <span class="hero-stat-label">🏃 Vận tốc hiện tại:</span>
+              <strong id="hero-profile-speed-stat" class="hero-stat-val hero-stat-val--blue">5.0 km/h</strong>
+            </div>
             <div class="hero-stat-box">
               <span class="hero-stat-label">🔨 Thợ thủ công:</span>
               <strong id="hero-profile-artisan" class="hero-stat-val">Cấp 1</strong>
@@ -847,14 +981,14 @@
               <span class="hero-stat-label">🐾 Thú cưng xuất chiến:</span>
               <strong id="hero-profile-pet" class="hero-stat-val hero-stat-val--green">Chưa xuất chiến</strong>
             </div>
-            <div class="hero-stat-box">
-              <span class="hero-stat-label">🚶 Tổng bước chân:</span>
+            <div class="hero-stat-box" style="grid-column: span 2;">
+              <span class="hero-stat-label">🚶 Tổng bước chân tích lũy:</span>
               <strong id="hero-profile-steps" class="hero-stat-val hero-stat-val--blue">0 bước</strong>
             </div>
           </div>
 
           <div class="hero-profile-tip">
-            💡 <strong>Mẹo sinh tồn:</strong> Nâng Thể Lực và rèn giáp, chế tạo Ba Lô Da Voi tại Trại để mang được nhiều tài nguyên hoang dã nhất có thể!
+            💡 <strong>Mẹo sinh tồn:</strong> Nâng Thân Pháp và Thể Lực giúp di chuyển nhanh như cơn gió, né tránh quái vật bóng đêm và gom tài nguyên thần tốc!
           </div>
         </div>
       </div>

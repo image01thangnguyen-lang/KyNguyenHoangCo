@@ -34,6 +34,11 @@ import {
   isOverburdened,
   getStrengthUpgradeInfo,
   MAX_STRENGTH_LEVEL,
+  getSpeedUpgradeInfo,
+  calcMovementSpeedKmh,
+  MAX_SPEED_LEVEL,
+  getCampExpansionInfo,
+  farmPlotsForGridSize,
 } from '../../../packages/game-core/src/index.js';
 import { actionIconSvg, itemIconSvg, zoneIconSvg, coinIconSvg } from './itemIcons.js';
 import { audio } from './audio.js';
@@ -55,6 +60,7 @@ export function el                       (id        )    {
                                   
                           
                         
+                                 
                                   
                                                  
                                                      
@@ -78,6 +84,7 @@ export function el                       (id        )    {
                       
                                               
                              
+                          
                               
                                                                                                      
                               
@@ -698,6 +705,7 @@ export function renderCamp(view          , profile             , handlers       
     </div>
   `;
 
+  renderCampTerritory(profile, handlers);
   renderPets(profile, handlers);
   renderFarming(view, profile, handlers);
   renderUpgrade(view, profile, handlers);
@@ -705,6 +713,52 @@ export function renderCamp(view          , profile             , handlers       
   renderSafeVaultSection(profile, handlers);
   renderInventory('inv-safe', profile.player.safeStorage, handlers, false);
   renderInventory('inv-carried', profile.player.carried, handlers, true);
+}
+
+export function renderCampTerritory(profile             , handlers          )       {
+  const box = el('camp-territory');
+  if (!box) return;
+
+  const info = getCampExpansionInfo(profile.player.camp);
+  const currentGold = countOf(profile.player.carried, 'ancient_coin');
+  const canAfford = currentGold >= info.costGold;
+
+  box.innerHTML = `
+    <div class="territory-card" style="background:linear-gradient(135deg, rgba(45,30,15,0.95), rgba(25,18,10,0.95));border:1.5px solid rgba(217,119,6,0.4);border-radius:12px;padding:12px 14px;margin-bottom:12px;box-shadow:0 6px 18px rgba(0,0,0,0.45);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:1.5rem;">📐</span>
+          <div>
+            <div style="font-weight:800;color:#fef08a;font-size:0.98rem;">LÃNH THỔ DOANH TRẠI</div>
+            <div style="font-size:0.78rem;color:var(--gold-faint);">Diện tích lưới ô vuông: <strong style="color:#38bdf8;">${info.currentGridSize}×${info.currentGridSize} (${info.currentTiles} ô đất)</strong></div>
+          </div>
+        </div>
+        <span class="chip chip--warn" style="font-weight:700;">🌾 ${info.currentMaxPlots} Luống Trồng</span>
+      </div>
+
+      <p style="font-size:0.8rem;color:var(--ink-muted);line-height:1.4;margin:6px 0 10px 0;">
+        Mỗi ô vuông nhỏ là một khoảng đất nung để gieo trồng cây nông nghiệp, đặt trạm chế tạo và dựng tháp canh phòng thủ. Dùng Đồng Vàng Cổ để mua thêm đất mở rộng lãnh thổ.
+      </p>
+
+      ${
+        !info.isMax
+          ? `
+        <button id="btn-expand-territory" class="btn btn--primary" style="width:100%;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 12px;font-weight:800;background:linear-gradient(135deg, #d97706, #b45309);border-color:#f59e0b;">
+          <span>👑 Mở Rộng Lên ${info.nextGridSize}×${info.nextGridSize} (${info.nextTiles} ô, +${info.nextMaxPlots - info.currentMaxPlots} luống) — Giá: ${info.costGold} 🪙</span>
+        </button>
+        ${!canAfford ? `<div style="font-size:0.75rem;color:#f87171;text-align:center;margin-top:4px;">Thiếu ${info.costGold - currentGold} 🪙 Đồng Vàng Cổ (Hiện có: ${currentGold} 🪙)</div>` : ''}
+      `
+          : `
+        <div class="chip chip--success" style="width:100%;text-align:center;padding:6px;font-weight:700;">🏆 Lãnh Thổ Đã Đạt Diện Tích Tối Đại (7×7 = 49 ô vuông)!</div>
+      `
+      }
+    </div>
+  `;
+
+  const btnExpand = document.getElementById('btn-expand-territory');
+  if (btnExpand && handlers.onExpandCampTerritory) {
+    btnExpand.onclick = () => handlers.onExpandCampTerritory?.();
+  }
 }
 
 export function renderSafeVaultSection(profile             , handlers          )       {
@@ -1349,6 +1403,25 @@ export function renderBagPanel(profile             , handlers          )       {
         btnUpgradeStrength.innerHTML = `💪 Nâng Thể Lực (Cấp ${strLvl + 1}: +5kg) · 💰 ${info.cost} Vàng`;
         btnUpgradeStrength.disabled = false;
         btnUpgradeStrength.onclick = () => handlers.onUpgradeStrength?.();
+      }
+    }
+  }
+
+  const btnUpgradeSpeed = document.getElementById('btn-bag-upgrade-speed')                            ;
+  if (btnUpgradeSpeed) {
+    if (isSafeTab) {
+      btnUpgradeSpeed.hidden = true;
+    } else {
+      btnUpgradeSpeed.hidden = false;
+      const spdLvl = profile.player.speedLevel ?? 1;
+      const spdInfo = getSpeedUpgradeInfo(spdLvl);
+      if (spdInfo.isMax) {
+        btnUpgradeSpeed.textContent = `⚡ Thân Pháp Tối Đa (Cấp ${MAX_SPEED_LEVEL})`;
+        btnUpgradeSpeed.disabled = true;
+      } else {
+        btnUpgradeSpeed.innerHTML = `⚡ Nâng Thân Pháp (Cấp ${spdLvl + 1}: +3.0km/h) · 💰 ${spdInfo.costCoin} Vàng`;
+        btnUpgradeSpeed.disabled = false;
+        btnUpgradeSpeed.onclick = () => handlers.onUpgradeSpeed?.();
       }
     }
   }

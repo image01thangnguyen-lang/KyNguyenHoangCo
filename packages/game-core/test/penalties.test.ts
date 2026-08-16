@@ -18,6 +18,8 @@ import {
   playerCombatPower,
   resolveNightDefense,
   upgradeStrength,
+  upgradeSpeed,
+  calcMovementSpeedKmh,
   slotsUsed,
 } from '../src/index.ts';
 import type { CampState } from '../src/index.ts';
@@ -232,7 +234,7 @@ describe('CƠ CHẾ PHẠT SINH TỒN & TƯƠNG TÁC SÂU', () => {
 
   it('11. NÂNG CẤP THỂ LỰC: Dùng Đồng Vàng Cổ tăng tải trọng ba lô (+5kg mỗi cấp)', () => {
     const player: any = {
-      carried: { ancient_coin: 30 },
+      carried: { ancient_coin: 85 },
       safeStorage: {},
       strengthLevel: 1,
       pets: [],
@@ -240,23 +242,67 @@ describe('CƠ CHẾ PHẠT SINH TỒN & TƯƠNG TÁC SÂU', () => {
 
     assert.equal(maxWeightCapacity([], {}, 1), 45); // Mặc định 45kg
 
-    // Nâng lên Cấp 2 (tốn 10 Vàng)
+    // Nâng lên Cấp 2 (tốn 25 Vàng)
     const res1 = upgradeStrength(player);
     assert.equal(res1.success, true);
     assert.equal(res1.player.strengthLevel, 2);
-    assert.equal(res1.player.carried.ancient_coin, 20); // 30 - 10 = 20
+    assert.equal(res1.player.carried.ancient_coin, 60); // 85 - 25 = 60
     assert.equal(maxWeightCapacity([], {}, res1.player.strengthLevel), 50); // 45 + 5 = 50kg
 
-    // Nâng lên Cấp 3 (tốn 20 Vàng)
+    // Nâng lên Cấp 3 (tốn 60 Vàng)
     const res2 = upgradeStrength(res1.player);
     assert.equal(res2.success, true);
     assert.equal(res2.player.strengthLevel, 3);
-    assert.equal(res2.player.carried.ancient_coin, undefined); // 20 - 20 = 0
+    assert.equal(res2.player.carried.ancient_coin, undefined); // 60 - 60 = 0
     assert.equal(maxWeightCapacity([], {}, res2.player.strengthLevel), 55); // 45 + 10 = 55kg
 
     // Nâng tiếp khi hết vàng => thất bại
     const res3 = upgradeStrength(res2.player);
     assert.equal(res3.success, false);
     assert.ok(res3.messageVi.includes('Không đủ Đồng Vàng Cổ'));
+  });
+
+  it('12. NÂNG CẤP THÂN PHÁP: Dùng Đồng Vàng Cổ nâng tốc độ di chuyển (+3.0km/h mỗi cấp)', () => {
+    const player: any = {
+      carried: { ancient_coin: 70 },
+      safeStorage: {},
+      speedLevel: 1,
+      strengthLevel: 1,
+      pets: [],
+    };
+
+    assert.equal(calcMovementSpeedKmh(player), 18.0); // Mặc định 18.0 km/h
+
+    // Nâng lên Cấp 2 (tốn 20 Vàng)
+    const res1 = upgradeSpeed(player);
+    assert.equal(res1.success, true);
+    assert.equal(res1.player.speedLevel, 2);
+    assert.equal(res1.player.carried.ancient_coin, 50); // 70 - 20 = 50
+    assert.equal(calcMovementSpeedKmh(res1.player), 21.0); // 18.0 + 3.0 = 21.0 km/h
+
+    // Nâng lên Cấp 3 (tốn 50 Vàng)
+    const res2 = upgradeSpeed(res1.player);
+    assert.equal(res2.success, true);
+    assert.equal(res2.player.speedLevel, 3);
+    assert.equal(res2.player.carried.ancient_coin, undefined); // 50 - 50 = 0
+    assert.equal(calcMovementSpeedKmh(res2.player), 24.0); // 18.0 + 6.0 = 24.0 km/h
+
+    // Nâng tiếp khi hết Vàng (cần 95 Vàng) => thất bại
+    const res3 = upgradeSpeed(res2.player);
+    assert.equal(res3.success, false);
+    assert.ok(res3.messageVi.includes('Không đủ Đồng Vàng Cổ'));
+  });
+
+  it('13. TỐC ĐỘ THÂN PHÁP: Thể Lực và Thú Cưng nhanh nhẹn tăng thêm tốc độ di chuyển', () => {
+    const player: any = {
+      carried: {},
+      safeStorage: {},
+      speedLevel: 2, // 21.0 km/h
+      strengthLevel: 3, // + (3 - 1) * 0.8 = +1.6 km/h
+      pets: [{ petId: 'sabertooth', isActive: true, level: 2 }], // +5.0 km/h
+    };
+
+    // 18.0 + 3.0 (spd) + 1.6 (str) + 5.0 (pet) = 27.6 km/h
+    assert.equal(calcMovementSpeedKmh(player), 27.6);
   });
 });

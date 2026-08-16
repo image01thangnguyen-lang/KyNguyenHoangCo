@@ -34,3 +34,5 @@ export * from './weekendQuests.ts';
 export * from './transit.ts';
 export * from './beasts.ts';
 export * from './game.ts';
+export * from './dinoTerrain.ts';
+export * from './hanoiTreasureHunt.ts';

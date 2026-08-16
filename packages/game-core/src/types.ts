@@ -170,6 +170,8 @@ export interface CampState {
   exactLon?: number;
   /** Danh sách các luống đất trồng trọt quanh doanh trại */
   farmPlots?: any[];
+  /** Kích thước cạnh lưới vuông của khu trại (mặc định 3 = lưới 3x3 = 9 ô vuông nhỏ) */
+  gridSize?: number;
 }
 
 /** Số liệu tích luỹ cả đời hồ sơ — dùng để chấm nhiệm vụ và kích hoạt beat cốt truyện. */
@@ -295,6 +297,8 @@ export interface PlayerState {
   fishTrapLevel?: number;
   /** Cấp độ Thể Lực / Sức Khỏe nâng bằng Đồng Vàng Cổ (1..10), mỗi cấp tăng +5kg tải trọng */
   strengthLevel?: number;
+  /** Cấp độ Thân Pháp / Tốc Độ Di Chuyển (1..10), mỗi cấp tăng tốc độ di chuyển của nhân vật */
+  speedLevel?: number;
   createdAtMs: number;
 }
 

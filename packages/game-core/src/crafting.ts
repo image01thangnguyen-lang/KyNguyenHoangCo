@@ -17,12 +17,14 @@ import {
   stationsUnlockedAt,
 } from './balance.ts';
 import { addItems, countOf, hasAll, missingFrom, removeItems } from './inventory.ts';
+import { farmPlotsForGridSize, type FarmPlot } from './farming.ts';
 import type {
   CampState,
   CraftAttempt,
   DefenseStructureId,
   Inventory,
   ItemStack,
+  PlayerState,
   RecipeDef,
   StationId,
 } from './types.ts';
@@ -552,4 +554,107 @@ export function relocateCamp(
     newHomeCell: newCellId,
   };
 }
+
+// ============================================================================
+// HỆ THỐNG MỞ RỘNG DIỆN TÍCH DOANH TRẠI BẰNG VÀNG (SQUARE GRID EXPANSION)
+// ============================================================================
+
+export interface CampExpansionInfo {
+  currentGridSize: number;
+  currentTiles: number;
+  nextGridSize: number;
+  nextTiles: number;
+  costGold: number;
+  currentMaxPlots: number;
+  nextMaxPlots: number;
+  isMax: boolean;
+}
+
+export function getCampExpansionInfo(camp: CampState): CampExpansionInfo {
+  const currentGridSize = camp.gridSize ?? 3;
+  const isMax = currentGridSize >= 7;
+  const nextGridSize = isMax ? currentGridSize : currentGridSize + 1;
+
+  // Chi phí mở rộng theo bậc diện tích:
+  // 3x3 (9 ô) -> 4x4 (16 ô): 50 vàng
+  // 4x4 (16 ô) -> 5x5 (25 ô): 120 vàng
+  // 5x5 (25 ô) -> 6x6 (36 ô): 250 vàng
+  // 6x6 (36 ô) -> 7x7 (49 ô): 450 vàng
+  const costs: Record<number, number> = { 3: 50, 4: 120, 5: 250, 6: 450 };
+  const costGold = costs[currentGridSize] ?? 500;
+
+  return {
+    currentGridSize,
+    currentTiles: currentGridSize * currentGridSize,
+    nextGridSize,
+    nextTiles: nextGridSize * nextGridSize,
+    costGold,
+    currentMaxPlots: farmPlotsForGridSize(currentGridSize),
+    nextMaxPlots: farmPlotsForGridSize(nextGridSize),
+    isMax,
+  };
+}
+
+export function expandCampTerritory(
+  camp: CampState,
+  player: PlayerState,
+  nowMs: number,
+): { camp: CampState; player: PlayerState; success: boolean; messageVi: string } {
+  const info = getCampExpansionInfo(camp);
+  if (info.isMax) {
+    return { camp, player, success: false, messageVi: 'Lãnh thổ doanh trại đã đạt diện tích tối đại (7x7 = 49 ô vuông)!' };
+  }
+
+  const currentGold = countOf(player.carried, 'ancient_coin');
+  if (currentGold < info.costGold) {
+    return {
+      camp,
+      player,
+      success: false,
+      messageVi: `Không đủ Đồng Vàng Cổ! Cần ${info.costGold} 🪙 (Hiện có: ${currentGold} 🪙).`,
+    };
+  }
+
+  // Trừ vàng cổ
+  const updatedCarried = removeItems(player.carried, [{ itemId: 'ancient_coin', qty: info.costGold }]);
+
+  // Cập nhật gridSize mới
+  const nextGridSize = info.nextGridSize;
+  const nextCamp: CampState = {
+    ...camp,
+    gridSize: nextGridSize,
+  };
+
+  // Mở thêm các luống đất trồng tương ứng diện tích mới
+  const targetPlots = farmPlotsForGridSize(nextGridSize);
+  const existingPlots = (camp.farmPlots ?? []) as FarmPlot[];
+  const nextPlots: FarmPlot[] = [...existingPlots];
+  while (nextPlots.length < targetPlots) {
+    nextPlots.push({
+      index: nextPlots.length,
+      cropId: null,
+      plantedAtMs: null,
+      waterLevel: 1,
+      lastWateredMs: null,
+      readyToHarvest: false,
+      wilted: false,
+      fertilized: false,
+    });
+  }
+  nextCamp.farmPlots = nextPlots;
+
+  const updatedPlayer: PlayerState = {
+    ...player,
+    carried: updatedCarried,
+    camp: nextCamp,
+  };
+
+  return {
+    camp: nextCamp,
+    player: updatedPlayer,
+    success: true,
+    messageVi: `👑 Mở rộng diện tích Doanh Trại thành công lên ${nextGridSize}x${nextGridSize} (${nextGridSize * nextGridSize} ô vuông)! Mở thêm ${targetPlots - existingPlots.length} luống đất trồng và không gian xây dựng.`,
+  };
+}
+
 

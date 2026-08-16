@@ -34,3 +34,5 @@ export * from './weekendQuests.js';
 export * from './transit.js';
 export * from './beasts.js';
 export * from './game.js';
+export * from './dinoTerrain.js';
+export * from './hanoiTreasureHunt.js';

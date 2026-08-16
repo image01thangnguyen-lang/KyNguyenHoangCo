@@ -84,6 +84,14 @@ export interface ProfileSave {
   /** Ngày cuối cùng đã ghi nhận hoạt động, để đếm daysPlayed và reset hạn mức POI. */
   lastActiveDay: string;
   lastPlayedMs: number;
+  /** Manh mối tầm bảo Hà Nội đang kích hoạt (§500m - 1km) */
+  activeTreasureClue?: any | null;
+  /** Số lượng kho báu đã tìm thấy */
+  treasuresClaimedCount?: number;
+  /** Điểm rèn luyện trí nhớ bản đồ */
+  treasureMemoryScore?: number;
+  /** Thời điểm nhận kho báu gần nhất */
+  lastClaimedTreasureAtMs?: number;
 }
 
 export interface SaveFile {
@@ -122,6 +130,7 @@ export function createProfile(displayName: string, nowMs: number, gender: Gender
     lifetime: emptyLifetime(),
     knownRecipes: [],
     strengthLevel: 1,
+    speedLevel: 1,
     createdAtMs: nowMs,
   };
 
@@ -138,6 +147,9 @@ export function createProfile(displayName: string, nowMs: number, gender: Gender
     pendingSteps: 0,
     lastActiveDay: dayKey(nowMs),
     lastPlayedMs: nowMs,
+    activeTreasureClue: null,
+    treasuresClaimedCount: 0,
+    treasureMemoryScore: 0,
   };
 }
 
@@ -332,17 +344,23 @@ export interface SlotSummary {
 }
 
 export function slotSummaries(save: SaveFile): SlotSummary[] {
+  if (!save || !Array.isArray(save.profiles)) {
+    return [
+      { slot: 0, empty: true },
+      { slot: 1, empty: true },
+    ];
+  }
   return save.profiles.map((profile, slot) => {
-    if (!profile) return { slot, empty: true };
+    if (!profile || !profile.player) return { slot, empty: true };
     return {
       slot,
       empty: false,
-      displayName: profile.player.displayName,
+      displayName: profile.player.displayName ?? `Hồ sơ ${slot + 1}`,
       gender: profile.player.gender ?? 'male',
-      campLevel: profile.player.camp.level,
-      chapterIndex: profile.story.chapterIndex,
-      lifetimeSteps: profile.player.lifetime.steps,
-      lastPlayedMs: profile.lastPlayedMs,
+      campLevel: profile.player.camp?.level ?? 1,
+      chapterIndex: profile.story?.chapterIndex ?? 1,
+      lifetimeSteps: profile.player.lifetime?.steps ?? 0,
+      lastPlayedMs: profile.lastPlayedMs ?? Date.now(),
     };
   });
 }
