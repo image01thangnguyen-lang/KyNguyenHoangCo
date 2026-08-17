@@ -528,8 +528,14 @@ export function executeCombatAttack(isSkill = false): void {
     const dx = beast.currentWorldX - playerWorldX;
     const dy = beast.currentWorldY - playerWorldY;
     const dist = Math.hypot(dx, dy);
+    const beastBodyRadius = (beast.species === 'trex' || beast.species === 'brachiosaurus' || beast.species === 'spinosaurus')
+      ? 3.8
+      : (beast.species === 'ankylosaurus' || beast.species === 'triceratops' || beast.species === 'mammoth' || beast.species === 'titanoboa' || beast.species === 'croc' || beast.species === 'plesiosaur')
+      ? 2.4
+      : 1.0;
+    const effectiveDist = Math.max(0, dist - beastBodyRadius);
 
-    if (dist <= attackRange) {
+    if (effectiveDist <= attackRange) {
       const targetAngle = Math.atan2(dx, dy);
       let angleDiff = Math.abs(targetAngle - angle);
       while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
@@ -547,7 +553,8 @@ export function executeCombatAttack(isSkill = false): void {
         beast.currentWorldX += Math.sin(targetAngle) * pushDist;
         beast.currentWorldY += Math.cos(targetAngle) * pushDist;
 
-        const pxPerM = ((Math.min(w, h) / 75) * (mapView?.zoomFactor ?? 1));
+        const effectiveSpan = 28 / (mapView?.zoomFactor ?? 1);
+        const pxPerM = Math.min(w, h) / effectiveSpan;
         const bsX = playerScreenX + (beast.currentWorldX - playerWorldX) * pxPerM;
         const bsY = playerScreenY - (beast.currentWorldY - playerWorldY) * (pxPerM * 0.72);
 
@@ -5041,6 +5048,7 @@ Object.assign(globalThis as Record<string, unknown>, {
     enterProfile,
     jumpTime,
     audio,
+    getMapView: () => mapView,
     addSteps(count: number) {
       if (!app.profile) return;
       app.stepAccumulator += count;

@@ -854,6 +854,8 @@ export interface DynamicBeastPack {
   attackCooldownMs: number;
   lastAttackTime: number;
   speedMps: number;
+  velocityX?: number;
+  velocityY?: number;
   isDefeated: boolean;
   respawnAt: number;
   lootTable: Array<{ itemId: ItemId; min: number; max: number }>;
@@ -1475,7 +1477,7 @@ export function updateDynamicBeastPacks(
     const distFromOrigin = Math.hypot(beast.currentWorldX - beast.originWorldX, beast.currentWorldY - beast.originWorldY);
 
     if (beast.isPredator) {
-      // 1. Dã thú ăn thịt (Sói, Sư tử, Gấu, Lợn lòi, Báo)
+      // 1. Dã thú ăn thịt (Sói, Sư tử, Gấu, Lợn lòi, Báo, T-Rex, Spinosaurus...)
       if (distToPlayer <= beast.aggroRadiusMeters && distFromOrigin <= beast.leashRadiusMeters) {
         // Trong tầm kích động và chưa vượt quá giới hạn lãnh địa: Truy đuổi!
         beast.isAggro = true;
@@ -1501,6 +1503,11 @@ export function updateDynamicBeastPacks(
           const moveStep = Math.min(distToPlayer, beast.speedMps * dtSeconds);
           beast.currentWorldX += (dx / len) * moveStep;
           beast.currentWorldY += (dy / len) * moveStep;
+          beast.velocityX = (dx / len) * beast.speedMps;
+          beast.velocityY = (dy / len) * beast.speedMps;
+        } else {
+          beast.velocityX = (dx / len) * 0.1;
+          beast.velocityY = (dy / len) * 0.1;
         }
 
         // Cắn xé người chơi khi trong cự ly cận chiến
@@ -1511,21 +1518,34 @@ export function updateDynamicBeastPacks(
           }
         }
       } else {
-        // Ngoài tầm phát hiện hoặc người chơi chạy thoát xa khỏi vùng lãnh địa (> 45m): Từ bỏ và quay về tổ!
+        // Ngoài tầm phát hiện: Thong thả đi dạo / tuần tra / săn mồi trong lãnh địa tự nhiên!
         beast.isAggro = false;
         beast.isChasing = false;
 
-        if (distFromOrigin > 0.5) {
-          const dx = beast.originWorldX - beast.currentWorldX;
-          const dy = beast.originWorldY - beast.currentWorldY;
-          const len = Math.hypot(dx, dy) || 1;
-          const returnStep = Math.min(distFromOrigin, (beast.speedMps * 0.65) * dtSeconds);
-          beast.currentWorldX += (dx / len) * returnStep;
-          beast.currentWorldY += (dy / len) * returnStep;
+        // Quỹ đạo đi dạo hữu cơ (Organic Wandering Lissajous curve)
+        const seed = beast.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+        const roamTime = (nowMs / 1000) * 0.18 + seed;
+        const targetRoamX = beast.originWorldX + Math.sin(roamTime) * 16.0 + Math.cos(roamTime * 0.45) * 8.0;
+        const targetRoamY = beast.originWorldY + Math.cos(roamTime * 0.8) * 12.0 + Math.sin(roamTime * 0.35) * 6.0;
+
+        const dRx = targetRoamX - beast.currentWorldX;
+        const dRy = targetRoamY - beast.currentWorldY;
+        const distRoam = Math.hypot(dRx, dRy);
+
+        if (distRoam > 0.5) {
+          const roamSpeed = beast.speedMps * 0.28;
+          const roamStep = Math.min(distRoam, roamSpeed * dtSeconds);
+          beast.currentWorldX += (dRx / distRoam) * roamStep;
+          beast.currentWorldY += (dRy / distRoam) * roamStep;
+          beast.velocityX = (dRx / distRoam) * roamSpeed;
+          beast.velocityY = (dRy / distRoam) * roamSpeed;
+        } else {
+          beast.velocityX = 0;
+          beast.velocityY = 0;
         }
       }
     } else {
-      // 2. Thú ăn cỏ (Hươu, Ngựa)
+      // 2. Thú ăn cỏ & Khủng long hiền lành (Hươu, Ngựa, Brachiosaurus, Plesiosaur...)
       if (distToPlayer <= beast.aggroRadiusMeters) {
         beast.isFleeing = true;
         if (distFromOrigin < beast.leashRadiusMeters) {
@@ -1535,16 +1555,31 @@ export function updateDynamicBeastPacks(
           const fleeStep = beast.speedMps * dtSeconds;
           beast.currentWorldX += (dx / len) * fleeStep;
           beast.currentWorldY += (dy / len) * fleeStep;
+          beast.velocityX = (dx / len) * beast.speedMps;
+          beast.velocityY = (dy / len) * beast.speedMps;
         }
       } else {
         beast.isFleeing = false;
-        if (distFromOrigin > 1.0) {
-          const dx = beast.originWorldX - beast.currentWorldX;
-          const dy = beast.originWorldY - beast.currentWorldY;
-          const len = Math.hypot(dx, dy) || 1;
-          const walkStep = (beast.speedMps * 0.4) * dtSeconds;
-          beast.currentWorldX += (dx / len) * walkStep;
-          beast.currentWorldY += (dy / len) * walkStep;
+        // Đi dạo gặm cỏ tự nhiên trong bãi cỏ
+        const seed = beast.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+        const grazeTime = (nowMs / 1000) * 0.15 + seed;
+        const targetGrazeX = beast.originWorldX + Math.sin(grazeTime) * 14.0;
+        const targetGrazeY = beast.originWorldY + Math.cos(grazeTime * 0.7) * 10.0;
+
+        const dGx = targetGrazeX - beast.currentWorldX;
+        const dGy = targetGrazeY - beast.currentWorldY;
+        const distGraze = Math.hypot(dGx, dGy);
+
+        if (distGraze > 0.5) {
+          const grazeSpeed = beast.speedMps * 0.22;
+          const grazeStep = Math.min(distGraze, grazeSpeed * dtSeconds);
+          beast.currentWorldX += (dGx / distGraze) * grazeStep;
+          beast.currentWorldY += (dGy / distGraze) * grazeStep;
+          beast.velocityX = (dGx / distGraze) * grazeSpeed;
+          beast.velocityY = (dGy / distGraze) * grazeSpeed;
+        } else {
+          beast.velocityX = 0;
+          beast.velocityY = 0;
         }
       }
     }
