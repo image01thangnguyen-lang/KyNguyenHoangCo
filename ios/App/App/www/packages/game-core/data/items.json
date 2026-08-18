@@ -84,6 +84,8 @@
     { "id": "traveler_bedroll", "nameVi": "Túi ngủ dã ngoại gấp gọn", "kind": "tool", "stack": 1, "weight": 2, "safe": true, "allowOutdoorSleep": true },
     { "id": "divine_tea",       "nameVi": "Trà cổ thụ Thần Nông",     "kind": "drink", "stack": 10, "weight": 1, "hydration": 40, "curesFatigue": true },
     { "id": "herb_scent_pouch", "nameVi": "Túi hương ngải cứu",      "kind": "tool", "stack": 1, "weight": 1, "safe": true, "masksBloodScent": true },
-    { "id": "beast_repellent_powder", "nameVi": "Bột lưu huỳnh xua quái", "kind": "consumable", "stack": 10, "weight": 1, "safe": true }
+    { "id": "beast_repellent_powder", "nameVi": "Bột lưu huỳnh xua quái", "kind": "consumable", "stack": 10, "weight": 1, "safe": true },
+    { "id": "bamboo_raft",      "nameVi": "Bè tre vượt sông",          "kind": "tool", "stack": 1, "weight": 4, "safe": true, "waterCraft": true },
+    { "id": "wooden_boat",      "nameVi": "Thuyền độc mộc",            "kind": "tool", "stack": 1, "weight": 8, "safe": true, "waterCraft": true }
   ]
 }

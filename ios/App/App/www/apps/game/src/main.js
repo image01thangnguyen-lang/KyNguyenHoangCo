@@ -44,6 +44,7 @@ import {
   openApp,
   playBeat,
   placeTrap,
+  poisNear,
   profileDayNumber,
   putProfile,
   runNightDefense,
@@ -126,6 +127,8 @@ import {
 
 import { MapView, featureAtPoint } from './mapView.js';
                                               
+import { initPhaserGame, getPhaserGame } from './phaser/phaserGame.js';
+import { PhaserGameBridge } from './phaser/gameBridge.js';
 import { startARCamera, stopARCamera, setARModel, captureARPhoto } from './arCamera.js';
 import { Pedometer, describeSource } from './pedometer.js';
 import { avatarSvg } from './itemIcons.js';
@@ -402,6 +405,10 @@ export function fireDirectionalProjectile(
 /** Thực thi Tấn Công Thường hoặc Kỹ Năng Vũ Khí theo hướng quay mặt của người chơi */
 export function executeCombatAttack(isSkill = false)       {
   if (!app.profile) return;
+
+  // Kích hoạt hoạt ảnh và logic chiến đấu trong Phaser 3 Scene
+  PhaserGameBridge.getInstance().triggerPlayerAttack(isSkill);
+
   const player = app.profile.player;
   const nowMs = Date.now();
   const weapon = getCurrentEquippedWeapon();
@@ -527,8 +534,14 @@ export function executeCombatAttack(isSkill = false)       {
     const dx = beast.currentWorldX - playerWorldX;
     const dy = beast.currentWorldY - playerWorldY;
     const dist = Math.hypot(dx, dy);
+    const beastBodyRadius = (beast.species === 'trex' || beast.species === 'brachiosaurus' || beast.species === 'spinosaurus')
+      ? 3.8
+      : (beast.species === 'ankylosaurus' || beast.species === 'triceratops' || beast.species === 'mammoth' || beast.species === 'titanoboa' || beast.species === 'croc' || beast.species === 'plesiosaur')
+      ? 2.4
+      : 1.0;
+    const effectiveDist = Math.max(0, dist - beastBodyRadius);
 
-    if (dist <= attackRange) {
+    if (effectiveDist <= attackRange) {
       const targetAngle = Math.atan2(dx, dy);
       let angleDiff = Math.abs(targetAngle - angle);
       while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
@@ -546,7 +559,8 @@ export function executeCombatAttack(isSkill = false)       {
         beast.currentWorldX += Math.sin(targetAngle) * pushDist;
         beast.currentWorldY += Math.cos(targetAngle) * pushDist;
 
-        const pxPerM = ((Math.min(w, h) / 75) * (mapView?.zoomFactor ?? 1));
+        const effectiveSpan = 28 / (mapView?.zoomFactor ?? 1);
+        const pxPerM = Math.min(w, h) / effectiveSpan;
         const bsX = playerScreenX + (beast.currentWorldX - playerWorldX) * pxPerM;
         const bsY = playerScreenY - (beast.currentWorldY - playerWorldY) * (pxPerM * 0.72);
 
@@ -1542,11 +1556,15 @@ function setupVirtualJoystick()       {
     const normalizedDist = Math.min(1, dist / maxRadius);
     if (dist < 4) {
       joystickVector = { x: 0, y: 0 };
+      PhaserGameBridge.getInstance().sendJoystickInput(0, 0);
     } else {
+      const vx = (dx / dist) * normalizedDist;
+      const vy = (dy / dist) * normalizedDist; // Screen Y
       joystickVector = {
-        x: (dx / dist) * normalizedDist,
-        y: (-dy / dist) * normalizedDist, // +y là hướng Bắc (lên trên)
+        x: vx,
+        y: -vy, // +y là hướng Bắc (lên trên) trong GPS world coords
       };
+      PhaserGameBridge.getInstance().sendJoystickInput(vx, vy);
     }
   };
 
@@ -1575,6 +1593,7 @@ function setupVirtualJoystick()       {
       stick.classList.remove('is-dragging');
       stick.style.transform = 'translate(0px, 0px)';
       joystickVector = { x: 0, y: 0 };
+      PhaserGameBridge.getInstance().sendJoystickInput(0, 0);
       try {
         base.releasePointerCapture(e.pointerId);
       } catch {}
@@ -1590,11 +1609,18 @@ function setupVirtualJoystick()       {
   window.addEventListener('keydown', (e) => {
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
     activeKeys[e.code] = true;
+    activeKeys[e.key] = true;
     bumpInteraction();
   });
 
   window.addEventListener('keyup', (e) => {
     activeKeys[e.code] = false;
+    activeKeys[e.key] = false;
+  });
+
+  window.addEventListener('blur', () => {
+    for (const k in activeKeys) activeKeys[k] = false;
+    joystickVector = { x: 0, y: 0 };
   });
 }
 
@@ -1857,14 +1883,20 @@ function enterProfile(slot        )       {
   app.profile = activeProfile(app.save);
   if (!app.profile) return;
 
-  // Khởi tạo vị trí nhân vật tại Doanh Trại (hoặc toạ độ mặc định)
+  // 1. KHÔI PHỤC VỊ TRÍ TRƯỚC ĐÓ CỦA NHÂN VẬT (PERSISTENT CHARACTER POSITION)
+  const lastSavedPos = app.profile.player.lastPosition;
   const homePos = getHomeCampCenter();
-  if (homePos) {
+  if (lastSavedPos && Number.isFinite(lastSavedPos.lat) && Number.isFinite(lastSavedPos.lon)) {
+    virtualPlayerPos = { ...lastSavedPos };
+  } else if (homePos) {
     virtualPlayerPos = { ...homePos };
   } else {
     virtualPlayerPos = { lat: 21.0068, lon: 105.8431 };
   }
   smoothRenderPos = { ...virtualPlayerPos };
+
+  // 2. MÔ PHỎNG HÀNH TRÌNH TỰ ĐỘNG NGOẠI TUYẾN NẾU ĐANG CÓ LỘ TRÌNH (OFFLINE AUTO-TRAVEL)
+  simulateOfflineAutoTravel();
 
   el('screen-profiles').hidden = true;
   el('screen-game').hidden = false;
@@ -1936,6 +1968,41 @@ function enterProfile(slot        )       {
     globalThis.addEventListener('resize', () => mapView?.resize());
   }
   mapView.resize();
+
+  // Khởi tạo Engine Phaser 3 (WebGL 60 FPS / Canvas Fallback)
+  try {
+    if (typeof (globalThis       ).Phaser !== 'undefined') {
+      const phaserCanvas = el                   ('map-canvas');
+      initPhaserGame({ canvas: phaserCanvas });
+
+      const bridge = PhaserGameBridge.getInstance();
+      bridge.listeners.onDropCollected = (drop) => {
+        collectWorldDrop(drop       );
+      };
+      bridge.listeners.onBeastHit = (_beastId, _dmg, _remainingHp) => {
+        audio.play('hit_punch');
+      };
+      bridge.listeners.onBeastDefeated = (beast) => {
+        audio.play('level_up');
+        toast(`Đã hạ gục ${beast.nameVi}!`, 'good');
+        awardCombatExp(beast.level * 25);
+      };
+      bridge.listeners.onPlayerDamaged = (damage, attacker) => {
+        audio.play('player_hurt');
+        toast(`Bị ${attacker} tấn công (-${damage} HP)!`, 'bad');
+        if (app.profile) {
+          app.profile.player.stats.hp = Math.max(0, app.profile.player.stats.hp - damage);
+          sync();
+        }
+      };
+      bridge.listeners.onPoiInteracted = (poiName) => {
+        audio.play('click');
+        toast(`Đang tiếp cận: ${poiName}`, 'info');
+      };
+    }
+  } catch (err) {
+    console.warn('Phaser 3 Game Engine init:', err);
+  }
 
   // Tự động kích hoạt cảm biến đếm bước chân
   pedometer.autoStart();
@@ -2714,10 +2781,16 @@ function startLoops()       {
 
     let keyX = 0;
     let keyY = 0;
-    if (activeKeys['KeyW'] || activeKeys['ArrowUp']) keyY += 1;
-    if (activeKeys['KeyS'] || activeKeys['ArrowDown']) keyY -= 1;
-    if (activeKeys['KeyA'] || activeKeys['ArrowLeft']) keyX -= 1;
-    if (activeKeys['KeyD'] || activeKeys['ArrowRight']) keyX += 1;
+    const isUp = activeKeys['KeyW'] || activeKeys['w'] || activeKeys['W'] || activeKeys['ArrowUp'];
+    const isDown = activeKeys['KeyS'] || activeKeys['s'] || activeKeys['S'] || activeKeys['ArrowDown'];
+    const isLeft = activeKeys['KeyA'] || activeKeys['a'] || activeKeys['A'] || activeKeys['ArrowLeft'];
+    const isRight = activeKeys['KeyD'] || activeKeys['d'] || activeKeys['D'] || activeKeys['ArrowRight'];
+    const isShift = activeKeys['ShiftLeft'] || activeKeys['ShiftRight'] || activeKeys['Shift'];
+
+    if (isUp) keyY += 1;
+    if (isDown) keyY -= 1;
+    if (isLeft) keyX -= 1;
+    if (isRight) keyX += 1;
 
     if (keyX !== 0 || keyY !== 0) {
       const klen = Math.hypot(keyX, keyY);
@@ -2728,14 +2801,17 @@ function startLoops()       {
     const moveMag = Math.hypot(inputX, inputY);
     const isMoving = moveMag > 0.05;
 
-    isCurrentlySprinting = false;
+    isCurrentlySprinting = isShift || (isMoving && moveMag > 0.9);
 
     if (isMoving && app.profile && moveDt > 0) {
       bumpInteraction();
       currentMovementHeading = Math.atan2(inputX, inputY);
       currentDeviceHeading = (currentMovementHeading * 180) / Math.PI;
-      // Tốc độ di chuyển chuẩn mực cân bằng hợp lý với tốc độ dã thú tiền sử (~15 - 18 km/h)
-      const spdKmh = calcMovementSpeedKmh(app.profile.player);
+
+      // Tốc độ di chuyển chuẩn mực mượt mà, phản hồi ngay tức thì
+      const baseSpdKmh = calcMovementSpeedKmh(app.profile.player);
+      const sprintFactor = isCurrentlySprinting ? 2.2 : 1.5;
+      const spdKmh = baseSpdKmh * sprintFactor;
       currentMovementSpeedKmh = spdKmh;
       const spdMs = spdKmh * (1000 / 3600);
       const distMeters = spdMs * Math.min(1, moveMag) * moveDt;
@@ -2744,13 +2820,65 @@ function startLoops()       {
       const deltaLat = (distMeters * inputY) / 111139;
       const deltaLon = (distMeters * inputX) / (111139 * Math.cos((virtualPlayerPos.lat * Math.PI) / 180));
 
-      virtualPlayerPos.lat += deltaLat;
-      virtualPlayerPos.lon += deltaLon;
+      const nextLat = virtualPlayerPos.lat + deltaLat;
+      const nextLon = virtualPlayerPos.lon + deltaLon;
 
-      // Tích luỹ quãng đường để quy đổi thành bước chân thật
-      pedometer.addGpsDistanceWalked(distMeters);
-      checkNearOutpostSupply();
-      updateHanoiTreasureHud(virtualPlayerPos);
+      // KIỂM TRA VA CHẠM MẶT NƯỚC & THIẾT BỊ THỦY HÀNH (BÈ TRE / THUYỀN)
+      const isWater = checkIsWaterLocation(nextLat, nextLon);
+      const hasWaterCraft = (app.profile.player.carried['bamboo_raft'] ?? 0) > 0 || (app.profile.player.carried['wooden_boat'] ?? 0) > 0;
+
+      if (isWater && !hasWaterCraft) {
+        currentMovementSpeedKmh = 0;
+        const nowMs = Date.now();
+        if (nowMs - lastWaterWarningMs > 4000) {
+          lastWaterWarningMs = nowMs;
+          toast('🌊 Phía trước là mặt nước sâu! Cần chế tạo Bè Tre hoặc Thuyền Độc Mộc trong Chế Tạo để vượt sông hồ.', 'warn');
+          audio.play('hit_wood');
+        }
+      } else {
+        virtualPlayerPos.lat = nextLat;
+        virtualPlayerPos.lon = nextLon;
+        app.profile.player.lastPosition = { ...virtualPlayerPos };
+
+        // Tích luỹ quãng đường để quy đổi thành bước chân thật
+        pedometer.addGpsDistanceWalked(distMeters);
+        checkNearOutpostSupply();
+        updateHanoiTreasureHud(virtualPlayerPos);
+      }
+    } else if (app.profile?.player.autoTravel && moveDt > 0) {
+      // TỰ ĐỘNG DI CHUYỂN DỌC THEO LỘ TRÌNH (ONLINE AUTO-TRAVEL LOOP)
+      const travel = app.profile.player.autoTravel;
+      const distToTarget = distanceMeters(virtualPlayerPos, travel.target);
+
+      if (distToTarget <= 15) {
+        const destName = travel.target.nameVi || 'Điểm đến';
+        app.profile.player.autoTravel = null;
+        persist();
+        audio.play('quest_complete');
+        toast(`🎉 Đã hoàn tất chuyến hành trình đến ${destName} an toàn!`, 'good');
+        updateAutoTravelHud();
+      } else {
+        const dLat = travel.target.lat - virtualPlayerPos.lat;
+        const dLon = travel.target.lon - virtualPlayerPos.lon;
+        const heading = Math.atan2(dLon * Math.cos((virtualPlayerPos.lat * Math.PI) / 180), dLat);
+        currentMovementHeading = heading;
+        currentDeviceHeading = (heading * 180) / Math.PI;
+
+        const autoSpeedKmh = travel.speedKmh || 8.0;
+        currentMovementSpeedKmh = autoSpeedKmh;
+        const spdMs = autoSpeedKmh * (1000 / 3600);
+        const distStep = spdMs * moveDt;
+
+        const deltaLat = (distStep * Math.cos(heading)) / 111139;
+        const deltaLon = (distStep * Math.sin(heading)) / (111139 * Math.cos((virtualPlayerPos.lat * Math.PI) / 180));
+
+        virtualPlayerPos.lat += deltaLat;
+        virtualPlayerPos.lon += deltaLon;
+        app.profile.player.lastPosition = { ...virtualPlayerPos };
+
+        pedometer.addGpsDistanceWalked(distStep);
+        updateAutoTravelHud();
+      }
     } else {
       currentMovementSpeedKmh = 0;
     }
@@ -2792,17 +2920,12 @@ function startLoops()       {
       }
     }
 
-    // Nhịp render: 60 FPS khi di chuyển/tương tác, 10 FPS khi đứng yên
-    const isInteracting = isMoving || timestamp - lastUserInteractionTime < 1500;
-    const targetFps = isInteracting ? 60 : 10;
-    const frameInterval = 1000 / targetFps;
-
-    const elapsed = timestamp - lastFrameTime;
-    if (elapsed < frameInterval) return;
-    lastFrameTime = timestamp - (elapsed % frameInterval);
+    // Tốc độ làm tươi mượt mà theo tần số quét màn hình (60Hz / 120Hz / 144Hz) với Delta Time chuẩn xác
+    const renderDt = lastFrameTime > 0 ? Math.min(0.1, (timestamp - lastFrameTime) / 1000) : 0.016;
+    lastFrameTime = timestamp;
 
     app.simTick++;
-    drawMap();
+    drawMap(renderDt);
   };
   cancelAnimationFrame(rafHandle);
   rafHandle = requestAnimationFrame(frame);
@@ -2962,7 +3085,10 @@ function sync()       {
 let lastNightThreatWarnMs = 0;
 
 function persist()       {
-  if (app.profile) app.save = putProfile(app.save, app.save.activeSlot, app.profile);
+  if (app.profile) {
+    app.profile.player.lastPosition = { ...virtualPlayerPos };
+    app.save = putProfile(app.save, app.save.activeSlot, app.profile);
+  }
   app.storageOk = writeSave(app.save, now());
 }
 
@@ -3041,7 +3167,7 @@ function checkBeastAttackDamage(beast                                        )  
   }
 }
 
-function drawMap()       {
+function drawMap(dt         )       {
   if (!mapView || !app.view || !app.profile) return;
 
   const { render: at, hasFix } = currentPosition();
@@ -3076,6 +3202,7 @@ function drawMap()       {
     aimHeading: currentMovementHeading,
     isAiming: isAimingInPad,
     aimWeaponType: getCurrentEquippedWeapon().isRanged ? (getCurrentEquippedWeapon().id === 'sharp_stone' ? 'stone' : 'bow') : (getCurrentEquippedWeapon().id === 'iron_spear' ? 'spear' : 'axe'),
+    dt,
   });
 }
 
@@ -3965,6 +4092,374 @@ function switchTab(targetTab        )       {
 
 // ---------------------------------------------------------------- điều khiển tĩnh
 
+
+// =========================================================================
+// HỆ THỐNG BẢN ĐỒ TOÀN CẢNH HÀ NỘI & TỰ HÀNH TRÌNH (HANOI MINIMAP & AUTO-TRAVEL)
+// =========================================================================
+
+                                
+             
+                 
+                   
+              
+              
+               
+                  
+ 
+
+export const HANOI_LANDMARKS                  = [
+  { id: 'hoguom', nameVi: 'Hồ Hoàn Kiếm & Tháp Rùa', district: 'Hoàn Kiếm', lat: 21.0285, lon: 105.8542, icon: '🐢', descVi: 'Trái tim Thăng Long cổ kính, nơi Rùa Thần ngự trị' },
+  { id: 'hotay', nameVi: 'Hồ Tây & Chùa Trấn Quốc', district: 'Tây Hồ', lat: 21.0583, lon: 105.8239, icon: '🌊', descVi: 'Mặt hồ mênh mông lộng gió, di tích danh thắng cổ' },
+  { id: 'hoangthanh', nameVi: 'Hoàng Thành Thăng Long', district: 'Ba Đình', lat: 21.0368, lon: 105.8402, icon: '🏯', descVi: 'Kinh đô ngàn năm văn hiến, trung tâm quyền lực cổ đại' },
+  { id: 'langbac', nameVi: 'Quảng Trường Ba Đình', district: 'Ba Đình', lat: 21.0368, lon: 105.8347, icon: '⭐', descVi: 'Quảng trường lịch sử linh thiêng' },
+  { id: 'vanmieu', nameVi: 'Văn Miếu - Quốc Tử Giám', district: 'Đống Đa', lat: 21.0294, lon: 105.8360, icon: '📜', descVi: 'Trường đại học đầu tiên, nơi lưu danh bảng vàng' },
+  { id: 'congviencaugiay', nameVi: 'Công Viên Cầu Giấy', district: 'Cầu Giấy', lat: 21.0256, lon: 105.7901, icon: '🌳', descVi: 'Khu vực thảm cỏ tự nhiên xanh mát phía Tây' },
+  { id: 'caulongbien', nameVi: 'Cầu Long Biên Lịch Sử', district: 'Long Biên', lat: 21.0425, lon: 105.8582, icon: '🌉', descVi: 'Cây cầu bắc qua dòng sông Hồng cuộn sóng' },
+  { id: 'mydinh', nameVi: 'Sân Vận Động Quốc Gia Mỹ Đình', district: 'Nam Từ Liêm', lat: 21.0205, lon: 105.7639, icon: '🏟️', descVi: 'Vùng đất phía Tây sầm uất và rộng lớn' },
+  { id: 'vanphuc', nameVi: 'Làng Lụa Vạn Phúc - Hà Đông', district: 'Hà Đông', lat: 20.9780, lon: 105.7728, icon: '🧵', descVi: 'Làng nghề dệt lụa truyền thống cổ xưa' },
+  { id: 'coloa', nameVi: 'Thành Cổ Loa & Đền An Dương Vương', district: 'Đông Anh', lat: 21.1128, lon: 105.8719, icon: '🏹', descVi: 'Toà thành ốc cổ xưa huyền thoại của nước Âu Lạc' },
+  { id: 'nuisoc', nameVi: 'Đền Gióng - Núi Sóc', district: 'Sóc Sơn', lat: 21.3142, lon: 105.8175, icon: '🐎', descVi: 'Nơi Thánh Gióng cưỡi ngựa sắt bay về trời' },
+  { id: 'nuibavi', nameVi: 'Vườn Quốc Gia Ba Vì - Đỉnh Vua', district: 'Ba Vì', lat: 21.0772, lon: 105.3628, icon: '⛰️', descVi: 'Đỉnh núi linh thiêng của Sơn Tinh Thần Núi' },
+  { id: 'chuahuong', nameVi: 'Quần Thể Danh Thắng Chùa Hương', district: 'Mỹ Đức', lat: 20.6186, lon: 105.7533, icon: '🛕', descVi: 'Vùng đất Phật thanh tịnh non nước hữu tình' },
+  { id: 'thanhsontay', nameVi: 'Thành Cổ Sơn Tây & Làng Đường Lâm', district: 'Sơn Tây', lat: 21.1394, lon: 105.5039, icon: '🏛️', descVi: 'Vùng đất hai vua, thành đá ong kiên cố' },
+];
+
+let selectedHanoiDest                                                                                                      = null;
+let lastWaterWarningMs = 0;
+
+/** Kiểm tra xem toạ độ có nằm trong vùng nước sâu hay không (Hồ Tây, Hồ Gươm, Sông Hồng...) */
+export function checkIsWaterLocation(lat        , lon        )          {
+  // 1. Kiểm tra các hồ nước lớn xác định tại Hà Nội
+  const waterLocations = [
+    { lat: 21.0583, lon: 105.8239, radius: 950 }, // Hồ Tây
+    { lat: 21.0478, lon: 105.8378, radius: 320 }, // Hồ Trúc Bạch
+    { lat: 21.0285, lon: 105.8542, radius: 230 }, // Hồ Gươm
+    { lat: 20.9702, lon: 105.8423, radius: 380 }, // Hồ Linh Đàm
+    { lat: 21.0175, lon: 105.8450, radius: 280 }, // Hồ Bảy Mẫu (Công viên Thống Nhất)
+    { lat: 21.0450, lon: 105.8650, radius: 450 }, // Sông Hồng 1
+    { lat: 21.0750, lon: 105.8350, radius: 500 }, // Sông Hồng 2
+    { lat: 21.0100, lon: 105.8900, radius: 480 }, // Sông Hồng 3
+  ];
+
+  for (const w of waterLocations) {
+    if (distanceMeters({ lat, lon }, { lat: w.lat, lon: w.lon }) <= w.radius) {
+      return true;
+    }
+  }
+
+  // 2. Kiểm tra POI gần đó có zone: 'water'
+  if (PACK) {
+    const nearby = poisNear(PACK, { lat, lon }, 120);
+    if (nearby.some((p) => p.zone === 'water' && p.distanceMeters <= (p.radiusMeters || 100))) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/** Mô phỏng hành trình tự động khi người chơi tắt game và vào lại */
+export function simulateOfflineAutoTravel()       {
+  if (!app.profile || !app.profile.player.autoTravel) return;
+  const travel = app.profile.player.autoTravel;
+  const nowMs = Date.now();
+  const lastMs = app.profile.player.survival.lastTickMs || travel.startTimeMs;
+  const elapsedSec = Math.max(0, (nowMs - lastMs) / 1000);
+  if (elapsedSec < 2) return;
+
+  const spdMs = ((travel.speedKmh || 8.0) * 1000) / 3600;
+  const distTraveledMeters = spdMs * elapsedSec;
+  const totalDist = travel.totalDistMeters || distanceMeters(travel.startPos, travel.target);
+
+  const progress = Math.min(1.0, distTraveledMeters / Math.max(1, totalDist));
+  const newLat = travel.startPos.lat + (travel.target.lat - travel.startPos.lat) * progress;
+  const newLon = travel.startPos.lon + (travel.target.lon - travel.startPos.lon) * progress;
+
+  virtualPlayerPos = { lat: newLat, lon: newLon };
+  app.profile.player.lastPosition = { ...virtualPlayerPos };
+
+  // Quy đổi quãng đường thành bước chân
+  const stepsGained = Math.round(distTraveledMeters / 0.75);
+  if (stepsGained > 0) {
+    app.profile.player.steps.totalSteps += stepsGained;
+    app.profile.player.lifetime.steps += stepsGained;
+    pedometer.addGpsDistanceWalked(distTraveledMeters);
+  }
+
+  if (progress >= 1.0) {
+    const destName = travel.target.nameVi || 'Điểm đến';
+    app.profile.player.autoTravel = null;
+    toast(`🎉 Trong lúc vắng mặt, bạn đã đến đích an toàn tại ${destName}! (+${stepsGained.toLocaleString()} bước chân)`, 'good');
+  } else {
+    const kmStr = (distTraveledMeters / 1000).toFixed(1);
+    toast(`🚶 Trong lúc vắng mặt, nhân vật đã tự đi được ${kmStr} km (+${stepsGained.toLocaleString()} bước)! Đang tiếp tục hành trình.`, 'good');
+  }
+  persist();
+  updateAutoTravelHud();
+}
+
+/** Cập nhật Banner Hiển Thị Tiến Độ Tự Hành Trình Trên HUD */
+export function updateAutoTravelHud()       {
+  const banner = document.getElementById('auto-travel-hud-banner');
+  if (!banner) return;
+
+  if (!app.profile || !app.profile.player.autoTravel) {
+    banner.hidden = true;
+    return;
+  }
+
+  const travel = app.profile.player.autoTravel;
+  banner.hidden = false;
+
+  const targetNameEl = document.getElementById('auto-travel-target-name');
+  if (targetNameEl) targetNameEl.textContent = travel.target.nameVi || 'Điểm Chỉ Định';
+
+  const distRemaining = distanceMeters(virtualPlayerPos, travel.target);
+  const totalDist = Math.max(1, travel.totalDistMeters || distanceMeters(travel.startPos, travel.target));
+  const progressRatio = Math.max(0, Math.min(1, 1 - distRemaining / totalDist));
+
+  const fillEl = document.getElementById('auto-travel-progress-fill');
+  if (fillEl) fillEl.style.width = `${Math.round(progressRatio * 100)}%`;
+
+  const statusTextEl = document.getElementById('auto-travel-status-text');
+  if (statusTextEl) {
+    const kmRem = (distRemaining / 1000).toFixed(1);
+    const speedKmh = travel.speedKmh || 8.0;
+    const minsRem = Math.round((distRemaining / (speedKmh * 1000 / 60)));
+    statusTextEl.textContent = `Còn ${kmRem} km (${minsRem} phút) · ${Math.round(progressRatio * 100)}%`;
+  }
+}
+
+/** Mở Modal Bản Đồ Toàn Cảnh Hà Nội */
+export function openHanoiMinimapModal()       {
+  const overlay = el('overlay-hanoi-minimap');
+  overlay.hidden = false;
+  updateControlsVisibility();
+
+  // Khởi tạo danh sách địa danh bên sidebar
+  renderHanoiLandmarkList();
+
+  // Vẽ bản đồ vector Hà Nội trên Canvas
+  drawHanoiVectorMap();
+}
+
+function renderHanoiLandmarkList()       {
+  const listEl = document.getElementById('hanoi-landmarks-list');
+  if (!listEl) return;
+  listEl.replaceChildren();
+
+  for (const lm of HANOI_LANDMARKS) {
+    const dist = distanceMeters(virtualPlayerPos, { lat: lm.lat, lon: lm.lon });
+    const distStr = dist >= 1000 ? `${(dist / 1000).toFixed(1)} km` : `${Math.round(dist)} m`;
+
+    const item = document.createElement('div');
+    item.className = `hanoi-landmark-item ${selectedHanoiDest?.id === lm.id ? 'is-selected' : ''}`;
+    item.innerHTML = `
+      <span class="landmark-item-icon">${lm.icon}</span>
+      <div class="landmark-item-name">${lm.nameVi} <small style="color:#94a3b8;font-size:10px;">(${lm.district})</small></div>
+      <span class="landmark-item-dist">${distStr}</span>
+    `;
+
+    item.onclick = () => {
+      selectHanoiDestination(lm);
+    };
+
+    listEl.append(item);
+  }
+}
+
+function selectHanoiDestination(dest                                                                                                           )       {
+  selectedHanoiDest = dest;
+  audio.play('click');
+
+  const nameEl = document.getElementById('hanoi-dest-name');
+  const iconEl = document.getElementById('hanoi-dest-icon');
+  const distEl = document.getElementById('hanoi-dest-dist');
+  const etaEl = document.getElementById('hanoi-dest-eta');
+  const stepsEl = document.getElementById('hanoi-dest-steps');
+  const btnStart = document.getElementById('btn-start-auto-travel')                            ;
+
+  const distM = distanceMeters(virtualPlayerPos, { lat: dest.lat, lon: dest.lon });
+  const distKm = distM / 1000;
+  const speedKmh = app.profile ? calcMovementSpeedKmh(app.profile.player) * 1.5 : 8.0;
+  const hours = distKm / speedKmh;
+  const mins = Math.round(hours * 60);
+  const steps = Math.round(distM / 0.75);
+
+  if (nameEl) nameEl.textContent = `${dest.nameVi} (${dest.district})`;
+  if (iconEl) iconEl.textContent = dest.icon || '📍';
+  if (distEl) distEl.textContent = distKm >= 1 ? `${distKm.toFixed(2)} km` : `${Math.round(distM)} m`;
+  if (etaEl) etaEl.textContent = mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins} phút`;
+  if (stepsEl) stepsEl.textContent = `~${steps.toLocaleString()} bước`;
+
+  if (btnStart) {
+    btnStart.disabled = false;
+    btnStart.onclick = () => {
+      startAutoTravelToSelected();
+    };
+  }
+
+  // Cập nhật lại UI bản đồ & danh sách
+  renderHanoiLandmarkList();
+  drawHanoiVectorMap();
+}
+
+function startAutoTravelToSelected()       {
+  if (!app.profile || !selectedHanoiDest) return;
+  const dest = selectedHanoiDest;
+  const distM = distanceMeters(virtualPlayerPos, { lat: dest.lat, lon: dest.lon });
+  const speedKmh = calcMovementSpeedKmh(app.profile.player) * 1.5;
+
+  app.profile.player.autoTravel = {
+    target: { lat: dest.lat, lon: dest.lon, nameVi: dest.nameVi },
+    startPos: { ...virtualPlayerPos },
+    startTimeMs: Date.now(),
+    speedKmh,
+    totalDistMeters: distM,
+  };
+
+  persist();
+  audio.play('quest_accept');
+  toast(`🚀 Đã kích hoạt Tự Hành Trình đến ${dest.nameVi}! Nhân vật sẽ tự di chuyển liên tục kể cả khi bạn tắt game.`, 'good');
+
+  el('overlay-hanoi-minimap').hidden = true;
+  updateControlsVisibility();
+  updateAutoTravelHud();
+}
+
+/** Vẽ bản đồ toàn cảnh Hà Nội trên Canvas */
+function drawHanoiVectorMap()       {
+  const canvas = document.getElementById('hanoi-minimap-canvas')                            ;
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const w = canvas.width;
+  const h = canvas.height;
+
+  // Bounding box tỉnh Hà Nội: Lat 20.55 .. 21.38, Lon 105.30 .. 106.05
+  const MIN_LAT = 20.55;
+  const MAX_LAT = 21.38;
+  const MIN_LON = 105.30;
+  const MAX_LON = 106.05;
+
+  const mapX = (lon        ) => ((lon - MIN_LON) / (MAX_LON - MIN_LON)) * (w - 40) + 20;
+  const mapY = (lat        ) => (1 - (lat - MIN_LAT) / (MAX_LAT - MIN_LAT)) * (h - 40) + 20;
+
+  // Nền bản đồ xanh rừng hoang dã
+  ctx.fillStyle = '#0b1910';
+  ctx.fillRect(0, 0, w, h);
+
+  // Lưới toạ độ mờ
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < w; x += 40) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+  }
+  for (let y = 0; y < h; y += 40) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+  }
+
+  // Vẽ Dòng Sông Hồng uốn lượn qua Hà Nội
+  ctx.strokeStyle = '#0284c7';
+  ctx.lineWidth = 8;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  const riverPoints                     = [
+    [21.35, 105.35],
+    [21.28, 105.48],
+    [21.18, 105.65],
+    [21.12, 105.78],
+    [21.05, 105.85],
+    [20.95, 105.92],
+    [20.85, 105.98],
+    [20.70, 106.02],
+  ];
+  riverPoints.forEach(([lat, lon], i) => {
+    const px = mapX(lon);
+    const py = mapY(lat);
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  });
+  ctx.stroke();
+
+  // Hồ Tây
+  ctx.fillStyle = 'rgba(56, 189, 248, 0.6)';
+  ctx.beginPath();
+  ctx.ellipse(mapX(105.8239), mapY(21.0583), 14, 11, 0.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Núi Ba Vì (Vùng cao phía Tây)
+  ctx.fillStyle = 'rgba(34, 197, 94, 0.25)';
+  ctx.beginPath();
+  ctx.arc(mapX(105.3628), mapY(21.0772), 28, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Vẽ lộ trình kết nối nếu đang chọn điểm đến
+  if (selectedHanoiDest) {
+    const px = mapX(virtualPlayerPos.lon);
+    const py = mapY(virtualPlayerPos.lat);
+    const tx = mapX(selectedHanoiDest.lon);
+    const ty = mapY(selectedHanoiDest.lat);
+
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.moveTo(px, py);
+    ctx.lineTo(tx, ty);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Vẽ các địa danh nổi tiếng
+  for (const lm of HANOI_LANDMARKS) {
+    const lx = mapX(lm.lon);
+    const ly = mapY(lm.lat);
+    const isSel = selectedHanoiDest?.id === lm.id;
+
+    ctx.fillStyle = isSel ? '#fef08a' : 'rgba(254, 240, 138, 0.75)';
+    ctx.beginPath();
+    ctx.arc(lx, ly, isSel ? 7 : 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.font = isSel ? 'bold 11px system-ui' : '10px system-ui';
+    ctx.fillStyle = isSel ? '#fef08a' : '#cbd5e1';
+    ctx.textAlign = 'center';
+    ctx.fillText(lm.nameVi.split('&')[0].trim(), lx, ly - 8);
+  }
+
+  // Điểm Doanh Trại
+  const campPos = getHomeCampCenter();
+  if (campPos) {
+    const cx = mapX(campPos.lon);
+    const cy = mapY(campPos.lat);
+    ctx.fillStyle = '#f59e0b';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.font = 'bold 11px system-ui';
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillText('⛺ Trại', cx, cy + 14);
+  }
+
+  // Điểm Người Chơi
+  const px = mapX(virtualPlayerPos.lon);
+  const py = mapY(virtualPlayerPos.lat);
+  ctx.fillStyle = '#38bdf8';
+  ctx.beginPath();
+  ctx.arc(px, py, 7, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.font = 'bold 11px system-ui';
+  ctx.fillStyle = '#38bdf8';
+  ctx.fillText('📍 Bạn', px, py + 14);
+}
+
+
 function wireStaticControls()       {
   // Đăng ký compass lần đầu và bật active ngay (app khởi động ở tab map)
   resumeCompass();
@@ -4008,6 +4503,67 @@ function wireStaticControls()       {
 
   // Bấm vào vùng backdrop ngoài Drawer để đóng về Bản đồ
   el('drawer-backdrop').onclick = () => switchTab('map');
+
+  // Nút mở Bản Đồ Toàn Cảnh Hà Nội
+  const btnOpenHanoiMap = document.getElementById('btn-open-hanoi-map');
+  if (btnOpenHanoiMap) {
+    btnOpenHanoiMap.onclick = (e) => {
+      e.stopPropagation();
+      openHanoiMinimapModal();
+      audio.play('click');
+    };
+  }
+
+  const btnHanoiMapClose = document.getElementById('btn-hanoi-map-close');
+  if (btnHanoiMapClose) {
+    btnHanoiMapClose.onclick = () => {
+      el('overlay-hanoi-minimap').hidden = true;
+      updateControlsVisibility();
+      audio.play('click');
+    };
+  }
+
+  // Nút huỷ Tự Hành Trình trên HUD
+  const btnCancelAutoTravel = document.getElementById('btn-cancel-auto-travel');
+  if (btnCancelAutoTravel) {
+    btnCancelAutoTravel.onclick = () => {
+      if (app.profile) {
+        app.profile.player.autoTravel = null;
+        persist();
+        updateAutoTravelHud();
+        toast('🛑 Đã dừng Tự Hành Trình.', 'good');
+      }
+    };
+  }
+
+  // Bắt sự kiện click trên Canvas Bản đồ Hà Nội để chọn điểm bất kỳ
+  const hanoiCanvas = document.getElementById('hanoi-minimap-canvas')                            ;
+  if (hanoiCanvas) {
+    hanoiCanvas.onclick = (e) => {
+      const rect = hanoiCanvas.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+      const w = hanoiCanvas.width;
+      const h = hanoiCanvas.height;
+
+      const MIN_LAT = 20.55;
+      const MAX_LAT = 21.38;
+      const MIN_LON = 105.30;
+      const MAX_LON = 106.05;
+
+      const clickedLon = MIN_LON + ((clickX - 20) / (w - 40)) * (MAX_LON - MIN_LON);
+      const clickedLat = MAX_LAT - ((clickY - 20) / (h - 40)) * (MAX_LAT - MIN_LAT);
+
+      selectHanoiDestination({
+        id: `custom_${Date.now()}`,
+        nameVi: 'Điểm Chấm Chọn',
+        district: 'Hà Nội',
+        lat: clickedLat,
+        lon: clickedLon,
+        icon: '📍',
+      });
+    };
+  }
 
   // Cụm điều khiển Bản đồ: Về ban đầu (🎯)
   const btnPocket = document.getElementById('btn-pocket-mode');
@@ -4498,9 +5054,27 @@ function jumpTime(deltaMs        )       {
   sync();
 }
 
-function registerServiceWorker()       {
+async function registerServiceWorker()                {
   if (!('serviceWorker' in navigator)) return;
-  // Đăng ký service worker chính là thứ làm game chạy được khi ngắt hoàn toàn Internet.
+  // Trong môi trường dev local: gỡ service worker và xoá CacheStorage để code mới luôn được tải trực tiếp từ đĩa
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    try {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      for (const r of registrations) {
+        await r.unregister();
+      }
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        for (const k of keys) {
+          await caches.delete(k);
+        }
+      }
+    } catch {
+      // bỏ qua nếu browser chặn
+    }
+    return;
+  }
+  // Đăng ký service worker chính là thứ làm game chạy được khi ngắt hoàn toàn Internet (Production)
   navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(() => {
     /* chạy qua file:// hoặc trình duyệt chặn — game vẫn chơi được, chỉ là không cache offline */
   });
@@ -4520,6 +5094,7 @@ Object.assign(globalThis                           , {
     enterProfile,
     jumpTime,
     audio,
+    getMapView: () => mapView,
     addSteps(count        ) {
       if (!app.profile) return;
       app.stepAccumulator += count;

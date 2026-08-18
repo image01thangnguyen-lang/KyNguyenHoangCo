@@ -5231,3 +5231,328 @@ h3 {
     transform: translateY(0) scale(1);
   }
 }
+
+/* ================================================================
+   BẢN ĐỒ TOÀN CẢNH HÀ NỘI & HÀNH TRÌNH TỰ ĐỘNG (HANOI MINIMAP & AUTO-TRAVEL)
+   ================================================================ */
+
+.btn-hud-map {
+  background: linear-gradient(135deg, rgba(30, 58, 138, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%) !important;
+  border-color: rgba(56, 189, 248, 0.6) !important;
+  color: #7dd3fc !important;
+}
+.btn-hud-map:hover {
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.45) !important;
+}
+
+/* 1. Banner Tự Động Hành Trình Trên HUD */
+.auto-travel-hud-banner {
+  position: fixed;
+  top: calc(var(--safe-t, 10px) + 68px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 65;
+  width: min(92vw, 420px);
+  pointer-events: auto;
+  animation: slideDownIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.auto-travel-hud-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: rgba(15, 23, 42, 0.94);
+  border: 1.5px solid rgba(56, 189, 248, 0.6);
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.75), 0 0 16px rgba(56, 189, 248, 0.25);
+  backdrop-filter: blur(12px);
+}
+
+.auto-travel-hud-icon {
+  font-size: 24px;
+  line-height: 1;
+  animation: pulseWalk 1.2s infinite ease-in-out;
+}
+@keyframes pulseWalk {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-3px) scale(1.1); }
+}
+
+.auto-travel-hud-body {
+  flex: 1;
+  min-width: 0;
+}
+.auto-travel-hud-title {
+  font-size: 11px;
+  font-weight: 800;
+  color: #94a3b8;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.auto-travel-hud-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 3px;
+}
+.auto-travel-progress-bar {
+  width: 100%;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.auto-travel-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #38bdf8 0%, #4ade80 100%);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+.auto-travel-status-text {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #38bdf8;
+}
+
+.btn-auto-travel-cancel {
+  padding: 5px 9px;
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  color: #fca5a5;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+.btn-auto-travel-cancel:hover {
+  background: rgba(239, 68, 68, 0.4);
+  color: #ffffff;
+}
+
+/* 2. Modal Bản Đồ Toàn Cảnh Hà Nội */
+.card--hanoi-map {
+  max-width: 820px;
+  width: 95vw;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  background: rgba(18, 14, 10, 0.97);
+  border: 1.8px solid rgba(245, 158, 11, 0.5);
+  border-radius: 18px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.9), 0 0 24px rgba(245, 158, 11, 0.2);
+  z-index: 120;
+}
+
+.hanoi-map-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(241, 218, 167, 0.15);
+}
+
+.hanoi-map-body {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 14px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .hanoi-map-body {
+    grid-template-columns: 1fr;
+    grid-template-rows: 240px 1fr;
+    overflow-y: auto;
+  }
+}
+
+.hanoi-map-canvas-wrap {
+  position: relative;
+  background: #0d1b11;
+  border: 1.5px solid rgba(241, 218, 167, 0.25);
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#hanoi-minimap-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: crosshair;
+}
+
+.hanoi-map-legend {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.75);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  color: #cbd5e1;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.legend-dot--player { background: #38bdf8; box-shadow: 0 0 6px #38bdf8; }
+.legend-dot--camp { background: #f59e0b; box-shadow: 0 0 6px #f59e0b; }
+.legend-dot--target { background: #ef4444; box-shadow: 0 0 6px #ef4444; }
+
+.hanoi-map-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.hanoi-dest-card {
+  background: rgba(30, 41, 59, 0.65);
+  border: 1.2px solid rgba(56, 189, 248, 0.35);
+  border-radius: 10px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.hanoi-dest-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.hanoi-dest-icon {
+  font-size: 20px;
+}
+.hanoi-dest-title-wrap {
+  flex: 1;
+  min-width: 0;
+}
+.hanoi-dest-title-wrap strong {
+  display: block;
+  font-size: 12.5px;
+  color: #fef08a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hanoi-dest-dist {
+  font-size: 11px;
+  font-weight: 700;
+  color: #38bdf8;
+}
+.hanoi-dest-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 10.5px;
+  color: #94a3b8;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 5px;
+}
+.hanoi-dest-meta strong {
+  color: #f1f5f9;
+}
+
+.btn-start-travel {
+  width: 100%;
+  padding: 9px;
+  font-size: 12px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  border-color: #38bdf8;
+  color: #fff;
+}
+.btn-start-travel:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.hanoi-landmarks-title {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--ink-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.hanoi-landmarks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  overflow-y: auto;
+}
+
+.hanoi-landmark-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 9px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(241, 218, 167, 0.12);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+.hanoi-landmark-item:hover {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.45);
+}
+.hanoi-landmark-item.is-selected {
+  background: rgba(2, 132, 199, 0.25);
+  border-color: #38bdf8;
+}
+.landmark-item-icon {
+  font-size: 14px;
+}
+.landmark-item-name {
+  flex: 1;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.landmark-item-dist {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #7dd3fc;
+}
+
+/* 3. Phân tầng z-index tuyệt đối & Tự động ẩn controls khi mở Drawer */
+.tab--drawer {
+  z-index: 100 !important;
+}
+
+.overlay {
+  z-index: 120 !important;
+}
+
+.toasts {
+  z-index: 200 !important;
+}
+

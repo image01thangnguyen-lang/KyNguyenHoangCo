@@ -27,5 +27,12 @@ Thumbs.db
 android/.gradle/
 android/app/build/
 android/local.properties
+android/app/src/main/assets/www/
 *.apk
 *.aab
+
+# iOS build & cache
+ios/App/App/www/
+ios/App/build/
+ios/App/Payload/
+*.ipa

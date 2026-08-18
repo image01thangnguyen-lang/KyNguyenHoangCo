@@ -70,7 +70,13 @@ export async function buildApkAssets(): Promise<void> {
   const coreSrc = join(ROOT, 'packages', 'game-core');
   await copyAndTransformTree(coreSrc, join(OUT_DIR, 'packages', 'game-core'));
 
-  // 3. Tạo file index.html chuyển tiếp ở gốc www
+  // 3. Copy thư mục 3D models (GLB & FBX)
+  console.log('🦖 Xử lý models (3D & FBX)...');
+  const modelsSrc = join(ROOT, 'models');
+  await cp(modelsSrc, join(OUT_DIR, 'models'), { recursive: true });
+  await cp(modelsSrc, join(OUT_DIR, 'apps', 'game', 'models'), { recursive: true });
+
+  // 4. Tạo file index.html chuyển tiếp ở gốc www
   console.log('📄 Tạo root index.html chuyển tiếp...');
   const rootIndexHtml = `<!doctype html>
 <html>
