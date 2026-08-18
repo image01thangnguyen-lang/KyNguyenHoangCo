@@ -16,9 +16,11 @@
       rel="stylesheet"
     />
 
-    <!-- Three.js (r128) & GLTFLoader -->
+    <!-- Three.js (r128), fflate, GLTFLoader & FBXLoader -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/libs/fflate.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/FBXLoader.js"></script>
 
     <style>
       :root {
@@ -786,15 +788,19 @@
           </div>
         </div>
 
-        <!-- Cụm 2: Kinh Tế & Chu Kỳ Ngày Đêm -->
-        <div class="hud-env-capsule">
+        <!-- Cụm 2: Kinh Tế & Chu Kỳ Ngày Đêm & Thời Tiết Thực Tế -->
+        <div class="hud-env-capsule" id="hud-env-capsule" title="Bấm để xem Bảng Khí Tượng & Lịch Trình Sinh Tồn" style="cursor: pointer;">
           <div class="economy-row">
             <span class="coin-pill">🪙 <span id="val-gold">150</span> Vàng</span>
             <span class="fang-pill">🦷 <span id="val-fangs">0</span> Răng Nanh</span>
           </div>
           <div class="time-row">
-            <span id="hud-time-text" class="time-tag">Bình Minh</span>
-            <span id="hud-phase-badge" class="phase-badge">Kỷ Jura</span>
+            <span id="hud-clock-text" class="time-tag">--:--:--</span>
+            <span id="hud-phase-badge" class="phase-badge">🌙 Đêm Tối</span>
+          </div>
+          <div class="weather-row" style="display: flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 800; color: #38bdf8;">
+            <span id="hud-weather-icon">☀️</span>
+            <span id="hud-weather-text">Trời Quang</span>
           </div>
         </div>
       </header>
@@ -889,23 +895,60 @@
             thirst: 100,
             stamina: 100,
             maxStamina: 100,
-            speed: 7.0,
+            speed: 3.8,
             attackPower: 25,
             armor: 0,
             weaponLevel: 1, // 1: Giáo Gỗ, 2: Giáo Đá, 3: Đại Giáo Bọc Xương T-Rex
             weaponName: 'Giáo Gỗ Tiền Sử',
             isAttacking: false,
             attackTimer: 0,
+            isPickingUp: false,
+            pickupTimer: 0,
+            isHitReacting: false,
+            hitTimer: 0,
+            isDead: false,
             isDodging: false,
             dodgeTimer: 0,
             dodgeDir: new THREE.Vector3(),
             facingAngle: 0,
             moving: false,
-            currentAnimName: 'Idle',
+            currentAnimName: 'idle',
             group: new THREE.Group(),
             characters: {
-              male: { file: 'warrior.glb', targetHeight: 1.85, model: null, mixer: null, actions: {}, currentAction: null, currentAnimName: 'Idle' },
-              female: { file: 'warrior_female.glb', targetHeight: 1.75, model: null, mixer: null, actions: {}, currentAction: null, currentAnimName: 'Idle' }
+              male: {
+                type: 'fbx',
+                files: {
+                  idle: 'warrior_idle.fbx',
+                  walk: 'warrior_walk.fbx',
+                  attack: 'warrior_attack.fbx',
+                  death: 'warrior_death.fbx',
+                  pickup: 'warrior_picking_up.fbx',
+                  hit: 'warrior_hit_reaction.fbx'
+                },
+                targetHeight: 1.85,
+                model: null,
+                mixer: null,
+                actions: {},
+                currentAction: null,
+                currentAnimName: 'idle'
+              },
+              female: {
+                type: 'fbx',
+                files: {
+                  idle: 'female_warrior_idle.fbx',
+                  walk: 'female_warrior_walk.fbx',
+                  attack: 'female_warrior_attack.fbx',
+                  death: 'female_warrior_death.fbx',
+                  pickup: 'female_warrior_picking_up.fbx',
+                  hit: 'female_warrior_hit_reaction.fbx'
+                },
+                targetHeight: 1.75,
+                model: null,
+                mixer: null,
+                actions: {},
+                currentAction: null,
+                currentAnimName: 'idle'
+              }
             }
           },
           economy: {
@@ -929,9 +972,27 @@
             { id: 3, title: 'Săn Bạo Chúa T-Rex', targetType: 'kill_trex', required: 1, rewardGold: 500, rewardFangs: 2, completed: false }
           ],
           time: {
-            dayTime: 0.25,
-            daySpeed: 0.005,
-            isNight: false
+            now: new Date(),
+            hours: 0,
+            minutes: 0,
+            seconds: 0,
+            dayOfWeek: 0,
+            dateStr: '',
+            timeStr: '',
+            phase: 'night',
+            phaseNameVi: 'Đêm Tối',
+            isNight: false,
+            isBloodMoon: false
+          },
+          weather: {
+            condition: 'clear',
+            nameVi: 'Trời Quang',
+            icon: '☀️',
+            desc: 'Trời quang đãng, tầm nhìn xa.',
+            isRaining: false,
+            rainIntensity: 0,
+            temperature: 28,
+            regionName: 'Miền Bắc (Hà Nội, 21.0°N)'
           },
           started: false
         };
@@ -1053,6 +1114,197 @@
         GameState.player.group.add(playerTorchLight);
 
         // ----------------------------------------------------
+        // HỆ THỐNG HIỆU ỨNG HẠT MƯA 3D (PROCEDURAL 3D RAIN FX)
+        // ----------------------------------------------------
+        const rainCount = 3000;
+        const rainGeo = new THREE.BufferGeometry();
+        const rainPositions = new Float32Array(rainCount * 3);
+        const rainVelocities = new Float32Array(rainCount);
+
+        for (let i = 0; i < rainCount; i++) {
+          rainPositions[i * 3] = (Math.random() - 0.5) * 75;
+          rainPositions[i * 3 + 1] = Math.random() * 32;
+          rainPositions[i * 3 + 2] = (Math.random() - 0.5) * 75;
+          rainVelocities[i] = 16 + Math.random() * 8;
+        }
+        rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPositions, 3));
+        const rainMat = new THREE.PointsMaterial({
+          color: 0x93c5fd,
+          size: 0.18,
+          transparent: true,
+          opacity: 0.7
+        });
+        const rainParticles = new THREE.Points(rainGeo, rainMat);
+        rainParticles.visible = false;
+        scene.add(rainParticles);
+
+        // ----------------------------------------------------
+        // ĐỘNG CƠ TÍNH TOÁN THỜI TIẾT & ĐỒNG BỘ THỜI GIAN THỰC
+        // (REAL-TIME CLOCK & PROCEDURAL WEATHER ENGINE)
+        // ----------------------------------------------------
+        function calculateWeather(lat = 21.0285, lon = 105.8542, now = new Date()) {
+          const year = now.getFullYear();
+          const month = now.getMonth() + 1;
+          const date = now.getDate();
+          const dayStr = `${year}-${String(month).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
+
+          let seed = 0;
+          const seedStr = `weather_${dayStr}_${Math.floor(lat * 10)}_${Math.floor(lon * 10)}`;
+          for (let i = 0; i < seedStr.length; i++) {
+            seed = (seed * 31 + seedStr.charCodeAt(i)) >>> 0;
+          }
+          function pseudoRandom() {
+            seed = (seed * 1664525 + 1013904223) >>> 0;
+            return (seed >>> 0) / 4294967296;
+          }
+
+          const isNorth = lat >= 19.5;
+          const isCentral = lat >= 13.5 && lat < 19.5;
+          const isSouth = lat < 13.5;
+
+          let rainChance = 0.28;
+          let heatChance = 0.15;
+          let coldChance = 0.0;
+
+          if (isNorth) {
+            if (month >= 11 || month <= 2) { coldChance = 0.45; rainChance = 0.15; heatChance = 0.0; }
+            else if (month >= 5 && month <= 8) { heatChance = 0.38; rainChance = 0.35; }
+            else { rainChance = 0.22; }
+          } else if (isSouth) {
+            if (month >= 5 && month <= 11) { rainChance = 0.65; heatChance = 0.2; }
+            else { rainChance = 0.08; heatChance = 0.55; }
+          }
+
+          const roll = pseudoRandom();
+          let cond = 'clear';
+          let nameVi = 'Trời Quang';
+          let icon = '☀️';
+          let desc = 'Trời quang mây tạnh, tầm nhìn xa lý tưởng để đi săn và hái lượm dã ngoại.';
+          let isRaining = false;
+          let rainIntensity = 0;
+          let temp = 28;
+
+          if (roll < rainChance) {
+            const r2 = pseudoRandom();
+            if (r2 < 0.35) {
+              cond = 'drizzle';
+              nameVi = 'Mưa Phùn';
+              icon = '🌦️';
+              desc = 'Mưa phùn nhẹ hạt. Đất rừng ẩm ướt, nấm và thảo dược mọc nhanh.';
+              isRaining = true;
+              rainIntensity = 0.35;
+              temp = 24;
+            } else if (r2 < 0.8) {
+              cond = 'rain';
+              nameVi = 'Mưa Rào';
+              icon = '🌧️';
+              desc = 'Mưa rào nặng hạt. Tự động tưới nước cho cây trồng và tích nước ngọt tại trại.';
+              isRaining = true;
+              rainIntensity = 0.7;
+              temp = 22;
+            } else {
+              cond = 'downpour';
+              nameVi = 'Mưa Bão';
+              icon = '⛈️';
+              desc = 'Mưa dông bão giật. Sấm sét vang rền, dã thú tìm nơi ẩn nấp.';
+              isRaining = true;
+              rainIntensity = 1.0;
+              temp = 20;
+            }
+          } else if (roll < rainChance + coldChance) {
+            cond = 'cold';
+            nameVi = 'Rét Đậm';
+            icon = '❄️';
+            desc = 'Không khí buốt giá. Độ đói giảm nhanh hơn 30%, cần lửa trại và áo da thú để giữ ấm.';
+            temp = 14;
+          } else if (roll < rainChance + coldChance + heatChance) {
+            cond = 'heat';
+            nameVi = 'Nắng Gắt';
+            icon = '🌡️';
+            desc = 'Nắng nóng gay gắt. Độ khát giảm nhanh hơn 40%, tăng 25% tốc độ nung quặng & sấy thịt.';
+            temp = 36;
+          } else {
+            const r3 = pseudoRandom();
+            if (r3 < 0.45) {
+              cond = 'cloudy';
+              nameVi = 'Nhiều Mây';
+              icon = '⛅';
+              desc = 'Trời nhiều mây râm mát, điều kiện thuận lợi nhất để viễn chinh khám phá vùng đất mới.';
+              temp = 26;
+            }
+          }
+
+          return {
+            condition: cond,
+            nameVi,
+            icon,
+            desc,
+            isRaining,
+            rainIntensity,
+            temperature: temp,
+            dayStr,
+            regionName: isNorth ? 'Miền Bắc (Hà Nội, 21.0°N)' : isCentral ? 'Miền Trung (Đà Nẵng, 16.0°N)' : 'Miền Nam (TP.HCM, 10.8°N)'
+          };
+        }
+
+        function updateWorldWeatherAndClock() {
+          const now = new Date();
+          const hours = now.getHours();
+          const minutes = now.getMinutes();
+          const seconds = now.getSeconds();
+          const dayOfWeek = now.getDay();
+
+          const daysVi = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+          const pad = (n) => String(n).padStart(2, '0');
+          const timeStr = `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+          const dateStr = `${daysVi[dayOfWeek]}, ${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()}`;
+
+          // Kiểm tra các mốc thời gian đặc biệt
+          const isBloodMoon = (dayOfWeek === 6 && hours >= 20 && hours < 22);
+          const isNight = (hours >= 20 || hours < 5);
+          const isEvening = (hours >= 18 && hours < 20);
+          const isMorning = (hours >= 5 && hours < 12);
+          const isNoon = (hours >= 12 && hours < 14);
+
+          let phase = 'day';
+          let phaseNameVi = 'Ban Ngày';
+          if (isBloodMoon) {
+            phase = 'blood_moon';
+            phaseNameVi = 'Trăng Máu';
+          } else if (isNight) {
+            phase = 'night';
+            phaseNameVi = 'Đêm Tối (Phòng Thủ)';
+          } else if (isEvening) {
+            phase = 'evening';
+            phaseNameVi = 'Hoàng Hôn';
+          } else if (isNoon) {
+            phase = 'noon';
+            phaseNameVi = 'Chính Trưa';
+          } else if (isMorning) {
+            phase = 'morning';
+            phaseNameVi = 'Bình Minh';
+          }
+
+          GameState.time.now = now;
+          GameState.time.hours = hours;
+          GameState.time.minutes = minutes;
+          GameState.time.seconds = seconds;
+          GameState.time.dayOfWeek = dayOfWeek;
+          GameState.time.dateStr = dateStr;
+          GameState.time.timeStr = timeStr;
+          GameState.time.phase = phase;
+          GameState.time.phaseNameVi = phaseNameVi;
+          GameState.time.isNight = isNight;
+          GameState.time.isBloodMoon = isBloodMoon;
+
+          // Cập nhật Thời Tiết
+          GameState.weather = calculateWeather(21.0285, 105.8542, now);
+        }
+
+        updateWorldWeatherAndClock();
+        setInterval(updateWorldWeatherAndClock, 1000);
+
+        // ----------------------------------------------------
         // ĐỊA HÌNH & LỬA TRẠI TIỀN ĐỒN KHỞI NGUYÊN
         // ----------------------------------------------------
         const groundGeo = new THREE.PlaneGeometry(360, 360, 80, 80);
@@ -1077,6 +1329,33 @@
         const ground = new THREE.Mesh(groundGeo, groundMat);
         ground.receiveShadow = true;
         scene.add(ground);
+
+        // ----------------------------------------------------
+        // HỆ THỐNG QUÉT VÀ BÁM ĐỊA HÌNH 3D (RAYCASTER TERRAIN SNAPPING)
+        // ----------------------------------------------------
+        const terrainRaycaster = new THREE.Raycaster();
+        const downVector = new THREE.Vector3(0, -1, 0);
+
+        /**
+         * Lấy độ cao chính xác của bề mặt địa hình tại tọa độ (x, z)
+         * @param {number} x - Tọa độ X thế giới
+         * @param {number} z - Tọa độ Z thế giới
+         * @param {THREE.Mesh} terrainMesh - Mesh địa hình (mặc định là ground)
+         * @returns {number} Độ cao Y thực tế của mặt cỏ
+         */
+        function getTerrainHeight(x, z, terrainMesh = ground) {
+          if (!terrainMesh) return 0;
+          terrainRaycaster.set(new THREE.Vector3(x, 100, z), downVector);
+          const hits = terrainRaycaster.intersectObject(terrainMesh, false);
+          if (hits.length > 0) {
+            return hits[0].point.y;
+          }
+          // Hàm toán học dự phòng khớp chuẩn xác với địa hình groundGeo
+          const dist = Math.hypot(x, z);
+          let y = Math.sin(x * 0.03) * Math.cos(z * 0.03) * 1.8;
+          if (dist < 14) y *= 0.1;
+          return y;
+        }
 
         // Lửa trại trung tâm
         const campGroup = new THREE.Group();
@@ -1126,7 +1405,8 @@
             z = (Math.random() - 0.5) * 190;
           } while (isSafeZone(x, z));
 
-          dummy.position.set(x, 0, z);
+          const gy = getTerrainHeight(x, z);
+          dummy.position.set(x, gy, z);
           dummy.rotation.set(0, Math.random() * Math.PI * 2, (Math.random() - 0.5) * 0.15);
           const sc = 0.7 + Math.random() * 0.55;
           dummy.scale.set(sc, sc, sc);
@@ -1140,26 +1420,60 @@
         // CHƯƠNG III: TRÌNH QUẢN LÝ HOẠT ẢNH DŨNG SĨ 3D
         // (WARRIOR ANIMATION SYSTEM & SKELETAL RIGGING)
         // ----------------------------------------------------
-        function setModelActualHeight(model, targetHeight) {
-          model.scale.set(1, 1, 1);
+        /**
+         * Chuẩn hóa kích thước và đặt đáy chân chạm mặt phẳng Y = 0
+         * @param {THREE.Object3D} model - Đối tượng 3D (Player hoặc Dinosaur hoặc Môi Trường)
+         * @param {number} targetHeight - Chiều cao mong muốn tính bằng mét (vd: 1.85m cho nam, 1.75m cho nữ)
+         */
+        /**
+         * Chuẩn hóa kích thước và đặt đáy chân chạm mặt phẳng Y = 0 (2-Layer Wrapper Group Pattern)
+         * @param {THREE.Object3D} model - Đối tượng 3D (Player hoặc Dinosaur)
+         * @param {number} targetHeight - Chiều cao mong muốn tính bằng mét (vd: 1.85m cho nam, 1.75m cho nữ)
+         * @param {boolean} isFbx - Đánh dấu model FBX (đơn vị cm -> scale 0.01)
+         */
+        function normalizeAndGroundModel(model, targetHeight = null, isFbx = true) {
+          // A. Ép tỉ lệ chiều cao chuẩn
+          const baseScale = isFbx ? 0.01 : 1.0;
+          model.scale.setScalar(baseScale);
           model.position.set(0, 0, 0);
           model.updateMatrixWorld(true);
 
-          const box = new THREE.Box3().setFromObject(model);
-          const size = new THREE.Vector3();
-          box.getSize(size);
+          let bbox = new THREE.Box3().setFromObject(model);
+          let modelHeight = bbox.max.y - bbox.min.y;
 
-          let h = size.y || Math.max(size.x, size.z) || 1.0;
-          const scaleFactor = targetHeight / h;
-          model.scale.set(scaleFactor, scaleFactor, scaleFactor);
-          model.updateMatrixWorld(true);
-
-          const scaledBox = new THREE.Box3().setFromObject(model);
-          if (isFinite(scaledBox.min.y)) {
-            model.position.y = -scaledBox.min.y; // Chân chạm khít mặt đất Y = 0
+          if (targetHeight && modelHeight > 0.001) {
+            const scaleFactor = (targetHeight / modelHeight) * baseScale;
+            model.scale.setScalar(scaleFactor);
+            model.updateMatrixWorld(true);
+            bbox = new THREE.Box3().setFromObject(model);
           }
-          return scaleFactor;
+
+          // B. ĐẨY MODEL CON LÊN ĐỂ CHÂN CHẠM ĐÁY GROUP CHA (Y = 0)
+          const yOffset = -bbox.min.y;
+          if (isFinite(yOffset)) {
+            model.position.y = yOffset;
+          }
+
+          // C. BẬT BÓNG ĐỔ VÀ TẮT CULLING
+          model.traverse((child) => {
+            if (child.isMesh || child.isSkinnedMesh) {
+              child.castShadow = true;
+              child.receiveShadow = true;
+              child.frustumCulled = false;
+              if (child.material) {
+                const mats = Array.isArray(child.material) ? child.material : [child.material];
+                mats.forEach((mat) => {
+                  mat.roughness = 0.75;
+                  mat.metalness = 0.15;
+                });
+              }
+            }
+          });
+
+          return yOffset;
         }
+
+        const setModelActualHeight = normalizeAndGroundModel;
 
         // Bộ tạo Skeletal AnimationClips chuẩn cho Khung xương Rig_Medium (Barbarian / Rogue)
         function createWarriorSkeletalClips() {
@@ -1244,20 +1558,27 @@
           return { Idle: idleClip, Walk: walkClip, Run: runClip, Attack: attackClip, Death: deathClip };
         }
 
-        // Quản lý chuyển hoạt ảnh cho Dũng Sĩ Người Chơi
-        function playHeroAction(animName, loopOnce = false, crossFade = 0.2, timeScale = 1.0) {
+        // Quản lý chuyển hoạt ảnh cho Dũng Sĩ Người Chơi (Animation State Machine & Blending)
+        function playHeroAction(animName, loopOnce = false, crossFade = 0.2, timeScale = 1.0, onComplete = null) {
           const char = GameState.player.characters[GameState.player.gender];
           if (!char || !char.mixer || Object.keys(char.actions).length === 0) return;
 
+          const req = animName.toLowerCase();
           let targetAction = char.actions[animName];
           if (!targetAction) {
             const keys = Object.keys(char.actions);
-            const matchKey = keys.find((k) => k.toLowerCase().includes(animName.toLowerCase()));
-            if (matchKey) targetAction = char.actions[matchKey];
+            const exactKey = keys.find((k) => k.toLowerCase() === req);
+            if (exactKey) {
+              targetAction = char.actions[exactKey];
+            } else {
+              const partialKey = keys.find((k) => k.toLowerCase().includes(req) || req.includes(k.toLowerCase()));
+              if (partialKey) targetAction = char.actions[partialKey];
+            }
           }
           if (!targetAction) return;
 
-          if (char.currentAnimName === animName && !loopOnce) {
+          // Nếu đang chạy cùng hoạt ảnh và không phải LoopOnce: chỉ cập nhật timeScale
+          if (char.currentAnimName && char.currentAnimName.toLowerCase() === req && !loopOnce) {
             targetAction.timeScale = timeScale;
             return;
           }
@@ -1281,10 +1602,17 @@
           char.currentAction = targetAction;
           char.currentAnimName = animName;
           GameState.player.currentAnimName = animName;
+
+          if (loopOnce && onComplete) {
+            const clip = targetAction.getClip();
+            const durationSec = clip ? clip.duration / Math.max(0.1, Math.abs(timeScale)) : 1.0;
+            setTimeout(onComplete, Math.max(80, durationSec * 1000 - 40));
+          }
         }
 
-        // Khởi tạo Dũng Sĩ
-        GameState.player.group.position.set(0, 0, 3.5);
+        // Khởi tạo Dũng Sĩ với độ cao bám địa hình
+        const playerStartY = getTerrainHeight(0, 3.5);
+        GameState.player.group.position.set(0, playerStartY, 3.5);
         scene.add(GameState.player.group);
 
         // Vệt chém kiếm (Arc Slash VFX)
@@ -1310,14 +1638,25 @@
 
           document.getElementById('hero-emoji').textContent = isM ? '🏹' : '🗡️';
 
-          // Tái kết nối AnimationMixer của nhân vật mới theo trạng thái di chuyển hiện tại
+          // Tái kết nối AnimationMixer của nhân vật mới theo trạng thái hiện tại
           const activeChar = isM ? maleChar : femaleChar;
           if (activeChar.mixer) {
-            const curState = GameState.player.isAttacking ? 'Attack' : (GameState.player.moving ? 'Run' : 'Idle');
-            playHeroAction(curState, GameState.player.isAttacking, 0.1);
+            const curState = GameState.player.isDead
+              ? 'death'
+              : GameState.player.isAttacking
+                ? 'attack'
+                : GameState.player.isPickingUp
+                  ? 'pickup'
+                  : GameState.player.isHitReacting
+                    ? 'hit'
+                    : GameState.player.moving
+                      ? 'walk'
+                      : 'idle';
+            const isSingleShot = GameState.player.isDead || GameState.player.isAttacking || GameState.player.isPickingUp || GameState.player.isHitReacting;
+            playHeroAction(curState, isSingleShot, 0.1);
           }
 
-          showToast(isM ? '🏹 Đã chuyển sang DŨNG SĨ NAM!' : '🗡️ Đã chuyển sang DŨNG SĨ NỮ!');
+          showToast(isM ? '🏹 Đã chuyển sang DŨNG SĨ NAM (FBX Modular 6 Hoạt Ảnh)!' : '🗡️ Đã chuyển sang DŨNG SĨ NỮ (FBX Modular 6 Hoạt Ảnh)!');
         }
 
         // ----------------------------------------------------
@@ -1349,7 +1688,8 @@
 
         function createNpcObject(npc) {
           const group = new THREE.Group();
-          group.position.copy(npc.pos);
+          const ny = getTerrainHeight(npc.pos.x, npc.pos.z);
+          group.position.set(npc.pos.x, ny, npc.pos.z);
 
           const body = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.45, 1.8, 8), new THREE.MeshStandardMaterial({ color: npc.color, roughness: 0.7 }));
           body.position.y = 0.9;
@@ -1406,7 +1746,9 @@
             this.state = 'IDLE';
 
             this.group = new THREE.Group();
-            this.group.position.copy(this.origin);
+            const startY = this.isFlying ? this.origin.y : getTerrainHeight(this.origin.x, this.origin.z);
+            this.group.position.set(this.origin.x, startY, this.origin.z);
+            this.target.y = startY;
             this.model = null;
             this.mixer = null;
             this.actions = {};
@@ -1639,9 +1981,10 @@
         ];
 
         // ----------------------------------------------------
-        // CHƯƠNG VI: NẠP TOÀN BỘ MÔ HÌNH .GLB VÀ TÀI NGUYÊN
+        // CHƯƠNG VI: NẠP TOÀN BỘ MÔ HÌNH (MODULAR FBX & GLB) VÀ TÀI NGUYÊN
         // ----------------------------------------------------
         const loader = typeof THREE.GLTFLoader !== 'undefined' ? new THREE.GLTFLoader() : null;
+        const fbxLoader = typeof THREE.FBXLoader !== 'undefined' ? new THREE.FBXLoader() : null;
         const harvestableNodes = [];
 
         function loadGLB(filename, onLoad) {
@@ -1654,66 +1997,265 @@
           tryNext(0);
         }
 
-        // Nạp Dũng Sĩ Nam & Nữ với AnimationMixer & Skeletal Tracks
-        const warriorClips = createWarriorSkeletalClips();
+        function loadFBX(filename) {
+          return new Promise((resolve, reject) => {
+            if (!fbxLoader) return reject(new Error('FBXLoader không khả dụng'));
+            const paths = [`./models/${filename}`, `models/${filename}`, `../../models/${filename}`];
+            function tryNext(i) {
+              if (i >= paths.length) {
+                console.error(`Không thể nạp file FBX: ${filename}`);
+                return reject(new Error(`Không thể nạp file FBX: ${filename}`));
+              }
+              fbxLoader.load(
+                paths[i],
+                (fbx) => resolve(fbx),
+                undefined,
+                () => tryNext(i + 1)
+              );
+            }
+            tryNext(0);
+          });
+        }
 
-        ['male', 'female'].forEach((gender) => {
-          const c = GameState.player.characters[gender];
-          loadGLB(c.file, (gltf) => {
-            const model = gltf.scene;
-            model.traverse((o) => {
-              if (o.isMesh) {
-                o.castShadow = true;
-                o.receiveShadow = true;
+        // Hàm triệt tiêu Root Motion dịch chuyển X/Z của xương gốc (giữ nguyên nhấp nhô Y)
+        function sanitizeClipRootMotion(clip) {
+          if (!clip || !clip.tracks) return clip;
+          clip.tracks.forEach((track) => {
+            if (track.name.toLowerCase().endsWith('.position')) {
+              const vals = track.values;
+              for (let i = 0; i < vals.length; i += 3) {
+                vals[i] = 0;     // Triệt tiêu dịch chuyển X (loại bỏ lệch ngang)
+                vals[i + 2] = 0; // Triệt tiêu dịch chuyển Z (chống giật lùi snapback khi hết vòng loop)
+              }
+            }
+          });
+          return clip;
+        }
+
+        // 1. Nạp Dũng Sĩ Nam (Modular FBX 6 Hoạt Ảnh)
+        async function loadMaleWarriorFBX() {
+          const c = GameState.player.characters.male;
+          try {
+            console.log('⏳ Đang nạp mô hình Dũng Sĩ Nam (warrior_idle.fbx)...');
+            const idleFbx = await loadFBX('warrior_idle.fbx');
+            const model = idleFbx;
+
+            model.traverse((child) => {
+              if (child.isMesh || child.isSkinnedMesh) {
+                child.frustumCulled = false; // Bắt buộc tắt Culling để không bao giờ bị mất hình khi xương cử động
+                child.castShadow = true;
+                child.receiveShadow = true;
+                if (child.material) {
+                  const mats = Array.isArray(child.material) ? child.material : [child.material];
+                  mats.forEach((mat) => {
+                    mat.roughness = 0.75;
+                    mat.metalness = 0.15;
+                  });
+                }
               }
             });
 
-            setModelActualHeight(model, c.targetHeight);
-            model.visible = (GameState.player.gender === gender);
+            // Chuẩn hóa chiều cao đạt đúng 1.85m và Pivot chân chạm khít Y = 0
+            normalizeAndGroundModel(model, c.targetHeight || 1.85);
+            model.visible = (GameState.player.gender === 'male');
             model.userData.baseY = model.position.y;
 
-            // Khởi tạo AnimationMixer cho Dũng Sĩ
+            // Khởi tạo AnimationMixer
             const mixer = new THREE.AnimationMixer(model);
             c.mixer = mixer;
             activeMixers.push(mixer);
 
-            // Nạp Clips: ưu tiên native clips nếu có, ngược lại nạp warriorClips đã được thiết kế
-            const clipsToUse = (gltf.animations && gltf.animations.length > 0) ? gltf.animations : Object.values(warriorClips);
-            clipsToUse.forEach((clip) => {
+            // Đăng ký clip Idle từ file gốc
+            if (idleFbx.animations && idleFbx.animations.length > 0) {
+              const clip = sanitizeClipRootMotion(idleFbx.animations[0].clone());
+              clip.name = 'idle';
               const act = mixer.clipAction(clip);
-              c.actions[clip.name] = act;
-              const lower = clip.name.toLowerCase();
-              if (lower.includes('idle')) c.actions['Idle'] = act;
-              if (lower.includes('walk')) c.actions['Walk'] = act;
-              if (lower.includes('run')) c.actions['Run'] = act;
-              if (lower.includes('attack') || lower.includes('slash')) c.actions['Attack'] = act;
-              if (lower.includes('death') || lower.includes('die')) c.actions['Death'] = act;
-            });
+              c.actions['idle'] = act;
+              c.actions['Idle'] = act;
+            }
+
+            // Nạp tiếp 5 file FBX hoạt ảnh modular còn lại
+            const [walkFbx, attackFbx, deathFbx, pickupFbx, hitFbx] = await Promise.all([
+              loadFBX('warrior_walk.fbx').catch((e) => { console.warn('Lỗi nạp warrior_walk.fbx', e); return null; }),
+              loadFBX('warrior_attack.fbx').catch((e) => { console.warn('Lỗi nạp warrior_attack.fbx', e); return null; }),
+              loadFBX('warrior_death.fbx').catch((e) => { console.warn('Lỗi nạp warrior_death.fbx', e); return null; }),
+              loadFBX('warrior_picking_up.fbx').catch((e) => { console.warn('Lỗi nạp warrior_picking_up.fbx', e); return null; }),
+              loadFBX('warrior_hit_reaction.fbx').catch((e) => { console.warn('Lỗi nạp warrior_hit_reaction.fbx', e); return null; })
+            ]);
+
+            if (walkFbx && walkFbx.animations && walkFbx.animations.length > 0) {
+              const clip = sanitizeClipRootMotion(walkFbx.animations[0].clone());
+              clip.name = 'walk';
+              const act = mixer.clipAction(clip);
+              c.actions['walk'] = act;
+              c.actions['Walk'] = act;
+              c.actions['run'] = act;
+              c.actions['Run'] = act;
+            }
+            if (attackFbx && attackFbx.animations && attackFbx.animations.length > 0) {
+              const clip = sanitizeClipRootMotion(attackFbx.animations[0].clone());
+              clip.name = 'attack';
+              const act = mixer.clipAction(clip);
+              c.actions['attack'] = act;
+              c.actions['Attack'] = act;
+            }
+            if (deathFbx && deathFbx.animations && deathFbx.animations.length > 0) {
+              const clip = sanitizeClipRootMotion(deathFbx.animations[0].clone());
+              clip.name = 'death';
+              const act = mixer.clipAction(clip);
+              c.actions['death'] = act;
+              c.actions['Death'] = act;
+            }
+            if (pickupFbx && pickupFbx.animations && pickupFbx.animations.length > 0) {
+              const clip = sanitizeClipRootMotion(pickupFbx.animations[0].clone());
+              clip.name = 'pickup';
+              const act = mixer.clipAction(clip);
+              c.actions['pickup'] = act;
+              c.actions['Pickup'] = act;
+              c.actions['picking_up'] = act;
+            }
+            if (hitFbx && hitFbx.animations && hitFbx.animations.length > 0) {
+              const clip = sanitizeClipRootMotion(hitFbx.animations[0].clone());
+              clip.name = 'hit';
+              const act = mixer.clipAction(clip);
+              c.actions['hit'] = act;
+              c.actions['Hit'] = act;
+              c.actions['hit_reaction'] = act;
+            }
 
             // Kích hoạt Idle ban đầu
-            if (c.actions['Idle']) {
-              c.actions['Idle'].play();
-              c.currentAction = c.actions['Idle'];
-              c.currentAnimName = 'Idle';
+            const initialIdle = c.actions['idle'] || c.actions['Idle'];
+            if (initialIdle && GameState.player.gender === 'male') {
+              initialIdle.play();
+              c.currentAction = initialIdle;
+              c.currentAnimName = 'idle';
+              GameState.player.currentAnimName = 'idle';
             }
 
             GameState.player.group.add(model);
             c.model = model;
-          });
-        });
+            console.log('✅ Đã nạp thành công 6 hoạt ảnh Modular FBX cho Dũng Sĩ Nam!');
+          } catch (err) {
+            console.error('Lỗi khi nạp FBX Dũng Sĩ Nam:', err);
+          }
+        }
+        loadMaleWarriorFBX();
+
+        // 2. Nạp Dũng Sĩ Nữ (Modular FBX 6 Hoạt Ảnh)
+        async function loadFemaleWarriorFBX() {
+          const c = GameState.player.characters.female;
+          try {
+            console.log('⏳ Đang nạp mô hình Dũng Sĩ Nữ (female_warrior_idle.fbx)...');
+            const idleFbx = await loadFBX('female_warrior_idle.fbx');
+            const model = idleFbx;
+
+            model.traverse((child) => {
+              if (child.isMesh || child.isSkinnedMesh) {
+                child.frustumCulled = false; // Bắt buộc tắt Culling để không bao giờ bị mất hình khi xương cử động
+                child.castShadow = true;
+                child.receiveShadow = true;
+                if (child.material) {
+                  const mats = Array.isArray(child.material) ? child.material : [child.material];
+                  mats.forEach((mat) => {
+                    mat.roughness = 0.75;
+                    mat.metalness = 0.15;
+                  });
+                }
+              }
+            });
+
+            // Chuẩn hóa chiều cao đạt đúng 1.75m và Pivot chân chạm khít Y = 0
+            normalizeAndGroundModel(model, c.targetHeight || 1.75);
+            model.visible = (GameState.player.gender === 'female');
+            model.userData.baseY = model.position.y;
+
+            // Khởi tạo AnimationMixer
+            const mixer = new THREE.AnimationMixer(model);
+            c.mixer = mixer;
+            activeMixers.push(mixer);
+
+            // Đăng ký clip Idle từ file gốc
+            if (idleFbx.animations && idleFbx.animations.length > 0) {
+              const clip = sanitizeClipRootMotion(idleFbx.animations[0].clone());
+              clip.name = 'idle';
+              const act = mixer.clipAction(clip);
+              c.actions['idle'] = act;
+              c.actions['Idle'] = act;
+            }
+
+            // Nạp tiếp 5 file FBX hoạt ảnh modular còn lại
+            const [walkFbx, attackFbx, deathFbx, pickupFbx, hitFbx] = await Promise.all([
+              loadFBX('female_warrior_walk.fbx').catch((e) => { console.warn('Lỗi nạp female_warrior_walk.fbx', e); return null; }),
+              loadFBX('female_warrior_attack.fbx').catch((e) => { console.warn('Lỗi nạp female_warrior_attack.fbx', e); return null; }),
+              loadFBX('female_warrior_death.fbx').catch((e) => { console.warn('Lỗi nạp female_warrior_death.fbx', e); return null; }),
+              loadFBX('female_warrior_picking_up.fbx').catch((e) => { console.warn('Lỗi nạp female_warrior_picking_up.fbx', e); return null; }),
+              loadFBX('female_warrior_hit_reaction.fbx').catch((e) => { console.warn('Lỗi nạp female_warrior_hit_reaction.fbx', e); return null; })
+            ]);
+
+            if (walkFbx && walkFbx.animations && walkFbx.animations.length > 0) {
+              const clip = sanitizeClipRootMotion(walkFbx.animations[0].clone());
+              clip.name = 'walk';
+              const act = mixer.clipAction(clip);
+              c.actions['walk'] = act;
+              c.actions['Walk'] = act;
+              c.actions['run'] = act;
+              c.actions['Run'] = act;
+            }
+            if (attackFbx && attackFbx.animations && attackFbx.animations.length > 0) {
+              const clip = sanitizeClipRootMotion(attackFbx.animations[0].clone());
+              clip.name = 'attack';
+              const act = mixer.clipAction(clip);
+              c.actions['attack'] = act;
+              c.actions['Attack'] = act;
+            }
+            if (deathFbx && deathFbx.animations && deathFbx.animations.length > 0) {
+              const clip = sanitizeClipRootMotion(deathFbx.animations[0].clone());
+              clip.name = 'death';
+              const act = mixer.clipAction(clip);
+              c.actions['death'] = act;
+              c.actions['Death'] = act;
+            }
+            if (pickupFbx && pickupFbx.animations && pickupFbx.animations.length > 0) {
+              const clip = sanitizeClipRootMotion(pickupFbx.animations[0].clone());
+              clip.name = 'pickup';
+              const act = mixer.clipAction(clip);
+              c.actions['pickup'] = act;
+              c.actions['Pickup'] = act;
+              c.actions['picking_up'] = act;
+            }
+            if (hitFbx && hitFbx.animations && hitFbx.animations.length > 0) {
+              const clip = sanitizeClipRootMotion(hitFbx.animations[0].clone());
+              clip.name = 'hit';
+              const act = mixer.clipAction(clip);
+              c.actions['hit'] = act;
+              c.actions['Hit'] = act;
+              c.actions['hit_reaction'] = act;
+            }
+
+            // Kích hoạt Idle ban đầu nếu giới tính chọn là Nữ
+            const initialIdle = c.actions['idle'] || c.actions['Idle'];
+            if (initialIdle && GameState.player.gender === 'female') {
+              initialIdle.play();
+              c.currentAction = initialIdle;
+              c.currentAnimName = 'idle';
+              GameState.player.currentAnimName = 'idle';
+            }
+
+            GameState.player.group.add(model);
+            c.model = model;
+            console.log('✅ Đã nạp thành công 6 hoạt ảnh Modular FBX cho Dũng Sĩ Nữ!');
+          } catch (err) {
+            console.error('Lỗi khi nạp FBX Dũng Sĩ Nữ:', err);
+          }
+        }
+        loadFemaleWarriorFBX();
 
         // Nạp từng con Khủng long với AnimationMixer riêng biệt
         dinosaurs.forEach((dino) => {
           loadGLB(dino.file, (gltf) => {
             const m = gltf.scene;
-            m.traverse((o) => {
-              if (o.isMesh) {
-                o.castShadow = true;
-                o.receiveShadow = true;
-              }
-            });
 
-            setModelActualHeight(m, dino.targetHeight);
+            normalizeAndGroundModel(m, dino.targetHeight, false);
             m.userData.baseY = m.position.y;
             dino.group.add(m);
             dino.model = m;
@@ -1758,7 +2300,7 @@
 
             const clone = baseModel.clone(true);
             const h = targetHeight * (0.85 + Math.random() * 0.3);
-            setModelActualHeight(clone, h);
+            setModelActualHeight(clone, h, false);
             clone.position.set(x, clone.position.y, z);
             clone.rotation.y = Math.random() * Math.PI * 2;
             scene.add(clone);
@@ -1781,7 +2323,7 @@
         loadGLB('stylized_stones_minipack.glb', (g) => {
           const m = g.scene;
           m.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-          setModelActualHeight(m, 4.5);
+          setModelActualHeight(m, 4.5, false);
           m.position.set(-35, m.position.y, -10);
           scene.add(m);
         });
@@ -1854,10 +2396,10 @@
         window.addEventListener('mousemove', (e) => { if (joyActive && joyTouchId === 'mouse') onJoyMove(e.clientX, e.clientY); });
         window.addEventListener('mouseup', () => { if (joyActive && joyTouchId === 'mouse') onJoyEnd(); });
 
-        // TẤN CÔNG DŨNG SĨ (ATTACK ACTION WITH ANIMATION OVERRIDE)
+        // TẤN CÔNG DŨNG SĨ (ATTACK ACTION WITH SINGLE-SHOT FBX ANIMATION)
         function triggerAttack() {
           const p = GameState.player;
-          if (p.isAttacking || p.hp <= 0) return;
+          if (p.isAttacking || p.isPickingUp || p.isHitReacting || p.hp <= 0 || p.isDead) return;
           if (p.stamina < 15) {
             showToast('⚡ Không đủ thể lực để vung giáo!');
             return;
@@ -1865,11 +2407,21 @@
 
           p.stamina = Math.max(0, p.stamina - 15);
           p.isAttacking = true;
-          p.attackTimer = 0.42;
+          const char = p.characters[p.gender];
+          const atkAct = char?.actions['attack'] || char?.actions['Attack'];
+          const atkClip = atkAct?.getClip();
+          const duration = atkClip ? atkClip.duration / 1.15 : 0.85;
+          p.attackTimer = duration;
           playSfx('swing');
 
           // Kích hoạt Clip Attack với LoopOnce
-          playHeroAction('Attack', true, 0.1);
+          playHeroAction('attack', true, 0.1, 1.15, () => {
+            p.isAttacking = false;
+            if (p.slashMesh) p.slashMesh.material.opacity = 0;
+            if (p.hp > 0 && !p.isDead && !p.isPickingUp && !p.isHitReacting) {
+              playHeroAction(p.moving ? 'walk' : 'idle', false, 0.2);
+            }
+          });
 
           if (p.slashMesh) p.slashMesh.material.opacity = 0.95;
 
@@ -1925,7 +2477,7 @@
         // NÉ ĐÒN (DODGE)
         function triggerDodge() {
           const p = GameState.player;
-          if (p.isDodging || p.stamina < 20 || p.hp <= 0) return;
+          if (p.isDodging || p.stamina < 20 || p.hp <= 0 || p.isDead) return;
           p.stamina = Math.max(0, p.stamina - 20);
           p.isDodging = true;
           p.dodgeTimer = 0.25;
@@ -1945,21 +2497,54 @@
           }
         }
 
+        // THU THẬP TÀI NGUYÊN (PICKUP ACTION WITH DELAYED REWARD ON BEND-DOWN)
         function harvestResource(node) {
-          if (!node.available) return;
-          playSfx('harvest');
-          const type = node.type;
-          GameState.inventory[type] = (GameState.inventory[type] || 0) + 1;
-          spawnFloatingText(`+1 ${getResName(type)}`, node.pos, 'dmg-popup--harvest');
-          showToast(`📦 Đã thu thập: +1 ${getResName(type)}!`);
-          checkQuest(type, 1);
+          const p = GameState.player;
+          if (!node.available || p.isAttacking || p.isPickingUp || p.isHitReacting || p.hp <= 0 || p.isDead) return;
 
-          node.available = false;
-          node.mesh.visible = false;
+          p.isPickingUp = true;
+          const char = p.characters[p.gender];
+          const pickAct = char?.actions['pickup'] || char?.actions['Pickup'] || char?.actions['picking_up'];
+          const clip = pickAct?.getClip();
+          const duration = clip ? clip.duration / 1.1 : 1.2;
+          p.pickupTimer = duration;
+
+          // Xoay nhân vật hướng về phía vật phẩm cần nhặt
+          const dir = node.pos.clone().sub(p.group.position);
+          dir.y = 0;
+          if (dir.lengthSq() > 0.001) {
+            p.facingAngle = Math.atan2(dir.x, dir.z);
+            p.group.rotation.y = p.facingAngle;
+          }
+
+          // Kích hoạt hoạt ảnh cúi người nhặt
+          playHeroAction('pickup', true, 0.15, 1.1);
+
+          // Cúi người nhặt xong mới cộng tài nguyên vào inventory
           setTimeout(() => {
-            node.available = true;
-            node.mesh.visible = true;
-          }, 20000);
+            if (p.hp <= 0 || p.isDead) return;
+            playSfx('harvest');
+            const type = node.type;
+            GameState.inventory[type] = (GameState.inventory[type] || 0) + 1;
+            spawnFloatingText(`+1 ${getResName(type)}`, node.pos, 'dmg-popup--harvest');
+            showToast(`📦 Đã thu thập: +1 ${getResName(type)}!`);
+            checkQuest(type, 1);
+
+            node.available = false;
+            node.mesh.visible = false;
+            setTimeout(() => {
+              node.available = true;
+              node.mesh.visible = true;
+            }, 20000);
+          }, Math.round(duration * 600));
+
+          // Kết thúc hoạt ảnh và trở về di chuyển / đứng thở
+          setTimeout(() => {
+            p.isPickingUp = false;
+            if (p.hp > 0 && !p.isDead && !p.isAttacking && !p.isHitReacting) {
+              playHeroAction(p.moving ? 'walk' : 'idle', false, 0.2);
+            }
+          }, Math.round(duration * 1000));
         }
 
         function getResName(type) {
@@ -2226,6 +2811,46 @@
           }
         };
 
+        function openWeatherModal() {
+          const t = GameState.time;
+          const w = GameState.weather;
+
+          const html = `
+            <div class="modal-header">
+              <span class="modal-title">🌦️ BẢNG KHÍ TƯỢNG & LỊCH TRÌNH SINH TỒN</span>
+              <button class="modal-close" id="modal-close-btn">✕</button>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 10px; font-size: 12px; color: #fef08a;">
+              <div style="background: rgba(0,0,0,0.5); padding: 10px; border-radius: 10px; border: 1px solid var(--line);">
+                <div style="font-size: 13.5px; font-weight: 900; color: #fff; margin-bottom: 4px;">🕒 ĐỒNG HỒ THỰC TẾ (VIỆT NAM UTC+7)</div>
+                <div>📅 <b>Ngày:</b> ${t.dateStr}</div>
+                <div>⏱️ <b>Thời gian hiện tại:</b> <span style="font-size: 16px; color: #38bdf8; font-weight: 900;">${t.timeStr}</span></div>
+                <div>🌓 <b>Khung giờ sinh tồn:</b> <span style="color: #fbbf24; font-weight: 800;">${t.phaseNameVi}</span></div>
+              </div>
+
+              <div style="background: rgba(0,0,0,0.5); padding: 10px; border-radius: 10px; border: 1px solid var(--line);">
+                <div style="font-size: 13.5px; font-weight: 900; color: #fff; margin-bottom: 4px;">🌦️ DỰ BÁO KHÍ TƯỢNG HÔM NAY</div>
+                <div>📍 <b>Vùng khí hậu:</b> ${w.regionName}</div>
+                <div>${w.icon} <b>Thời tiết:</b> <span style="font-size: 14.5px; font-weight: 900; color: #4ade80;">${w.nameVi} (${w.temperature}°C)</span></div>
+                <div style="margin-top: 5px; color: #cbd5e1; font-style: italic;">"${w.desc}"</div>
+              </div>
+
+              <div style="background: rgba(0,0,0,0.5); padding: 10px; border-radius: 10px; border: 1px solid var(--line);">
+                <div style="font-size: 13px; font-weight: 900; color: #fca5a5; margin-bottom: 4px;">⚖️ QUY LUẬT SINH TỒN THỜI TIẾT</div>
+                <ul style="margin: 0; padding-left: 16px; color: #e2e8f0; line-height: 1.45; font-size: 11px;">
+                  <li>🌧️ <b>Trời Mưa:</b> Nông sản tự tưới, tự động hứng nước ngọt tại Trại, tăng tỷ lệ nấm/thảo dược rừng.</li>
+                  <li>🌡️ <b>Nắng Gắt:</b> Tăng 40% tốc độ mất nước khi di chuyển; tăng 25% tốc độ nung quặng & sấy thịt trong nhà.</li>
+                  <li>❄️ <b>Rét Đậm:</b> Tăng 30% tốc độ tiêu hao độ no, cần Đốt Lửa Trại để giữ ấm cơ thể.</li>
+                  <li>🌙 <b>Đêm Tối (20:00 - 05:00):</b> Dã thú hung hãn tấn công trại, cần chế tạo Đuốc để xua đuổi.</li>
+                  <li>🩸 <b>Trăng Máu (Thứ Bảy 20:00 - 22:00):</b> Boss Cổ Đại thức tỉnh mở khoá Chương Sử Thi mới.</li>
+                </ul>
+              </div>
+            </div>
+          `;
+          openModal(html);
+          document.getElementById('modal-close-btn').onclick = closeModal;
+        }
+
         // Gắn sự kiện các nút Dock
         document.getElementById('dock-btn-inv').onclick = openInventoryModal;
         document.getElementById('dock-btn-quest').onclick = () => openNpcModal('elder');
@@ -2233,6 +2858,7 @@
         document.getElementById('dock-btn-forge').onclick = () => openNpcModal('blacksmith');
         document.getElementById('dock-btn-switch').onclick = () => switchHeroGender();
         document.getElementById('hero-avatar-btn').onclick = () => switchHeroGender();
+        document.getElementById('hud-env-capsule').onclick = openWeatherModal;
 
         // ----------------------------------------------------
         // MÀN HÌNH CHỌN NHÂN VẬT ĐẦU GAME
@@ -2286,6 +2912,9 @@
 
         function updateHUD() {
           const p = GameState.player;
+          const t = GameState.time;
+          const w = GameState.weather;
+
           document.getElementById('bar-hp').style.width = `${(p.hp / p.maxHp) * 100}%`;
           document.getElementById('val-hp').textContent = Math.round(p.hp);
           document.getElementById('bar-hunger').style.width = `${p.hunger}%`;
@@ -2297,6 +2926,15 @@
 
           document.getElementById('val-gold').textContent = GameState.economy.gold;
           document.getElementById('val-fangs').textContent = GameState.economy.fangs;
+
+          if (t && t.timeStr) {
+            document.getElementById('hud-clock-text').textContent = t.timeStr;
+            document.getElementById('hud-phase-badge').textContent = t.isBloodMoon ? '🩸 Trăng Máu' : (t.isNight ? '🌙 Đêm Tối' : t.phaseNameVi);
+          }
+          if (w) {
+            document.getElementById('hud-weather-icon').textContent = w.icon;
+            document.getElementById('hud-weather-text').textContent = `${w.nameVi} (${w.temperature}°C)`;
+          }
         }
 
         // ----------------------------------------------------
@@ -2308,13 +2946,17 @@
         function animate() {
           requestAnimationFrame(animate);
 
-          const dt = Math.min(clock.getDelta(), 0.1);
+          const dt = Math.min(clock.getDelta(), 0.05); // Cố định delta time tối đa 0.05s chống nhảy cóc giật lag
           const time = clock.getElapsedTime();
           const p = GameState.player;
+          const t = GameState.time;
+          const w = GameState.weather;
 
-          // 1. CÔNG THỨC TOÁN HỌC SINH TỒN
-          p.hunger = Math.max(0, p.hunger - (dt / 4.0));
-          p.thirst = Math.max(0, p.thirst - (dt / 3.0));
+          // 1. CÔNG THỨC TOÁN HỌC SINH TỒN THEO THỜI TIẾT THỰC TẾ
+          const hungerRate = (w.condition === 'cold' ? 1.3 : 1.0) / 4.0;
+          const thirstRate = (w.condition === 'heat' ? 1.4 : 1.0) / 3.0;
+          p.hunger = Math.max(0, p.hunger - (dt * hungerRate));
+          p.thirst = Math.max(0, p.thirst - (dt * thirstRate));
 
           if (p.hunger === 0 || p.thirst === 0) {
             p.hp = Math.max(0, p.hp - (dt * 2.0));
@@ -2322,44 +2964,107 @@
             p.hp = Math.min(p.maxHp, p.hp + (dt * 1.5));
           }
 
-          if (p.hp <= 0 && p.currentAnimName !== 'Death') {
-            playHeroAction('Death', true, 0.2);
+          if (p.hp <= 0 && !p.isDead) {
+            p.isDead = true;
+            p.isAttacking = false;
+            p.isPickingUp = false;
+            p.isHitReacting = false;
+            playHeroAction('death', true, 0.2);
+            showToast('☠️ Bạn đã gục ngã vì kiệt sức sinh tồn!');
           }
 
-          if (!p.isAttacking && !p.isDodging && p.hp > 0) {
+          if (!p.isAttacking && !p.isPickingUp && !p.isHitReacting && !p.isDodging && p.hp > 0 && !p.isDead) {
             p.stamina = Math.min(p.maxStamina, p.stamina + dt * 15.0);
           }
 
-          // 2. ĐỘNG CƠ CHIẾU SÁNG QUỸ ĐẠO NGÀY - ĐÊM
-          GameState.time.dayTime = (GameState.time.dayTime + dt * GameState.time.daySpeed) % 1.0;
-          const sunAngle = GameState.time.dayTime * Math.PI * 2;
-          sunLight.position.set(Math.cos(sunAngle) * 80, Math.sin(sunAngle) * 80, 40);
-          sunLight.intensity = Math.max(0.08, Math.sin(sunAngle) * 1.5);
-
-          const isNight = Math.sin(sunAngle) < 0;
-          GameState.time.isNight = isNight;
-          playerTorchLight.intensity = isNight && GameState.inventory.torch > 0 ? 2.5 : 0;
-
+          // 2. ĐỘNG CƠ CHIẾU SÁNG & THỜI TIẾT ĐỒNG BỘ THỜI GIAN THỰC
+          const currentHourDec = t.hours + t.minutes / 60 + t.seconds / 3600;
+          // 06:00 = 0 (Bình Minh Đông), 12:00 = PI/2 (Đỉnh Đầu), 18:00 = PI (Hoàng Hôn Tây), 24:00 = 3PI/2 (Nửa Đêm)
+          const sunAngle = ((currentHourDec - 6) / 24) * Math.PI * 2;
           const sinS = Math.sin(sunAngle);
-          if (sinS > 0.4) {
-            skyColor.setHex(0x87ceeb);
-            fog.color.setHex(0xbae6fd);
-            ambientLight.color.setHex(0xd9eafd);
-            document.getElementById('hud-time-text').textContent = 'Chính Trưa';
-          } else if (sinS > 0) {
+
+          // Cập nhật đèn Đuốc người chơi khi đêm xuống
+          playerTorchLight.intensity = t.isNight && GameState.inventory.torch > 0 ? 2.8 : 0;
+
+          // Cập nhật hạt mưa rơi 3D
+          if (w.isRaining) {
+            rainParticles.visible = true;
+            rainParticles.position.x = p.group.position.x;
+            rainParticles.position.z = p.group.position.z;
+            const rPos = rainGeo.attributes.position.array;
+            const rSpeed = 16 * w.rainIntensity;
+            for (let i = 0; i < rainCount; i++) {
+              rPos[i * 3 + 1] -= (rainVelocities[i] + rSpeed) * dt;
+              if (rPos[i * 3 + 1] < 0) {
+                rPos[i * 3 + 1] = 28 + Math.random() * 6;
+              }
+            }
+            rainGeo.attributes.position.needsUpdate = true;
+          } else {
+            rainParticles.visible = false;
+          }
+
+          // Phối màu Bầu trời & Sương mù theo Pha thời gian & Thời tiết thực tế
+          if (t.isBloodMoon) {
+            skyColor.setHex(0x450a0a);
+            fog.color.setHex(0x7f1d1d);
+            fog.density = 0.012;
+            ambientLight.color.setHex(0x991b1b);
+            sunLight.color.setHex(0xef4444);
+            sunLight.intensity = 0.85;
+            sunLight.position.set(0, 70, 30);
+          } else if (t.isNight) {
+            skyColor.setHex(0x060814);
+            fog.color.setHex(0x0b0f19);
+            fog.density = 0.01;
+            ambientLight.color.setHex(0x1e1b4b);
+            sunLight.color.setHex(0xa5b4fc);
+            sunLight.intensity = 0.2;
+            sunLight.position.set(-Math.cos(sunAngle) * 80, 50, -40);
+          } else if (t.phase === 'evening') {
             skyColor.setHex(0xff7e47);
             fog.color.setHex(0xfca5a5);
+            fog.density = 0.009;
             ambientLight.color.setHex(0xfb923c);
-            document.getElementById('hud-time-text').textContent = 'Hoàng Hôn';
+            sunLight.color.setHex(0xffedd5);
+            sunLight.intensity = 0.9;
+            sunLight.position.set(Math.cos(sunAngle) * 80, Math.max(10, Math.sin(sunAngle) * 80), 40);
           } else {
-            skyColor.setHex(0x0d0d1a);
-            fog.color.setHex(0x111827);
-            ambientLight.color.setHex(0x1e1b4b);
-            document.getElementById('hud-time-text').textContent = 'Đêm Tối';
+            // Ban ngày (Sáng / Trưa / Chiều)
+            if (w.isRaining) {
+              skyColor.setHex(0x475569);
+              fog.color.setHex(0x64748b);
+              fog.density = 0.012;
+              ambientLight.color.setHex(0x94a3b8);
+              sunLight.color.setHex(0xe2e8f0);
+              sunLight.intensity = 0.65;
+            } else if (w.condition === 'heat') {
+              skyColor.setHex(0xfef08a);
+              fog.color.setHex(0xfde047);
+              fog.density = 0.007;
+              ambientLight.color.setHex(0xfef9c3);
+              sunLight.color.setHex(0xfffbeb);
+              sunLight.intensity = 1.6;
+            } else if (w.condition === 'cold') {
+              skyColor.setHex(0xbae6fd);
+              fog.color.setHex(0xe0f2fe);
+              fog.density = 0.011;
+              ambientLight.color.setHex(0xbfdbfe);
+              sunLight.color.setHex(0xdbeafe);
+              sunLight.intensity = 1.0;
+            } else {
+              skyColor.setHex(0x87ceeb);
+              fog.color.setHex(0xbae6fd);
+              fog.density = 0.008;
+              ambientLight.color.setHex(0xd9eafd);
+              sunLight.color.setHex(0xfff2cc);
+              sunLight.intensity = Math.max(0.6, sinS * 1.4);
+            }
+            sunLight.position.set(Math.cos(sunAngle) * 80, Math.sin(sunAngle) * 80, 40);
           }
 
           // 3. DI CHUYỂN DŨNG SĨ THEO VECTOR CAMERA ISOMETRIC
-          if (p.hp > 0) {
+          if (p.hp > 0 && !p.isDead) {
             let moveX = input.x, moveZ = input.z;
             if (input.keys['w'] || input.keys['arrowup']) moveZ -= 1;
             if (input.keys['s'] || input.keys['arrowdown']) moveZ += 1;
@@ -2377,7 +3082,9 @@
             const isMoving = inputMag > 0.08;
             p.moving = isMoving;
 
-            if (isMoving && !p.isDodging) {
+            const canMove = !p.isAttacking && !p.isPickingUp && !p.isHitReacting;
+
+            if (isMoving && !p.isDodging && canMove) {
               moveVec.normalize();
               p.group.position.addScaledVector(moveVec, p.speed * inputMag * dt);
               const targetAngle = Math.atan2(moveVec.x, moveVec.z);
@@ -2387,13 +3094,14 @@
               p.facingAngle += diff * Math.min(1, 14 * dt);
               p.group.rotation.y = p.facingAngle;
 
-              // Cơ chế Chống Trượt Chân: timeScale tỷ lệ thuận với tốc độ di chuyển
-              if (!p.isAttacking) {
-                const animSpeed = Math.max(0.65, inputMag * 1.15);
-                playHeroAction('Run', false, 0.2, animSpeed);
-              }
-            } else if (!p.isAttacking && !p.isDodging) {
-              playHeroAction('Idle', false, 0.2, 1.0);
+              // Cơ chế Đồng bộ Vận tốc & Tần số bước chân (Kinematic Synchronization):
+              // Tự động điều chỉnh timeScale tỷ lệ thuận với tốc độ di chuyển thực tế để bám chặt mặt đất
+              const baseSpeed = 3.8;
+              const currentSpeed = p.speed * inputMag;
+              const animSpeed = Math.max(0.6, currentSpeed / baseSpeed);
+              playHeroAction('walk', false, 0.2, animSpeed);
+            } else if (canMove && !p.isDodging) {
+              playHeroAction('idle', false, 0.2, 1.0);
             }
 
             if (p.isDodging) {
@@ -2407,9 +3115,15 @@
               if (p.attackTimer <= 0) {
                 p.isAttacking = false;
                 if (p.slashMesh) p.slashMesh.material.opacity = 0;
-                playHeroAction(p.moving ? 'Run' : 'Idle', false, 0.15);
+                if (canMove) {
+                  playHeroAction(p.moving ? 'walk' : 'idle', false, 0.15);
+                }
               }
             }
+
+            // BÁM ĐỊA HÌNH 3D CHO PLAYER (TERRAIN SNAPPING): Lấy độ cao mặt đất chính xác và Lerp mượt mà
+            const groundY = getTerrainHeight(p.group.position.x, p.group.position.z);
+            p.group.position.y = THREE.MathUtils.lerp(p.group.position.y, groundY, 0.35);
           }
 
           // Cập nhật toàn bộ AnimationMixer thời gian thực
@@ -2455,21 +3169,26 @@
               dino.flightAngle += dt * 0.38;
               const fx = Math.cos(dino.flightAngle) * dino.flightRadius;
               const fz = Math.sin(dino.flightAngle) * (dino.flightRadius * 0.85);
-              const fy = dino.flightAltitude + Math.sin(time * 1.8) * 1.2;
+              const groundAtFlight = getTerrainHeight(fx, fz);
+              const fy = Math.max(groundAtFlight + 6.0, dino.flightAltitude + Math.sin(time * 1.8) * 1.2);
               dino.group.position.set(fx, fy, fz);
               dino.group.rotation.y = -dino.flightAngle + Math.PI / 2;
             } else {
+              // BÁM ĐỊA HÌNH 3D CHO KHỦNG LONG (TERRAIN SNAPPING): Leo dốc và chạy trên các sườn đồi tự nhiên
+              const dinoGroundY = getTerrainHeight(dino.group.position.x, dino.group.position.z);
+              dino.group.position.y = THREE.MathUtils.lerp(dino.group.position.y, dinoGroundY, 0.35);
+
               const distToP = dino.group.position.distanceTo(p.group.position);
               const distToO = dino.group.position.distanceTo(dino.origin);
 
               if (dino.hitStun > 0) {
                 dino.hitStun -= dt;
               } else {
-                if (!dino.isDocile && distToP <= dino.aggroRadius && p.hp > 0) {
+                if (!dino.isDocile && distToP <= dino.aggroRadius && p.hp > 0 && !p.isDead) {
                   dino.state = 'AGGRO';
                 }
 
-                if (dino.state === 'AGGRO' && p.hp > 0) {
+                if (dino.state === 'AGGRO' && p.hp > 0 && !p.isDead) {
                   const maxChase = dino.isBoss ? 28.0 : 18.0;
                   const maxLeash = dino.isBoss ? 38.0 : 25.0;
 
@@ -2497,6 +3216,38 @@
                         playSfx('hit');
                         spawnFloatingText(`-${dino.damage}`, p.group.position, 'dmg-popup--player');
                         showToast(`🩸 Bị ${dino.name} tấn công: -${dino.damage} HP!`);
+
+                        if (p.hp <= 0) {
+                          if (!p.isDead) {
+                            p.isDead = true;
+                            p.isAttacking = false;
+                            p.isPickingUp = false;
+                            p.isHitReacting = false;
+                            playHeroAction('death', true, 0.2);
+                            showToast('☠️ Bạn đã gục ngã trước nanh vuốt dã thú hoang dã!');
+                          }
+                        } else if (!p.isAttacking && !p.isPickingUp && !p.isHitReacting) {
+                          p.isHitReacting = true;
+                          // Giật lùi nhẹ khỏi dã thú
+                          const pushDir = p.group.position.clone().sub(dino.group.position);
+                          pushDir.y = 0;
+                          if (pushDir.lengthSq() > 0.001) {
+                            pushDir.normalize();
+                            p.group.position.addScaledVector(pushDir, 0.55);
+                          }
+                          const char = p.characters[p.gender];
+                          const hitAct = char?.actions['hit'] || char?.actions['Hit'] || char?.actions['hit_reaction'];
+                          const hitClip = hitAct?.getClip();
+                          const hitDur = hitClip ? hitClip.duration / 1.2 : 0.6;
+                          p.hitTimer = hitDur;
+
+                          playHeroAction('hit', true, 0.1, 1.2, () => {
+                            p.isHitReacting = false;
+                            if (p.hp > 0 && !p.isDead && !p.isAttacking && !p.isPickingUp) {
+                              playHeroAction(p.moving ? 'walk' : 'idle', false, 0.2);
+                            }
+                          });
+                        }
                       }
                     }
                   }
