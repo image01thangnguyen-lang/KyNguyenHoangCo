@@ -127,6 +127,8 @@ import type {
 
 import { MapView, featureAtPoint } from './mapView.ts';
 import type { WorldDrop } from './mapView.ts';
+import { initPhaserGame, getPhaserGame } from './phaser/phaserGame.ts';
+import { PhaserGameBridge } from './phaser/gameBridge.ts';
 import { startARCamera, stopARCamera, setARModel, captureARPhoto } from './arCamera.ts';
 import { Pedometer, describeSource } from './pedometer.ts';
 import { avatarSvg } from './itemIcons.ts';
@@ -403,6 +405,10 @@ export function fireDirectionalProjectile(
 /** Thực thi Tấn Công Thường hoặc Kỹ Năng Vũ Khí theo hướng quay mặt của người chơi */
 export function executeCombatAttack(isSkill = false): void {
   if (!app.profile) return;
+
+  // Kích hoạt hoạt ảnh và logic chiến đấu trong Phaser 3 Scene
+  PhaserGameBridge.getInstance().triggerPlayerAttack(isSkill);
+
   const player = app.profile.player;
   const nowMs = Date.now();
   const weapon = getCurrentEquippedWeapon();
@@ -1550,11 +1556,15 @@ function setupVirtualJoystick(): void {
     const normalizedDist = Math.min(1, dist / maxRadius);
     if (dist < 4) {
       joystickVector = { x: 0, y: 0 };
+      PhaserGameBridge.getInstance().sendJoystickInput(0, 0);
     } else {
+      const vx = (dx / dist) * normalizedDist;
+      const vy = (dy / dist) * normalizedDist; // Screen Y
       joystickVector = {
-        x: (dx / dist) * normalizedDist,
-        y: (-dy / dist) * normalizedDist, // +y là hướng Bắc (lên trên)
+        x: vx,
+        y: -vy, // +y là hướng Bắc (lên trên) trong GPS world coords
       };
+      PhaserGameBridge.getInstance().sendJoystickInput(vx, vy);
     }
   };
 
@@ -1583,6 +1593,7 @@ function setupVirtualJoystick(): void {
       stick.classList.remove('is-dragging');
       stick.style.transform = 'translate(0px, 0px)';
       joystickVector = { x: 0, y: 0 };
+      PhaserGameBridge.getInstance().sendJoystickInput(0, 0);
       try {
         base.releasePointerCapture(e.pointerId);
       } catch {}
@@ -1957,6 +1968,41 @@ function enterProfile(slot: number): void {
     globalThis.addEventListener('resize', () => mapView?.resize());
   }
   mapView.resize();
+
+  // Khởi tạo Engine Phaser 3 (WebGL 60 FPS / Canvas Fallback)
+  try {
+    if (typeof (globalThis as any).Phaser !== 'undefined') {
+      const phaserCanvas = el<HTMLCanvasElement>('map-canvas');
+      initPhaserGame({ canvas: phaserCanvas });
+
+      const bridge = PhaserGameBridge.getInstance();
+      bridge.listeners.onDropCollected = (drop) => {
+        collectWorldDrop(drop as any);
+      };
+      bridge.listeners.onBeastHit = (_beastId, _dmg, _remainingHp) => {
+        audio.play('hit_punch');
+      };
+      bridge.listeners.onBeastDefeated = (beast) => {
+        audio.play('level_up');
+        toast(`Đã hạ gục ${beast.nameVi}!`, 'good');
+        awardCombatExp(beast.level * 25);
+      };
+      bridge.listeners.onPlayerDamaged = (damage, attacker) => {
+        audio.play('player_hurt');
+        toast(`Bị ${attacker} tấn công (-${damage} HP)!`, 'bad');
+        if (app.profile) {
+          app.profile.player.stats.hp = Math.max(0, app.profile.player.stats.hp - damage);
+          sync();
+        }
+      };
+      bridge.listeners.onPoiInteracted = (poiName) => {
+        audio.play('click');
+        toast(`Đang tiếp cận: ${poiName}`, 'info');
+      };
+    }
+  } catch (err) {
+    console.warn('Phaser 3 Game Engine init:', err);
+  }
 
   // Tự động kích hoạt cảm biến đếm bước chân
   pedometer.autoStart();
