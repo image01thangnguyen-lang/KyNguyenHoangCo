@@ -521,46 +521,81 @@
       }
       .btn-interact-name { font-size: 7px; font-weight: 800; color: #fef08a; }
 
-      /* FLOATING DOCK (MENU SYSTEM - COMPACT BOTTOM CENTER) */
-      .dock-container {
+      /* SIDEBAR QUICK MENU (TOP-RIGHT UNDER RESOURCES - ZERO OVERLAP WITH JOYSTICK/COMBAT) */
+      .sidebar-menu-container {
         position: fixed;
-        bottom: calc(var(--safe-b) + 12px);
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 30;
+        top: calc(var(--safe-t) + 48px);
+        right: 10px;
+        z-index: 45;
         pointer-events: auto;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 5px;
       }
-      .floating-dock {
+      .sidebar-toggle-btn {
         display: flex;
         align-items: center;
         gap: 5px;
-        background: rgba(18, 13, 9, 0.78);
-        border: 1.2px solid rgba(245, 158, 11, 0.35);
+        background: linear-gradient(135deg, rgba(34, 24, 16, 0.94), rgba(18, 13, 8, 0.94));
+        border: 1.2px solid rgba(245, 158, 11, 0.65);
         border-radius: 999px;
-        padding: 3px 8px;
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.85);
-        backdrop-filter: blur(12px);
+        padding: 4px 11px;
+        color: #fef08a;
+        font-size: 11px;
+        font-weight: 900;
+        cursor: pointer;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.75), 0 0 10px rgba(245, 158, 11, 0.25);
+        backdrop-filter: blur(10px);
+        transition: all 0.2s ease;
+      }
+      .sidebar-toggle-btn:hover, .sidebar-toggle-btn:active {
+        background: rgba(245, 158, 11, 0.35);
+        border-color: #fef08a;
+        transform: scale(1.04);
+      }
+      .sidebar-menu-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(78px, 1fr));
+        gap: 4px;
+        background: linear-gradient(180deg, rgba(28, 19, 13, 0.95), rgba(14, 10, 7, 0.96));
+        border: 1.5px solid rgba(245, 158, 11, 0.45);
+        border-radius: 12px;
+        padding: 6px;
+        box-shadow: 0 8px 26px rgba(0, 0, 0, 0.85);
+        backdrop-filter: blur(14px);
+        transform-origin: top right;
+        transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .sidebar-menu-grid.is-collapsed {
+        display: none !important;
       }
       .dock-btn {
         display: flex;
-        flex-direction: column;
+        flex-direction: row;
         align-items: center;
-        justify-content: center;
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        color: #d1d5db;
-        font-size: 15px;
+        gap: 5px;
+        padding: 4px 7px;
+        border-radius: 8px;
+        color: #f1f5f9;
+        font-size: 13px;
         background: rgba(255, 255, 255, 0.05);
         border: 1px solid rgba(255, 255, 255, 0.08);
         transition: all 0.15s ease;
         cursor: pointer;
+        box-sizing: border-box;
       }
       .dock-btn:hover, .dock-btn:active {
         color: #fff;
         background: rgba(245, 158, 11, 0.35);
         border-color: #fef08a;
-        transform: scale(1.1);
+        transform: translateY(-1px);
+      }
+      .dock-btn-lbl {
+        font-size: 9px;
+        font-weight: 800;
+        color: #fef08a;
+        white-space: nowrap;
       }
 
       /* MODALS (INVENTORY, SHOP, QUEST, FORGE) */
@@ -984,18 +1019,49 @@
           </button>
         </div>
 
-        <!-- THANH DOCK HỆ THỐNG ICON THU GỌN (CHÍNH GIỮA ĐÁY MÀN HÌNH) -->
-        <div class="dock-container">
-          <nav class="floating-dock">
-            <button class="dock-btn" id="dock-btn-inv" title="🎒 Túi Đồ">🎒</button>
-            <button class="dock-btn" id="dock-btn-treasure" title="🧭 Cổ Đồ Tầm Bảo">🧭</button>
-            <button class="dock-btn" id="dock-btn-quest" title="📜 Sắc Lệnh Ngày">📜</button>
-            <button class="dock-btn" id="dock-btn-campaign" title="👑 5 Chương Sử Thi">👑</button>
-            <button class="dock-btn" id="dock-btn-townhall" title="🏛️ Nhà Chính">🏛️</button>
-            <button class="dock-btn" id="dock-btn-forge" title="⚒️ Lò Rèn">⚒️</button>
-            <button class="dock-btn" id="dock-btn-shop" title="🛒 Giao Thương">🛒</button>
-            <button class="dock-btn" id="dock-btn-switch" title="🔄 Đổi Dũng Sĩ">🔄</button>
-            <button class="dock-btn" id="dock-btn-settings" title="⚙️ Cài Đặt">⚙️</button>
+        <!-- THANH MENU BỘ TỘC (GÓC TRÊN PHẢI - HOÀN TOÀN KHÔNG ĐÈ JOYSTICK VÀ NÚT ĐÁNH) -->
+        <div class="sidebar-menu-container" id="sidebar-menu-container">
+          <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" title="Bật/Tắt Menu Quản Lý Bộ Tộc">
+            <span id="sidebar-toggle-icon">📜</span>
+            <span id="sidebar-toggle-text">BỘ TỘC ▾</span>
+          </button>
+          <nav class="sidebar-menu-grid" id="sidebar-menu-grid">
+            <button class="dock-btn" id="dock-btn-townhall" title="🏛️ Nhà Chính (Quản Lý Bộ Tộc)">
+              <span>🏛️</span>
+              <span class="dock-btn-lbl">Nhà Chính</span>
+            </button>
+            <button class="dock-btn" id="dock-btn-inv" title="🎒 Túi Đồ & Trang Bị">
+              <span>🎒</span>
+              <span class="dock-btn-lbl">Túi Đồ</span>
+            </button>
+            <button class="dock-btn" id="dock-btn-quest" title="📜 Sắc Lệnh Trưởng Lão">
+              <span>📜</span>
+              <span class="dock-btn-lbl">Sắc Lệnh</span>
+            </button>
+            <button class="dock-btn" id="dock-btn-forge" title="⚒️ Lò Rèn Thần Binh">
+              <span>⚒️</span>
+              <span class="dock-btn-lbl">Lò Rèn</span>
+            </button>
+            <button class="dock-btn" id="dock-btn-shop" title="🛒 Giao Thương">
+              <span>🛒</span>
+              <span class="dock-btn-lbl">Thương Điếm</span>
+            </button>
+            <button class="dock-btn" id="dock-btn-treasure" title="🧭 Cổ Đồ Tầm Bảo">
+              <span>🧭</span>
+              <span class="dock-btn-lbl">Tầm Bảo</span>
+            </button>
+            <button class="dock-btn" id="dock-btn-campaign" title="👑 5 Chương Sử Thi">
+              <span>👑</span>
+              <span class="dock-btn-lbl">Sử Thi</span>
+            </button>
+            <button class="dock-btn" id="dock-btn-switch" title="🔄 Đổi Dũng Sĩ Nam / Nữ">
+              <span>🔄</span>
+              <span class="dock-btn-lbl">Đổi Tướng</span>
+            </button>
+            <button class="dock-btn" id="dock-btn-settings" title="⚙️ Cài Đặt Hệ Thống">
+              <span>⚙️</span>
+              <span class="dock-btn-lbl">Cài Đặt</span>
+            </button>
           </nav>
         </div>
       </div>
@@ -1028,7 +1094,7 @@
             thirst: 100,
             stamina: 100,
             maxStamina: 100,
-            speed: 3.8,
+            speed: 5.2,
             attackPower: 25,
             armor: 0,
             weaponLevel: 1, // 1: Giáo Gỗ, 2: Giáo Đá, 3: Đại Giáo Bọc Xương T-Rex
@@ -1434,7 +1500,7 @@
           powerPreference: 'high-performance'
         });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         renderer.outputEncoding = THREE.sRGBEncoding;
@@ -1447,7 +1513,7 @@
         const fog = new THREE.FogExp2(0x87ceeb, 0.009);
         scene.fog = fog;
 
-        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 800);
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 300);
         const camOffset = new THREE.Vector3(20, 26, 20);
         camera.position.copy(camOffset);
 
@@ -1458,17 +1524,17 @@
         const ambientLight = new THREE.AmbientLight(0xd9eafd, 0.45);
         scene.add(ambientLight);
 
-        // 1. Hệ Thống Bóng Động Bám Theo Tầm Nhìn (Dynamic Follow-Shadow System 70m x 70m)
+        // 1. Hệ Thống Bóng Động Bám Theo Tầm Nhìn (Dynamic Follow-Shadow System)
         const sunLight = new THREE.DirectionalLight(0xfff2cc, 1.35);
         sunLight.castShadow = true;
         sunLight.shadow.mapSize.width = 1024;
         sunLight.shadow.mapSize.height = 1024;
         sunLight.shadow.camera.near = 0.5;
-        sunLight.shadow.camera.far = 160;
-        sunLight.shadow.camera.left = -35;
-        sunLight.shadow.camera.right = 35;
-        sunLight.shadow.camera.top = 35;
-        sunLight.shadow.camera.bottom = -35;
+        sunLight.shadow.camera.far = 120;
+        sunLight.shadow.camera.left = -28;
+        sunLight.shadow.camera.right = 28;
+        sunLight.shadow.camera.top = 28;
+        sunLight.shadow.camera.bottom = -28;
         sunLight.shadow.bias = -0.0005;
         sunLight.shadow.normalBias = 0.02;
         scene.add(sunLight);
@@ -1480,25 +1546,23 @@
         GameState.player.group.add(playerTorchLight);
 
         // ----------------------------------------------------
-        // HỆ THỐNG HIỆU ỨNG HẠT MƯA 3D (PROCEDURAL 3D RAIN FX)
+        // HỆ THỐNG HIỆU ỨNG HẠT MƯA 3D (GPU TRANSFORM O(1))
         // ----------------------------------------------------
-        const rainCount = 3000;
+        const rainCount = 1200;
         const rainGeo = new THREE.BufferGeometry();
         const rainPositions = new Float32Array(rainCount * 3);
-        const rainVelocities = new Float32Array(rainCount);
 
         for (let i = 0; i < rainCount; i++) {
-          rainPositions[i * 3] = (Math.random() - 0.5) * 75;
-          rainPositions[i * 3 + 1] = Math.random() * 32;
-          rainPositions[i * 3 + 2] = (Math.random() - 0.5) * 75;
-          rainVelocities[i] = 16 + Math.random() * 8;
+          rainPositions[i * 3] = (Math.random() - 0.5) * 65;
+          rainPositions[i * 3 + 1] = Math.random() * 26;
+          rainPositions[i * 3 + 2] = (Math.random() - 0.5) * 65;
         }
         rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPositions, 3));
         const rainMat = new THREE.PointsMaterial({
           color: 0x93c5fd,
-          size: 0.18,
+          size: 0.16,
           transparent: true,
-          opacity: 0.7
+          opacity: 0.65
         });
         const rainParticles = new THREE.Points(rainGeo, rainMat);
         rainParticles.visible = false;
@@ -1702,26 +1766,16 @@
         scene.add(ground);
 
         // ----------------------------------------------------
-        // HỆ THỐNG QUÉT VÀ BÁM ĐỊA HÌNH 3D (RAYCASTER TERRAIN SNAPPING)
         // ----------------------------------------------------
-        const terrainRaycaster = new THREE.Raycaster();
-        const downVector = new THREE.Vector3(0, -1, 0);
-
+        // HỆ THỐNG QUÉT VÀ BÁM ĐỊA HÌNH 3D (TÍNH TOÁN GIẢI TÍCH O(1))
+        // ----------------------------------------------------
         /**
-         * Lấy độ cao chính xác của bề mặt địa hình tại tọa độ (x, z)
+         * Lấy độ cao chính xác của bề mặt địa hình tại tọa độ (x, z) — Tính giải tích O(1) tức thì, zero-allocation
          * @param {number} x - Tọa độ X thế giới
          * @param {number} z - Tọa độ Z thế giới
-         * @param {THREE.Mesh} terrainMesh - Mesh địa hình (mặc định là ground)
-         * @returns {number} Độ cao Y thực tế của mặt cỏ
+         * @returns {number} Độ cao Y thực tế của mặt đất
          */
-        function getTerrainHeight(x, z, terrainMesh = ground) {
-          if (!terrainMesh) return 0;
-          terrainRaycaster.set(new THREE.Vector3(x, 100, z), downVector);
-          const hits = terrainRaycaster.intersectObject(terrainMesh, false);
-          if (hits.length > 0) {
-            return hits[0].point.y;
-          }
-          // Hàm toán học dự phòng khớp chuẩn xác với địa hình groundGeo
+        function getTerrainHeight(x, z) {
           const dist = Math.hypot(x, z);
           let y = Math.sin(x * 0.03) * Math.cos(z * 0.03) * 1.8;
           if (dist < 14) y *= 0.1;
@@ -1815,13 +1869,12 @@
           return Math.hypot(x, z) < 6.0 || Math.hypot(x - (-6), z - (-5)) < 4.5 || Math.hypot(x, z - (-4.5)) < 4.5;
         }
 
-        // BIỂN CỎ 3D 8.000 NGỌN (THREE.InstancedMesh)
-        const grassCount = 8000;
-        const bladeGeo = new THREE.PlaneGeometry(0.16, 0.75, 1, 2);
+        // BIỂN CỎ 3D (THREE.InstancedMesh & MeshLambertMaterial tối ưu GPU)
+        const grassCount = 4500;
+        const bladeGeo = new THREE.PlaneGeometry(0.16, 0.75, 1, 1);
         bladeGeo.translate(0, 0.375, 0);
-        const bladeMat = new THREE.MeshStandardMaterial({
+        const bladeMat = new THREE.MeshLambertMaterial({
           color: 0x487928,
-          roughness: 0.8,
           side: THREE.DoubleSide
         });
         const grassMesh = new THREE.InstancedMesh(bladeGeo, bladeMat, grassCount);
@@ -1847,14 +1900,43 @@
         scene.add(grassMesh);
 
         // ----------------------------------------------------
-        // CHƯƠNG III: TRÌNH QUẢN LÝ HOẠT ẢNH DŨNG SĨ 3D
-        // (WARRIOR ANIMATION SYSTEM & SKELETAL RIGGING)
+        // CHƯƠNG III: TRÌNH QUẢN LÝ HOẠT ẢNH DŨNG SĨ 3D & LOADERS
+        // (WARRIOR ANIMATION SYSTEM & LOADERS)
         // ----------------------------------------------------
-        /**
-         * Chuẩn hóa kích thước và đặt đáy chân chạm mặt phẳng Y = 0
-         * @param {THREE.Object3D} model - Đối tượng 3D (Player hoặc Dinosaur hoặc Môi Trường)
-         * @param {number} targetHeight - Chiều cao mong muốn tính bằng mét (vd: 1.85m cho nam, 1.75m cho nữ)
-         */
+        const loader = typeof THREE.GLTFLoader !== 'undefined' ? new THREE.GLTFLoader() : null;
+        const fbxLoader = typeof THREE.FBXLoader !== 'undefined' ? new THREE.FBXLoader() : null;
+        const harvestableNodes = [];
+
+        function loadGLB(filename, onLoad) {
+          if (!loader) return;
+          const paths = [`./models/${filename}`, `models/${filename}`, `../../models/${filename}`];
+          function tryNext(i) {
+            if (i >= paths.length) return;
+            loader.load(paths[i], (g) => onLoad(g), undefined, () => tryNext(i + 1));
+          }
+          tryNext(0);
+        }
+
+        function loadFBX(filename) {
+          return new Promise((resolve, reject) => {
+            if (!fbxLoader) return reject(new Error('FBXLoader không khả dụng'));
+            const paths = [`./models/${filename}`, `models/${filename}`, `../../models/${filename}`];
+            function tryNext(i) {
+              if (i >= paths.length) {
+                console.error(`Không thể nạp file FBX: ${filename}`);
+                return reject(new Error(`Không thể nạp file FBX: ${filename}`));
+              }
+              fbxLoader.load(
+                paths[i],
+                (fbx) => resolve(fbx),
+                undefined,
+                () => tryNext(i + 1)
+              );
+            }
+            tryNext(0);
+          });
+        }
+
         /**
          * Chuẩn hóa kích thước và đặt đáy chân chạm mặt phẳng Y = 0 (2-Layer Wrapper Group Pattern)
          * @param {THREE.Object3D} model - Đối tượng 3D (Player hoặc Dinosaur)
@@ -1988,13 +2070,13 @@
           return { Idle: idleClip, Walk: walkClip, Run: runClip, Attack: attackClip, Death: deathClip };
         }
 
-        // Cấu hình Tốc độ Phát Hoạt ảnh Chuẩn (Game Feel Tuning - TimeScale Configuration)
+        // Cấu hình Tốc độ Phát Hoạt ảnh Chuẩn (Game Feel Tuning - 1.5x Speed Up)
         const HERO_ACTION_TIMESCALES = {
-          walk: 1.25,      // Bước chân nhanh hơn 1.25 lần (Khớp chuẩn với vận tốc di chuyển)
-          run: 1.25,       // Chạy nhanh 1.25 lần
-          pickup: 1.35,    // Cúi nhặt đồ nhanh và dứt khoát 1.35 lần (Fast Looting)
-          attack: 1.20,    // Vung kiếm/giáo nhanh hơn 1.20 lần (Tạo cảm giác chém uy lực)
-          hit: 1.30,       // Giật lùi nhanh 1.30 lần khi trúng đòn
+          walk: 1.875,     // Bước chân nhanh hơn 1.5x (1.25 * 1.5)
+          run: 1.875,      // Chạy nhanh 1.5x (1.25 * 1.5)
+          pickup: 2.025,   // Cúi nhặt đồ nhanh và dứt khoát 1.5x (1.35 * 1.5)
+          attack: 1.80,    // Vung kiếm/giáo nhanh hơn 1.5x (1.20 * 1.5)
+          hit: 1.95,       // Giật lùi nhanh 1.5x (1.30 * 1.5)
           idle: 1.0,       // Đứng thở giữ nguyên nhịp tự nhiên 1.0
           death: 1.0       // Gục ngã tự nhiên 1.0
         };
@@ -3424,8 +3506,8 @@
           }
 
           p.isPickingUp = true;
-          p.pickupTimer = 1.0;
-          playHeroAction('pickup', true, 0.15, 1.35);
+          p.pickupTimer = 0.65;
+          playHeroAction('pickup', true, 0.15, 2.025);
 
           setTimeout(() => {
             if (p.hp <= 0 || p.isDead) return;
@@ -3485,53 +3567,19 @@
             }
             const idx = harvestableNodes.indexOf(node);
             if (idx !== -1) harvestableNodes.splice(idx, 1);
-          }, 550);
+          }, 360);
 
           setTimeout(() => {
             p.isPickingUp = false;
             if (p.hp > 0 && !p.isDead && !p.isAttacking && !p.isHitReacting) {
               playHeroAction(p.moving ? 'walk' : 'idle', false, 0.2);
             }
-          }, 1000);
+          }, 650);
         }
 
         // ----------------------------------------------------
         // CHƯƠNG VI: NẠP TOÀN BỘ MÔ HÌNH (MODULAR FBX & GLB) VÀ TÀI NGUYÊN
         // ----------------------------------------------------
-        const loader = typeof THREE.GLTFLoader !== 'undefined' ? new THREE.GLTFLoader() : null;
-        const fbxLoader = typeof THREE.FBXLoader !== 'undefined' ? new THREE.FBXLoader() : null;
-        const harvestableNodes = [];
-
-        function loadGLB(filename, onLoad) {
-          if (!loader) return;
-          const paths = [`./models/${filename}`, `models/${filename}`, `../../models/${filename}`];
-          function tryNext(i) {
-            if (i >= paths.length) return;
-            loader.load(paths[i], (g) => onLoad(g), undefined, () => tryNext(i + 1));
-          }
-          tryNext(0);
-        }
-
-        function loadFBX(filename) {
-          return new Promise((resolve, reject) => {
-            if (!fbxLoader) return reject(new Error('FBXLoader không khả dụng'));
-            const paths = [`./models/${filename}`, `models/${filename}`, `../../models/${filename}`];
-            function tryNext(i) {
-              if (i >= paths.length) {
-                console.error(`Không thể nạp file FBX: ${filename}`);
-                return reject(new Error(`Không thể nạp file FBX: ${filename}`));
-              }
-              fbxLoader.load(
-                paths[i],
-                (fbx) => resolve(fbx),
-                undefined,
-                () => tryNext(i + 1)
-              );
-            }
-            tryNext(0);
-          });
-        }
-
         // Hàm triệt tiêu Root Motion dịch chuyển X/Z của xương gốc (giữ nguyên nhấp nhô Y)
         function sanitizeClipRootMotion(clip) {
           if (!clip || !clip.tracks) return clip;
@@ -3603,7 +3651,7 @@
               const clip = sanitizeClipRootMotion(walkFbx.animations[0].clone());
               clip.name = 'walk';
               const act = mixer.clipAction(clip);
-              act.timeScale = 1.25; // Bước chân nhanh hơn 1.25 lần (Khớp chuẩn với vận tốc di chuyển)
+              act.timeScale = 1.875; // Bước chân nhanh hơn 1.5x (Khớp chuẩn với vận tốc di chuyển)
               c.actions['walk'] = act;
               c.actions['Walk'] = act;
               c.actions['run'] = act;
@@ -3613,7 +3661,7 @@
               const clip = sanitizeClipRootMotion(attackFbx.animations[0].clone());
               clip.name = 'attack';
               const act = mixer.clipAction(clip);
-              act.timeScale = 1.20; // Vung kiếm/giáo nhanh hơn 1.2 lần (Tạo cảm giác chém uy lực)
+              act.timeScale = 1.80; // Vung kiếm/giáo nhanh hơn 1.5x (Tạo cảm giác chém uy lực)
               c.actions['attack'] = act;
               c.actions['Attack'] = act;
             }
@@ -3629,7 +3677,7 @@
               const clip = sanitizeClipRootMotion(pickupFbx.animations[0].clone());
               clip.name = 'pickup';
               const act = mixer.clipAction(clip);
-              act.timeScale = 1.35; // Cúi nhặt đồ nhanh và dứt khoát (tránh kẹt animation lâu)
+              act.timeScale = 2.025; // Cúi nhặt đồ nhanh và dứt khoát 1.5x
               c.actions['pickup'] = act;
               c.actions['Pickup'] = act;
               c.actions['picking_up'] = act;
@@ -3638,7 +3686,7 @@
               const clip = sanitizeClipRootMotion(hitFbx.animations[0].clone());
               clip.name = 'hit';
               const act = mixer.clipAction(clip);
-              act.timeScale = 1.30; // Giật lùi nhanh khi trúng đòn
+              act.timeScale = 1.95; // Giật lùi nhanh 1.5x khi trúng đòn
               c.actions['hit'] = act;
               c.actions['Hit'] = act;
               c.actions['hit_reaction'] = act;
@@ -3718,7 +3766,7 @@
               const clip = sanitizeClipRootMotion(walkFbx.animations[0].clone());
               clip.name = 'walk';
               const act = mixer.clipAction(clip);
-              act.timeScale = 1.25; // Bước chân nhanh hơn 1.25 lần (Khớp chuẩn với vận tốc di chuyển)
+              act.timeScale = 1.875; // Bước chân nhanh hơn 1.5x (Khớp chuẩn với vận tốc di chuyển)
               c.actions['walk'] = act;
               c.actions['Walk'] = act;
               c.actions['run'] = act;
@@ -3728,7 +3776,7 @@
               const clip = sanitizeClipRootMotion(attackFbx.animations[0].clone());
               clip.name = 'attack';
               const act = mixer.clipAction(clip);
-              act.timeScale = 1.20; // Vung kiếm/giáo nhanh hơn 1.2 lần (Tạo cảm giác chém uy lực)
+              act.timeScale = 1.80; // Vung kiếm/giáo nhanh hơn 1.5x (Tạo cảm giác chém uy lực)
               c.actions['attack'] = act;
               c.actions['Attack'] = act;
             }
@@ -3744,7 +3792,7 @@
               const clip = sanitizeClipRootMotion(pickupFbx.animations[0].clone());
               clip.name = 'pickup';
               const act = mixer.clipAction(clip);
-              act.timeScale = 1.35; // Cúi nhặt đồ nhanh và dứt khoát (tránh kẹt animation lâu)
+              act.timeScale = 2.025; // Cúi nhặt đồ nhanh và dứt khoát 1.5x
               c.actions['pickup'] = act;
               c.actions['Pickup'] = act;
               c.actions['picking_up'] = act;
@@ -3753,7 +3801,7 @@
               const clip = sanitizeClipRootMotion(hitFbx.animations[0].clone());
               clip.name = 'hit';
               const act = mixer.clipAction(clip);
-              act.timeScale = 1.30; // Giật lùi nhanh khi trúng đòn
+              act.timeScale = 1.95; // Giật lùi nhanh 1.5x khi trúng đòn
               c.actions['hit'] = act;
               c.actions['Hit'] = act;
               c.actions['hit_reaction'] = act;
@@ -3815,9 +3863,14 @@
           });
         });
 
-        // Nạp và rải đều các đối tượng tài nguyên & môi trường
-        function scatterObjects(baseModel, count, targetHeight, radiusMin, radiusMax, type) {
-          baseModel.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+        // Nạp và rải đều các đối tượng tài nguyên & môi trường (Tối ưu Shadow Pass)
+        function scatterObjects(baseModel, count, targetHeight, radiusMin, radiusMax, type, castShadow = false) {
+          baseModel.traverse((o) => {
+            if (o.isMesh) {
+              o.castShadow = castShadow;
+              o.receiveShadow = true;
+            }
+          });
           for (let i = 0; i < count; i++) {
             let x, z;
             do {
@@ -3849,8 +3902,8 @@
         }
 
         // Cây cối & Tài nguyên Thực Địa
-        loadGLB('stylized_palm_tree_1k_pbr.glb', (g) => scatterObjects(g.scene, 45, 6.5, 10, 115, 'tree'));
-        loadGLB('stylized_tropical_pack.glb', (g) => scatterObjects(g.scene, 30, 4.2, 14, 120, null));
+        loadGLB('stylized_palm_tree_1k_pbr.glb', (g) => scatterObjects(g.scene, 45, 6.5, 10, 115, 'tree', true));
+        loadGLB('stylized_tropical_pack.glb', (g) => scatterObjects(g.scene, 30, 4.2, 14, 120, null, false));
         loadGLB('stylized_stones_minipack.glb', (g) => {
           const m = g.scene;
           m.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
@@ -3858,13 +3911,13 @@
           m.position.set(-35, m.position.y, -10);
           scene.add(m);
         });
-        loadGLB('stylized_rock.glb', (g) => scatterObjects(g.scene, 35, 1.8, 8, 110, 'stone'));
-        loadGLB('fallen_stump_tree_optimized.glb', (g) => scatterObjects(g.scene, 22, 1.3, 8, 95, 'wood'));
-        loadGLB('tree_stump_model.glb', (g) => scatterObjects(g.scene, 14, 1.6, 8, 85, 'wood'));
-        loadGLB('anemone_flower_low_poly.glb', (g) => scatterObjects(g.scene, 40, 0.65, 6, 80, 'flower'));
-        loadGLB('generic_ranunculus_flower.glb', (g) => scatterObjects(g.scene, 30, 0.65, 6, 85, 'flower'));
-        loadGLB('peace_lily_plants__flower.glb', (g) => scatterObjects(g.scene, 25, 1.6, 8, 90, 'flower'));
-        loadGLB('low_poly_mushroom_pack.glb', (g) => scatterObjects(g.scene, 35, 0.55, 6, 75, 'mushroom'));
+        loadGLB('stylized_rock.glb', (g) => scatterObjects(g.scene, 35, 1.8, 8, 110, 'stone', true));
+        loadGLB('fallen_stump_tree_optimized.glb', (g) => scatterObjects(g.scene, 22, 1.3, 8, 95, 'wood', false));
+        loadGLB('tree_stump_model.glb', (g) => scatterObjects(g.scene, 14, 1.6, 8, 85, 'wood', false));
+        loadGLB('anemone_flower_low_poly.glb', (g) => scatterObjects(g.scene, 40, 0.65, 6, 80, 'flower', false));
+        loadGLB('generic_ranunculus_flower.glb', (g) => scatterObjects(g.scene, 30, 0.65, 6, 85, 'flower', false));
+        loadGLB('peace_lily_plants__flower.glb', (g) => scatterObjects(g.scene, 25, 1.6, 8, 90, 'flower', false));
+        loadGLB('low_poly_mushroom_pack.glb', (g) => scatterObjects(g.scene, 35, 0.55, 6, 75, 'mushroom', false));
 
         // ----------------------------------------------------
         // CHƯƠNG VII: HỆ THỐNG ĐIỀU KHIỂN & CHIẾN ĐẤU
@@ -3941,12 +3994,12 @@
           const char = p.characters[p.gender];
           const atkAct = char?.actions['attack'] || char?.actions['Attack'];
           const atkClip = atkAct?.getClip();
-          const duration = atkClip ? atkClip.duration / 1.20 : 0.85;
+          const duration = atkClip ? atkClip.duration / 1.80 : 0.55;
           p.attackTimer = duration;
           playSfx('swing');
 
-          // Kích hoạt Clip Attack với LoopOnce (1.20x timeScale)
-          playHeroAction('attack', true, 0.1, 1.20, () => {
+          // Kích hoạt Clip Attack với LoopOnce (1.80x timeScale)
+          playHeroAction('attack', true, 0.1, 1.80, () => {
             p.isAttacking = false;
             if (p.slashMesh) p.slashMesh.material.opacity = 0;
             if (p.hp > 0 && !p.isDead && !p.isPickingUp && !p.isHitReacting) {
@@ -4039,7 +4092,6 @@
           p.dodgeTimer = 0.25;
           const backVec = new THREE.Vector3(-Math.sin(p.facingAngle), 0, -Math.cos(p.facingAngle));
           p.dodgeDir.copy(backVec);
-          showToast('💨 Đạp lùi né đòn!');
         }
 
         // HÀNH ĐỘNG TƯƠNG TÁC NGỮ CẢNH
@@ -4099,7 +4151,7 @@
             }
 
             p.isPickingUp = true;
-            playHeroAction('pickup', true, 0.15, 1.35);
+            playHeroAction('pickup', true, 0.15, 2.025);
 
             setTimeout(() => {
               playSfx('harvest');
@@ -4117,7 +4169,7 @@
               spawnFloatingText('+3 Thịt, +1 Da, +1 Nanh 🪤', node.pos, 'dmg-popup--food');
               showToast('🎉 Thu hoạch bẫy thú thành công: +3 Thịt Sống, +1 Da Thú, +1 Nanh Thú!');
               p.isPickingUp = false;
-            }, 600);
+            }, 380);
             return;
           }
 
@@ -4127,10 +4179,10 @@
           }
 
           if (type === 'tree' || type === 'wood') {
-            // ĐỐN GỖ: Vung vũ khí đốn cây (attack clip 1.20x), cây rung nhẹ -> +2 Wood
+            // ĐỐN GỖ: Vung vũ khí đốn cây (attack clip 1.80x), cây rung nhẹ -> +2 Wood
             p.isAttacking = true;
-            p.attackTimer = 0.55;
-            playHeroAction('attack', true, 0.1, 1.20);
+            p.attackTimer = 0.35;
+            playHeroAction('attack', true, 0.1, 1.80);
             playSfx('swing');
 
             setTimeout(() => {
@@ -4154,20 +4206,20 @@
                   node.mesh.visible = true;
                 }, 25000);
               }
-            }, 250);
+            }, 160);
 
             setTimeout(() => {
               p.isAttacking = false;
               if (p.hp > 0 && !p.isDead && !p.isPickingUp && !p.isHitReacting) {
                 playHeroAction(p.moving ? 'walk' : 'idle', false, 0.2);
               }
-            }, 550);
+            }, 360);
 
           } else if (type === 'stone') {
-            // ĐẬP ĐÁ: Vung vũ khí đập đá (attack clip 1.20x), khối đá rung nhẹ -> +2 Stone
+            // ĐẬP ĐÁ: Vung vũ khí đập đá (attack clip 1.80x), khối đá rung nhẹ -> +2 Stone
             p.isAttacking = true;
-            p.attackTimer = 0.55;
-            playHeroAction('attack', true, 0.1, 1.20);
+            p.attackTimer = 0.35;
+            playHeroAction('attack', true, 0.1, 1.80);
             playSfx('swing');
 
             setTimeout(() => {
@@ -4191,25 +4243,25 @@
                   node.mesh.visible = true;
                 }, 25000);
               }
-            }, 250);
+            }, 160);
 
             setTimeout(() => {
               p.isAttacking = false;
               if (p.hp > 0 && !p.isDead && !p.isPickingUp && !p.isHitReacting) {
                 playHeroAction(p.moving ? 'walk' : 'idle', false, 0.2);
               }
-            }, 550);
+            }, 360);
 
           } else if (type === 'mushroom') {
-            // HÁI NẤM: Cúi người nhặt (pickup clip 1.35x) -> +1 Food
+            // HÁI NẤM: Cúi người nhặt (pickup clip 2.025x) -> +1 Food
             p.isPickingUp = true;
             const char = p.characters[p.gender];
             const pickAct = char?.actions['pickup'] || char?.actions['Pickup'] || char?.actions['picking_up'];
             const clip = pickAct?.getClip();
-            const duration = clip ? clip.duration / 1.35 : 1.0;
+            const duration = clip ? clip.duration / 2.025 : 0.65;
             p.pickupTimer = duration;
 
-            playHeroAction('pickup', true, 0.15, 1.35);
+            playHeroAction('pickup', true, 0.15, 2.025);
 
             setTimeout(() => {
               if (p.hp <= 0 || p.isDead) return;
@@ -4237,15 +4289,15 @@
             }, Math.round(duration * 1000));
 
           } else {
-            // HÁI THẢO DƯỢC (flower / herbs): Cúi người nhặt -> +1 Herbs
+            // HÁI THẢO DƯỢC (flower / herbs): Cúi người nhặt (pickup clip 2.025x) -> +1 Herbs
             p.isPickingUp = true;
             const char = p.characters[p.gender];
             const pickAct = char?.actions['pickup'] || char?.actions['Pickup'] || char?.actions['picking_up'];
             const clip = pickAct?.getClip();
-            const duration = clip ? clip.duration / 1.35 : 1.0;
+            const duration = clip ? clip.duration / 2.025 : 0.65;
             p.pickupTimer = duration;
 
-            playHeroAction('pickup', true, 0.15, 1.35);
+            playHeroAction('pickup', true, 0.15, 2.025);
 
             setTimeout(() => {
               if (p.hp <= 0 || p.isDead) return;
@@ -5369,9 +5421,6 @@
           openModal(html);
           document.getElementById('modal-close-btn').onclick = closeModal;
         }
-          showToast('📤 Đã rút toàn bộ tài nguyên về Túi Đồ!');
-          openChestModal();
-        };
 
         function trackDecreeProgress(type, amount) {
           GameState.dailyDecrees.forEach((d) => {
@@ -6070,7 +6119,18 @@
           document.getElementById('modal-close-btn').onclick = closeModal;
         }
 
-        // Gắn sự kiện các nút Dock & Top Bar
+        // Gắn sự kiện các nút Menu Bộ Tộc & Top Bar
+        const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
+        const sidebarGrid = document.getElementById('sidebar-menu-grid');
+        const sidebarToggleText = document.getElementById('sidebar-toggle-text');
+        if (sidebarToggleBtn && sidebarGrid) {
+          sidebarToggleBtn.onclick = (e) => {
+            e.stopPropagation();
+            const isCollapsed = sidebarGrid.classList.toggle('is-collapsed');
+            sidebarToggleText.textContent = isCollapsed ? 'BỘ TỘC ▸' : 'BỘ TỘC ▾';
+          };
+        }
+
         document.getElementById('dock-btn-townhall').onclick = openTownHallModal;
         document.getElementById('dock-btn-inv').onclick = openInventoryModal;
         const treasBtn = document.getElementById('dock-btn-treasure');
@@ -6098,35 +6158,74 @@
         const btnStart = document.getElementById('btn-start-game');
         const charOverlay = document.getElementById('char-modal-overlay');
 
+        // Tự động kiểm tra nếu đã có save trước đó
+        try {
+          const savedStr = localStorage.getItem(SAVE_KEY);
+          if (savedStr) {
+            const data = JSON.parse(savedStr);
+            if (data && data.gender === 'female') {
+              cardF.classList.add('is-selected');
+              cardM.classList.remove('is-selected');
+              GameState.player.gender = 'female';
+            }
+          }
+        } catch (e) {}
+
         cardM.onclick = () => { cardM.classList.add('is-selected'); cardF.classList.remove('is-selected'); GameState.player.gender = 'male'; };
         cardF.onclick = () => { cardF.classList.add('is-selected'); cardM.classList.remove('is-selected'); GameState.player.gender = 'female'; };
+
         btnStart.onclick = () => {
+          // Lưu lại lựa chọn nhân vật người chơi vừa chọn trên màn hình
+          const chosenGender = GameState.player.gender || 'male';
           const loaded = loadGameState();
-          switchHeroGender(GameState.player.gender);
+          
+          // Ghi đè giới tính theo đúng lựa chọn thực tế của người chơi trên giao diện
+          GameState.player.gender = chosenGender;
+          switchHeroGender(chosenGender);
+          saveGameState();
+
           charOverlay.classList.add('is-hidden');
           GameState.started = true;
           if (loaded) {
             showToast(`📂 Đã khôi phục tiến trình chơi: Đời ${GameState.empire.tier} (${GameState.player.weaponName})!`);
           } else {
-            showToast(`🌟 Chào mừng ${GameState.player.gender === 'male' ? 'Dũng Sĩ Nam' : 'Dũng Sĩ Nữ'} đến Kỷ Nguyên Hoang Cổ 3D!`);
+            showToast(`🌟 Chào mừng ${chosenGender === 'male' ? 'Dũng Sĩ Nam' : 'Dũng Sĩ Nữ'} đến Kỷ Nguyên Hoang Cổ 3D!`);
           }
         };
 
         // ----------------------------------------------------
         // UI HELPERS (TOAST & FLOATING TEXT)
         // ----------------------------------------------------
+        let _lastToastMsg = '';
+        let _lastToastTime = 0;
+
         function showToast(msg) {
+          if (!msg) return;
+          const now = performance.now();
+          // Chống spam thông báo trùng lặp trong 3.5s
+          if (msg === _lastToastMsg && now - _lastToastTime < 3500) return;
+          _lastToastMsg = msg;
+          _lastToastTime = now;
+
           const stack = document.getElementById('toast-stack');
+          if (!stack) return;
+
+          // Giới hạn tối đa 2 thông báo trên màn hình
+          while (stack.children.length >= 2) {
+            stack.firstChild.remove();
+          }
+
           const t = document.createElement('div');
           t.className = 'toast';
           t.textContent = msg;
           stack.appendChild(t);
+
           setTimeout(() => {
             t.style.opacity = '0';
             t.style.transform = 'translateY(-10px)';
-            t.style.transition = 'all 0.25s ease';
-            setTimeout(() => t.remove(), 250);
-          }, 2600);
+            t.style.transition = 'all 0.2s ease';
+            setTimeout(() => t.remove(), 200);
+          }, 1800);
         }
 
         function spawnFloatingText(text, worldPos, className) {
@@ -6202,20 +6301,33 @@
         updateHUD();
 
         // ----------------------------------------------------
-        // CHƯƠNG IX: VÒNG LẶP CHÍNH (GAME LOOP 60 FPS FRAME PACING)
+        // CHƯƠNG IX: VÒNG LẶP CHÍNH (GAME LOOP 60 FPS ZERO-ALLOCATION)
         // ĐIỀU KHIỂN HOẠT ẢNH DŨNG SĨ VÀ AI KHỦNG LONG 3D
         // ----------------------------------------------------
         const clock = new THREE.Clock();
         let lastFrameTime = 0;
-        const targetFrameInterval = 1000 / 60; // Khóa 60 FPS chống quá nhiệt trên màn hình 90Hz/120Hz
+        const targetFrameInterval = 1000 / 60; // 16.666ms
+
+        // Cached Temp Vectors để triệt tiêu Garbage Collection trong Render Loop
+        const _camForward = new THREE.Vector3();
+        const _camRight = new THREE.Vector3();
+        const _moveVec = new THREE.Vector3();
+        const _targetCam = new THREE.Vector3();
+        const _upVec = new THREE.Vector3(0, 1, 0);
+
+        // Cached DOM Elements cho nút Tương Tác
+        const _elInteractBtn = document.getElementById('btn-interact');
+        const _elInteractLabel = document.getElementById('btn-interact-label');
+        const _elInteractIcon = _elInteractBtn ? _elInteractBtn.querySelector('span:first-child') : null;
+        let _lastInteractState = '';
 
         function animate(currentTime = 0) {
           requestAnimationFrame(animate);
 
-          // 3. Khóa Tốc Độ 60 FPS Chuẩn (Frame Pacing Limiter)
+          // 3. Khóa Tốc Độ 60 FPS Chuẩn (có độ trễ sai số 3.5ms để không rớt khung hình trên màn hình 60Hz)
           const elapsed = currentTime - lastFrameTime;
-          if (elapsed < targetFrameInterval) return;
-          lastFrameTime = currentTime - (elapsed % targetFrameInterval);
+          if (elapsed < targetFrameInterval - 3.5) return;
+          lastFrameTime = currentTime;
 
           const dt = Math.min(clock.getDelta(), 0.05); // Cố định delta time tối đa 0.05s chống nhảy cóc giật lag
           const time = clock.getElapsedTime();
@@ -6276,20 +6388,15 @@
           // Cập nhật đèn Đuốc người chơi khi đêm xuống
           playerTorchLight.intensity = t.isNight && GameState.inventory.torch > 0 ? 2.8 : 0;
 
-          // Cập nhật hạt mưa rơi 3D
+          // Cập nhật hạt mưa rơi 3D (Tối ưu GPU Transform O(1), không upload CPU buffer)
           if (w.isRaining) {
             rainParticles.visible = true;
             rainParticles.position.x = p.group.position.x;
             rainParticles.position.z = p.group.position.z;
-            const rPos = rainGeo.attributes.position.array;
-            const rSpeed = 16 * w.rainIntensity;
-            for (let i = 0; i < rainCount; i++) {
-              rPos[i * 3 + 1] -= (rainVelocities[i] + rSpeed) * dt;
-              if (rPos[i * 3 + 1] < 0) {
-                rPos[i * 3 + 1] = 28 + Math.random() * 6;
-              }
+            rainParticles.position.y -= dt * (24 * w.rainIntensity);
+            if (rainParticles.position.y < -12) {
+              rainParticles.position.y = 0;
             }
-            rainGeo.attributes.position.needsUpdate = true;
           } else {
             rainParticles.visible = false;
           }
@@ -6349,7 +6456,7 @@
             }
           }
 
-          // 3. DI CHUYỂN DŨNG SĨ THEO VECTOR CAMERA ISOMETRIC
+          // 3. DI CHUYỂN DŨNG SĨ THEO VECTOR CAMERA ISOMETRIC (ZERO-ALLOCATION)
           if (p.hp > 0 && !p.isDead) {
             let moveX = input.x, moveZ = input.z;
             if (input.keys['w'] || input.keys['arrowup']) moveZ -= 1;
@@ -6357,23 +6464,22 @@
             if (input.keys['a'] || input.keys['arrowleft']) moveX -= 1;
             if (input.keys['d'] || input.keys['arrowright']) moveX += 1;
 
-            const camForward = new THREE.Vector3();
-            camera.getWorldDirection(camForward);
-            camForward.y = 0;
-            camForward.normalize();
-            const camRight = new THREE.Vector3().crossVectors(camForward, new THREE.Vector3(0, 1, 0)).normalize();
-            const moveVec = new THREE.Vector3().addScaledVector(camRight, moveX).addScaledVector(camForward, -moveZ);
+            camera.getWorldDirection(_camForward);
+            _camForward.y = 0;
+            _camForward.normalize();
+            _camRight.crossVectors(_camForward, _upVec).normalize();
+            _moveVec.set(0, 0, 0).addScaledVector(_camRight, moveX).addScaledVector(_camForward, -moveZ);
 
-            const inputMag = Math.min(1.0, moveVec.length());
+            const inputMag = Math.min(1.0, _moveVec.length());
             const isMoving = inputMag > 0.08;
             p.moving = isMoving;
 
             const canMove = !p.isAttacking && !p.isPickingUp && !p.isHitReacting;
 
             if (isMoving && !p.isDodging && canMove) {
-              moveVec.normalize();
-              p.group.position.addScaledVector(moveVec, p.speed * inputMag * dt);
-              const targetAngle = Math.atan2(moveVec.x, moveVec.z);
+              _moveVec.normalize();
+              p.group.position.addScaledVector(_moveVec, p.speed * inputMag * dt);
+              const targetAngle = Math.atan2(_moveVec.x, _moveVec.z);
               let diff = targetAngle - p.facingAngle;
               while (diff > Math.PI) diff -= Math.PI * 2;
               while (diff < -Math.PI) diff += Math.PI * 2;
@@ -6381,10 +6487,10 @@
               p.group.rotation.y = p.facingAngle;
 
               // Cơ chế Đồng bộ Vận tốc & Tần số bước chân (Kinematic Synchronization):
-              // Tự động điều chỉnh timeScale tỷ lệ thuận với tốc độ di chuyển thực tế để bám chặt mặt đất (1.25x)
-              const baseSpeed = 3.8;
+              // Tự động điều chỉnh timeScale tỷ lệ thuận với tốc độ di chuyển thực tế để bám chặt mặt đất (1.875x)
+              const baseSpeed = 5.2;
               const currentSpeed = p.speed * inputMag;
-              const animSpeed = Math.max(0.6, (currentSpeed / baseSpeed) * 1.25);
+              const animSpeed = Math.max(0.7, (currentSpeed / baseSpeed) * 1.875);
               playHeroAction('walk', false, 0.2, animSpeed);
             } else if (canMove && !p.isDodging) {
               playHeroAction('idle', false, 0.2, 1.0);
@@ -6407,7 +6513,7 @@
               }
             }
 
-            // 5. TỐI ƯU QUÉT ĐỘ CAO ĐỊA HÌNH CHO PLAYER (RAYCASTER THROTTLING >= 0.05m)
+            // 5. TỐI ƯU QUÉT ĐỘ CAO ĐỊA HÌNH CHO PLAYER (CALCULATION THROTTLING >= 0.05m)
             const pdx = p.group.position.x - (p.lastGroundX !== undefined ? p.lastGroundX : -999);
             const pdz = p.group.position.z - (p.lastGroundZ !== undefined ? p.lastGroundZ : -999);
             if (p.cachedGroundY === undefined || (pdx * pdx + pdz * pdz) >= 0.0025) {
@@ -6424,9 +6530,7 @@
             activeChar.mixer.update(dt);
           }
 
-          // 4. KIỂM TRA ĐỐI TƯỢNG TƯƠNG TÁC GẦN NHẤT
-          const interactBtn = document.getElementById('btn-interact');
-          const interactLabel = document.getElementById('btn-interact-label');
+          // 4. KIỂM TRA ĐỐI TƯỢNG TƯƠNG TÁC GẦN NHẤT (DOM CACHED & STATE CHECKED)
           let nearestTarget = null;
           let nearestDist = 3.8;
 
@@ -6470,52 +6574,46 @@
           });
 
           activeContextTarget = nearestTarget;
-          if (nearestTarget) {
-            interactBtn.classList.add('is-active');
-            if (nearestTarget.isNpc) {
-              if (nearestTarget.npcId === 'townhall') {
-                interactLabel.textContent = '🏛️ NHÀ CHÍNH';
-                const iconSpan = interactBtn.querySelector('span:first-child');
-                if (iconSpan) iconSpan.textContent = '🏛️';
-              } else if (nearestTarget.npcId === 'blacksmith') {
-                interactLabel.textContent = '⚒️ LÒ RÈN KRA';
-                const iconSpan = interactBtn.querySelector('span:first-child');
-                if (iconSpan) iconSpan.textContent = '⚒️';
-              } else if (nearestTarget.npcId === 'smoker') {
-                interactLabel.textContent = '🍖 GIÀN HUN KHÓI';
-                const iconSpan = interactBtn.querySelector('span:first-child');
-                if (iconSpan) iconSpan.textContent = '🍖';
-              } else if (nearestTarget.npcId === 'chest') {
-                interactLabel.textContent = '📦 KÉT AN TOÀN';
-                const iconSpan = interactBtn.querySelector('span:first-child');
-                if (iconSpan) iconSpan.textContent = '📦';
-              } else if (nearestTarget.npcId === 'farm') {
-                interactLabel.textContent = '🌱 VƯỜN ƯƠM';
-                const iconSpan = interactBtn.querySelector('span:first-child');
-                if (iconSpan) iconSpan.textContent = '🌱';
-              } else if (nearestTarget.npcId === 'stonehenge') {
-                interactLabel.textContent = '🪨 TRẬN ĐỒ CỰ THẠCH';
-                const iconSpan = interactBtn.querySelector('span:first-child');
-                if (iconSpan) iconSpan.textContent = '🪨';
-              } else if (nearestTarget.npcId === 'elder') {
-                interactLabel.textContent = '📜 SẮC LỆNH MO';
-                const iconSpan = interactBtn.querySelector('span:first-child');
-                if (iconSpan) iconSpan.textContent = '📜';
+          const currentTargetKey = nearestTarget ? (nearestTarget.isNpc ? nearestTarget.npcId : (nearestTarget.node ? nearestTarget.node.type : 'target')) : 'none';
+          if (currentTargetKey !== _lastInteractState && _elInteractBtn && _elInteractLabel) {
+            _lastInteractState = currentTargetKey;
+            if (nearestTarget) {
+              _elInteractBtn.classList.add('is-active');
+              if (nearestTarget.isNpc) {
+                if (nearestTarget.npcId === 'townhall') {
+                  _elInteractLabel.textContent = '🏛️ NHÀ CHÍNH';
+                  if (_elInteractIcon) _elInteractIcon.textContent = '🏛️';
+                } else if (nearestTarget.npcId === 'blacksmith') {
+                  _elInteractLabel.textContent = '⚒️ LÒ RÈN KRA';
+                  if (_elInteractIcon) _elInteractIcon.textContent = '⚒️';
+                } else if (nearestTarget.npcId === 'smoker') {
+                  _elInteractLabel.textContent = '🍖 GIÀN HUN KHÓI';
+                  if (_elInteractIcon) _elInteractIcon.textContent = '🍖';
+                } else if (nearestTarget.npcId === 'chest') {
+                  _elInteractLabel.textContent = '📦 KÉT AN TOÀN';
+                  if (_elInteractIcon) _elInteractIcon.textContent = '📦';
+                } else if (nearestTarget.npcId === 'farm') {
+                  _elInteractLabel.textContent = '🌱 VƯỜN ƯƠM';
+                  if (_elInteractIcon) _elInteractIcon.textContent = '🌱';
+                } else if (nearestTarget.npcId === 'stonehenge') {
+                  _elInteractLabel.textContent = '🪨 TRẬN ĐỒ CỰ THẠCH';
+                  if (_elInteractIcon) _elInteractIcon.textContent = '🪨';
+                } else if (nearestTarget.npcId === 'elder') {
+                  _elInteractLabel.textContent = '📜 SẮC LỆNH MO';
+                  if (_elInteractIcon) _elInteractIcon.textContent = '📜';
+                } else {
+                  _elInteractLabel.textContent = 'TRÒ CHUYỆN';
+                  if (_elInteractIcon) _elInteractIcon.textContent = '💬';
+                }
               } else {
-                interactLabel.textContent = 'TRÒ CHUYỆN';
-                const iconSpan = interactBtn.querySelector('span:first-child');
-                if (iconSpan) iconSpan.textContent = '💬';
+                _elInteractLabel.textContent = nearestTarget.label || 'THU THẬP';
+                if (_elInteractIcon) _elInteractIcon.textContent = nearestTarget.icon || '✋';
               }
             } else {
-              interactLabel.textContent = nearestTarget.label || 'THU THẬP';
-              const iconSpan = interactBtn.querySelector('span:first-child');
-              if (iconSpan) iconSpan.textContent = nearestTarget.icon || '✋';
+              _elInteractBtn.classList.remove('is-active');
+              _elInteractLabel.textContent = 'TƯƠNG TÁC';
+              if (_elInteractIcon) _elInteractIcon.textContent = '✋';
             }
-          } else {
-            interactBtn.classList.remove('is-active');
-            interactLabel.textContent = 'TƯƠNG TÁC';
-            const iconSpan = interactBtn.querySelector('span:first-child');
-            if (iconSpan) iconSpan.textContent = '✋';
           }
 
           // 4.5. HOẠT HÓA TINH THỂ NHÀ CHÍNH & STONEHENGE
@@ -6632,7 +6730,6 @@
                 targetDino.takeDamage(35, coopHeroGroup.position);
                 playSfx('hit');
                 spawnFloatingText('-35 👥', targetDino.group.position, 'dmg-popup--crit');
-                showToast(`👥 ĐỒNG ĐỘI CO-OP ĐÃ ĐẨY LÙI ${targetDino.name} (-35 HP)!`);
               }
             }
           }
@@ -6692,13 +6789,13 @@
           dinosaurs.forEach((dino) => {
             if (!dino.alive) return;
 
-            // Cập nhật billboarding thanh máu cho khủng long
-            if (dino.hpBarGroup) {
-              dino.updateHealthBar();
-            }
-
             const distToPlayer = dino.group.position.distanceTo(p.group.position);
             const inViewport = distToPlayer < 45.0 || dino.isBoss;
+
+            // Cập nhật billboarding thanh máu cho khủng long (chỉ khi nằm trong tầm nhìn)
+            if (inViewport && dino.hpBarGroup) {
+              dino.updateHealthBar();
+            }
 
             // Chỉ gọi mixer.update(dt) cho các cá thể nằm trong bán kính hiển thị của Camera (< 45m)
             if (inViewport && dino.mixer) {
@@ -6801,7 +6898,6 @@
                     dino.state = 'WALK';
                     dino.target.copy(dino.origin);
                     dino.setAnimation('Walk');
-                    if (dino.isBoss) showToast('🌿 Đã thoát khỏi tầm rượt đuổi của T-Rex!');
                   } else {
                     const chaseDir = p.group.position.clone().sub(dino.group.position);
                     chaseDir.y = 0;
@@ -6827,7 +6923,6 @@
                         p.hp = Math.max(0, p.hp - actualDmg);
                         playSfx('hit');
                         spawnFloatingText(`-${actualDmg}`, p.group.position, 'dmg-popup--player');
-                        showToast(`🩸 Bị ${dino.name} tấn công: -${actualDmg} HP!`);
 
                         if (p.hp <= 0) {
                           if (!p.isDead) {
@@ -6918,7 +7013,6 @@
                 spawnFloatingText(tower.isFire ? `-${tower.damage} 🔥` : `-${tower.damage} 🏹`, targetDino.group.position, tower.isFire ? 'dmg-popup--crit' : 'dmg-popup--player');
 
                 if (targetDino.hp <= 0) {
-                  showToast(`🏹 THÁP CANH ĐÃ TIÊU DIỆT ${targetDino.name}!`);
                   trackDecreeProgress('hunt_dino', 1);
                 }
               }
@@ -6934,7 +7028,6 @@
                 const node = harvestableNodes.find((n) => n.trapData === trap);
                 if (node) node.available = true;
                 playSfx('trap');
-                showToast('🎯 BẪY THÚ ĐÃ SẬP! Hãy lại gần thu hoạch chiến lợi phẩm.');
                 spawnFloatingText('🎯 BẪY ĐÃ SẬP!', trap.pos, 'dmg-popup--food');
               }
             }
@@ -6975,8 +7068,7 @@
               GameState.economy.fangs += 2;
               GameState.empire.fangs = GameState.economy.fangs;
               playSfx('reward');
-              spawnFloatingText('+25🪙 +2🦷 (VIỄN CHINH)', p.group.position, 'dmg-popup--crit');
-              showToast('🚌 VIỄN CHINH: Linh Điểu đã mang về 1 Rương Tiếp Tế Tiền Đồn (+25 Vàng 🪙, +2 Nanh 🦷)!');
+              spawnFloatingText('+25🪙 +2🦷', p.group.position, 'dmg-popup--crit');
             }
           }
 
@@ -7010,8 +7102,8 @@
           }
 
           // 6. CAMERA LERP, SCREEN SHAKE & LỬA TRẠI BẬP BÙNG
-          const targetCam = p.group.position.clone().add(camOffset);
-          camera.position.lerp(targetCam, 0.08);
+          _targetCam.copy(p.group.position).add(camOffset);
+          camera.position.lerp(_targetCam, 0.08);
 
           if (typeof screenShakeTimer !== 'undefined' && screenShakeTimer > 0) {
             screenShakeTimer -= dt;
