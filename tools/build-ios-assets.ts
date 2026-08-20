@@ -32,6 +32,7 @@ async function copyAndTransformTree(srcDir: string, destDir: string): Promise<vo
     const dest = join(destDir, entry.name);
 
     if (entry.isDirectory()) {
+      if (entry.name === 'models') continue; // Bỏ qua models trùng lặp trong apps/game
       await copyAndTransformTree(src, dest);
     } else if (entry.isFile()) {
       if (entry.name.endsWith('.ts')) {
@@ -58,7 +59,7 @@ export async function buildIosAssets(): Promise<void> {
   await rm(OUT_DIR, { recursive: true, force: true });
   await ensureDir(OUT_DIR);
 
-  // 1. Copy và convert apps/game
+  // 1. Copy và convert apps/game (không nhân bản models)
   console.log('📦 Xử lý apps/game...');
   const appGameSrc = join(ROOT, 'apps', 'game');
   await copyAndTransformTree(appGameSrc, join(OUT_DIR, 'apps', 'game'));
@@ -68,11 +69,10 @@ export async function buildIosAssets(): Promise<void> {
   const coreSrc = join(ROOT, 'packages', 'game-core');
   await copyAndTransformTree(coreSrc, join(OUT_DIR, 'packages', 'game-core'));
 
-  // 3. Copy thư mục 3D models (GLB & FBX)
-  console.log('🦖 Xử lý models (3D & FBX) cho iOS...');
+  // 3. Copy thư mục 3D models (GLB & FBX) một lần duy nhất vào OUT_DIR/models
+  console.log('🦖 Xử lý models (3D & FBX) duy nhất cho iOS...');
   const modelsSrc = join(ROOT, 'models');
   await cp(modelsSrc, join(OUT_DIR, 'models'), { recursive: true });
-  await cp(modelsSrc, join(OUT_DIR, 'apps', 'game', 'models'), { recursive: true });
 
   // 4. Tạo file index.html chuyển tiếp ở gốc www
   console.log('📄 Tạo root index.html chuyển tiếp cho iOS...');
