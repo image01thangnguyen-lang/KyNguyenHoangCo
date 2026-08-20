@@ -200,6 +200,7 @@
         transition: opacity 0.4s ease, visibility 0.4s ease;
       }
       .char-modal-overlay.is-hidden {
+        display: none !important;
         opacity: 0;
         visibility: hidden;
         pointer-events: none;
@@ -687,7 +688,7 @@
       .game-modal-overlay {
         position: fixed;
         inset: 0;
-        z-index: 500;
+        z-index: 1200;
         background: rgba(8, 6, 4, 0.75);
         backdrop-filter: blur(10px);
         display: flex;
@@ -1887,13 +1888,6 @@
         const campFireLight = new THREE.PointLight(0xff7700, 2.5, 20, 2);
         campFireLight.position.set(0, 1.0, 0);
         campGroup.add(campFireLight);
-
-        const flameMesh = new THREE.Mesh(
-          new THREE.ConeGeometry(0.35, 0.9, 8),
-          new THREE.MeshBasicMaterial({ color: 0xff6600, transparent: true, opacity: 0.85 })
-        );
-        flameMesh.position.y = 0.55;
-        campGroup.add(flameMesh);
         scene.add(campGroup);
 
         // 🏛️ TIẾN HÓA 4 ĐỜI NHÀ CHÍNH TIỀN ĐỒN (TOWN HALL MULTI-ERA 3D ENGINE)
@@ -1999,10 +1993,22 @@
 
         function loadGLB(filename, onLoad) {
           if (!loader) return;
-          const paths = [`./models/${filename}`, `models/${filename}`, `../../models/${filename}`];
+          const paths = [
+            `./models/${filename}`,
+            `models/${filename}`,
+            `/models/${filename}`,
+            `/apps/game/models/${filename}`,
+            `../../models/${filename}`,
+            `../models/${filename}`
+          ];
           function tryNext(i) {
-            if (i >= paths.length) return;
-            loader.load(paths[i], (g) => onLoad(g), undefined, () => tryNext(i + 1));
+            if (i >= paths.length) {
+              console.warn(`[3D Loader] Không thể nạp GLB: ${filename}`);
+              return;
+            }
+            loader.load(paths[i], (g) => {
+              if (onLoad) onLoad(g);
+            }, undefined, () => tryNext(i + 1));
           }
           tryNext(0);
         }
@@ -2025,9 +2031,6 @@
           });
         }
 
-        // Tải Nhà Chính Đời I mặc định
-        setTownHallEra(GameState.empire.era || 1);
-
         function loadFBX(filename) {
           return new Promise((resolve, reject) => {
             if (!fbxLoader) return reject(new Error('FBXLoader không khả dụng'));
@@ -2046,6 +2049,55 @@
             }
             tryNext(0);
           });
+        }
+
+        /**
+         * Chuẩn hóa kích thước và đặt đáy GLTF Model chạm mặt đất Y = 0
+         * @param {Object} gltf - Đối tượng GLTF từ GLTFLoader
+         * @param {number} targetSize - Kích thước lớn nhất mong muốn (mét)
+         * @param {number} posX - Tọa độ X
+         * @param {number} posZ - Tọa độ Z
+         * @param {number} rotY - Góc xoay quanh trục Y (radian)
+         * @param {THREE.Group|null} parentGroup - Group cha để gắn vào (nếu null gắn vào scene)
+         */
+        function setupGLTFModel(gltf, targetSize, posX, posZ, rotY = 0, parentGroup = null) {
+          const root = gltf.scene;
+
+          // Tính toán Bounding Box để căn chỉnh scale chuẩn xác
+          const box = new THREE.Box3().setFromObject(root);
+          const size = box.getSize(new THREE.Vector3());
+          const maxDim = Math.max(size.x, size.y, size.z);
+          const scaleFactor = targetSize / (maxDim || 1);
+
+          root.scale.setScalar(scaleFactor);
+
+          // Đặt đáy model sát mặt đất Y = 0 (tính cả độ cao địa hình)
+          const updatedBox = new THREE.Box3().setFromObject(root);
+          const groundY = getTerrainHeight(posX, posZ);
+          root.position.set(posX, groundY - updatedBox.min.y, posZ);
+          root.rotation.y = rotY;
+
+          root.traverse((child) => {
+            if (child.isMesh || child.isSkinnedMesh) {
+              child.castShadow = true;
+              child.receiveShadow = true;
+              child.frustumCulled = false; // Chống nháy biến mất góc nhìn
+              if (child.material) {
+                const mats = Array.isArray(child.material) ? child.material : [child.material];
+                mats.forEach((mat) => {
+                  mat.roughness = 0.75;
+                  mat.metalness = 0.15;
+                });
+              }
+            }
+          });
+
+          if (parentGroup) {
+            parentGroup.add(root);
+          } else {
+            scene.add(root);
+          }
+          return root;
         }
 
         /**
@@ -2406,42 +2458,22 @@
           loadGLB('building_forge.glb', (gltf) => {
             const m = gltf.scene;
             setupModelMesh(m);
-            setModelActualHeight(m, 3.2, false);
+            setModelActualHeight(m, 3.6, false);
             m.position.set(0, 0, 0);
             forgeGroup.add(m);
           });
 
-          // Thợ rèn Kra cầm búa tool_hammer.glb
-          const kraGroup = new THREE.Group();
-          kraGroup.position.set(-1.1, 0, 0.4);
-          const kraBody = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.36, 0.44, 1.8, 8),
-            new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.7 })
-          );
-          kraBody.position.y = 0.9;
-          kraBody.castShadow = true;
-          kraGroup.add(kraBody);
-
-          const kraHead = new THREE.Mesh(
-            new THREE.SphereGeometry(0.25, 8, 8),
-            new THREE.MeshStandardMaterial({ color: 0xd4a373 })
-          );
-          kraHead.position.y = 1.9;
-          kraHead.castShadow = true;
-          kraGroup.add(kraHead);
-
+          // Búa Thợ Rèn tool_hammer.glb đặt cạnh đe rèn
           loadGLB('tool_hammer.glb', (gltf) => {
             const hammer = gltf.scene;
             setupModelMesh(hammer);
-            setModelActualHeight(hammer, 0.65, false);
-            hammer.position.set(0.4, 0.9, 0.2);
+            setModelActualHeight(hammer, 0.75, false);
+            hammer.position.set(0.6, 0.85, 0.3);
             hammer.rotation.z = Math.PI / 4;
-            kraGroup.add(hammer);
+            forgeGroup.add(hammer);
           });
 
-          forgeGroup.add(kraGroup);
-
-          const forgeLight = new THREE.PointLight(0xf97316, 2.5, 9.0);
+          const forgeLight = new THREE.PointLight(0xf97316, 2.8, 9.0);
           forgeLight.position.set(0, 1.4, 0);
           forgeGroup.add(forgeLight);
 
@@ -2712,8 +2744,8 @@
 
         function createCrossbowWatchtowers() {
           const towerConfigs = [
-            { id: 'tower_east', x: 11.0, z: -6.5 },
-            { id: 'tower_west', x: -11.0, z: -6.5 }
+            { id: 'tower_east', x: 11.0, z: -11.0 },
+            { id: 'tower_west', x: -11.0, z: -11.0 }
           ];
 
           towerConfigs.forEach((cfg) => {
@@ -2735,7 +2767,7 @@
             loadGLB('building_crossbow_tower.glb', (gltf) => {
               const m = gltf.scene;
               setupModelMesh(m);
-              setModelActualHeight(m, 5.0, false);
+              setModelActualHeight(m, 6.0, false);
               m.position.set(0, 0, 0);
               towerGroup.add(m);
             });
@@ -2744,14 +2776,14 @@
             loadGLB('prop_ballista.glb', (gltf) => {
               const ballista = gltf.scene;
               setupModelMesh(ballista);
-              setModelActualHeight(ballista, 1.2, false);
-              ballista.position.set(0, 4.8, 0);
+              setModelActualHeight(ballista, 1.4, false);
+              ballista.position.set(0, 5.2, 0);
               towerGroup.add(ballista);
               towerEntry.ballistaMesh = ballista;
             });
 
             const torchLight = new THREE.PointLight(0xf59e0b, 1.8, 14.0);
-            torchLight.position.set(0, 5.2, 0);
+            torchLight.position.set(0, 5.6, 0);
             towerGroup.add(torchLight);
 
             scene.add(towerGroup);
@@ -2803,9 +2835,77 @@
           npcs.stonehenge.group = stGroup;
         }
 
+        function createElderMoObject() {
+          const elderGroup = new THREE.Group();
+          const pos = npcs.elder.pos;
+          const py = getTerrainHeight(pos.x, pos.z);
+          elderGroup.position.set(pos.x, py, pos.z);
+
+          // Nạp hoạt ảnh nhân vật FBX cho Trưởng Lão Mo
+          loadFBX('warrior_idle.fbx').then((fbx) => {
+            setupModelMesh(fbx);
+            setModelActualHeight(fbx, 1.85, true);
+            fbx.position.set(0, 0, 0);
+            fbx.traverse((child) => {
+              if (child.isMesh && child.material) {
+                const mat = child.material.clone();
+                mat.color.setHex(0x1d4ed8); // Màu áo choàng xanh thẫm Trưởng Lão
+                child.material = mat;
+              }
+            });
+            elderGroup.add(fbx);
+
+            const mixer = new THREE.AnimationMixer(fbx);
+            if (fbx.animations && fbx.animations.length > 0) {
+              const act = mixer.clipAction(fbx.animations[0]);
+              act.play();
+            }
+            activeMixers.push(mixer);
+          }).catch(() => {});
+
+          // Billboard nhãn tên 3D Trưởng Lão Mo
+          const canvas = document.createElement('canvas');
+          canvas.width = 256;
+          canvas.height = 64;
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+          ctx.roundRect(4, 4, 248, 56, 12);
+          ctx.fill();
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 3;
+          ctx.stroke();
+          ctx.fillStyle = '#fef08a';
+          ctx.font = 'bold 22px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('📜 Trưởng Lão Mo', 128, 32);
+
+          const texture = new THREE.CanvasTexture(canvas);
+          const tagMat = new THREE.SpriteMaterial({ map: texture, transparent: true });
+          const tagSprite = new THREE.Sprite(tagMat);
+          tagSprite.position.set(0, 2.3, 0);
+          tagSprite.scale.set(1.8, 0.45, 1);
+          elderGroup.add(tagSprite);
+
+          const elderRing = new THREE.Mesh(
+            new THREE.RingGeometry(1.2, 1.45, 24),
+            new THREE.MeshBasicMaterial({ color: 0x3b82f6, side: THREE.DoubleSide, transparent: true, opacity: 0.8 })
+          );
+          elderRing.rotation.x = -Math.PI / 2;
+          elderRing.position.y = 0.06;
+          elderGroup.add(elderRing);
+
+          scene.add(elderGroup);
+          npcs.elder.group = elderGroup;
+        }
+
         function createNpcObject(npc) {
           if (npc.id === 'townhall') {
             npc.group = townHallGroup;
+            return;
+          }
+          if (npc.id === 'elder') {
+            createElderMoObject();
             return;
           }
           if (npc.id === 'blacksmith') {
@@ -2848,31 +2948,6 @@
             createStonehengeObject();
             return;
           }
-
-          const group = new THREE.Group();
-          const ny = getTerrainHeight(npc.pos.x, npc.pos.z);
-          group.position.set(npc.pos.x, ny, npc.pos.z);
-
-          const body = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.45, 1.8, 8), new THREE.MeshStandardMaterial({ color: npc.color, roughness: 0.7 }));
-          body.position.y = 0.9;
-          body.castShadow = true;
-          group.add(body);
-
-          const head = new THREE.Mesh(new THREE.SphereGeometry(0.26, 8, 8), new THREE.MeshStandardMaterial({ color: 0xd4a373 }));
-          head.position.set(0, 1.9, 0);
-          head.castShadow = true;
-          group.add(head);
-
-          const ring = new THREE.Mesh(
-            new THREE.RingGeometry(1.2, 1.4, 24),
-            new THREE.MeshBasicMaterial({ color: npc.color, side: THREE.DoubleSide, transparent: true, opacity: 0.75 })
-          );
-          ring.rotation.x = -Math.PI / 2;
-          ring.position.y = 0.05;
-          group.add(ring);
-
-          scene.add(group);
-          npc.group = group;
         }
 
         let palisadeWallGroup = null;
@@ -3097,29 +3172,24 @@
             });
           }
 
-          // 4 Ô ươm mầm cây
+          // 4 Ô ươm mầm cây với mô hình thảo dược GLB thật
           const coords = [
             [-1.1, -1.1], [1.1, -1.1],
             [-1.1, 1.1], [1.1, 1.1]
           ];
 
-          coords.forEach(([cx, cz]) => {
+          coords.forEach(([cx, cz], idx) => {
             const sproutGroup = new THREE.Group();
             sproutGroup.position.set(cx, 0.25, cz);
 
-            const stem = new THREE.Mesh(
-              new THREE.CylinderGeometry(0.04, 0.06, 0.8, 6),
-              new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.6 })
-            );
-            stem.position.y = 0.4;
-            sproutGroup.add(stem);
-
-            const flower = new THREE.Mesh(
-              new THREE.SphereGeometry(0.22, 8, 8),
-              new THREE.MeshStandardMaterial({ color: 0xf43f5e, roughness: 0.4, emissive: 0xbe123c, emissiveIntensity: 0.6 })
-            );
-            flower.position.y = 0.85;
-            sproutGroup.add(flower);
+            const flowerFile = idx % 2 === 0 ? 'anemone_flower_low_poly.glb' : 'generic_ranunculus_flower.glb';
+            loadGLB(flowerFile, (gltf) => {
+              const plant = gltf.scene;
+              setupModelMesh(plant);
+              setModelActualHeight(plant, 0.85, false);
+              plant.position.set(0, 0, 0);
+              sproutGroup.add(plant);
+            });
 
             sproutGroup.scale.set(0.1, 0.1, 0.1);
             sproutGroup.visible = false;
@@ -3257,6 +3327,7 @@
           scene.add(coopHeroGroup);
         }
 
+        setTownHallEra(GameState.empire.era || 1);
         Object.values(npcs).forEach(createNpcObject);
         createCrossbowWatchtowers();
         createPalisadeWalls();
@@ -3622,19 +3693,14 @@
           beaconLight.position.y = 1.2;
           carcassGroup.add(beaconLight);
 
-          // Khối hòm / xương thú chiến lợi phẩm
-          const boneBox = new THREE.Mesh(
-            new THREE.BoxGeometry(0.8, 0.5, 0.6),
-            new THREE.MeshStandardMaterial({
-              color: 0xfef08a,
-              emissive: 0xd97706,
-              emissiveIntensity: 0.7,
-              roughness: 0.3
-            })
-          );
-          boneBox.position.y = 0.25;
-          boneBox.castShadow = true;
-          carcassGroup.add(boneBox);
+          // Rương báu chiến lợi phẩm rớt ra từ quái vật
+          loadGLB('prop_storage_chest.glb', (gltf) => {
+            const m = gltf.scene;
+            setupModelMesh(m);
+            setModelActualHeight(m, 0.75, false);
+            m.position.set(0, 0, 0);
+            carcassGroup.add(m);
+          });
 
           // Vòng sáng hào quang dưới đất
           const glowRing = new THREE.Mesh(
@@ -4623,6 +4689,8 @@
         function closeModal() {
           modalOverlay.hidden = true;
         }
+        window.openModal = openModal;
+        window.closeModal = closeModal;
 
         function openInventoryModal() {
           const inv = GameState.inventory;
@@ -6374,14 +6442,30 @@
                 </div>
               </div>
 
-              <button class="trade-btn" style="background:#059669; border-color:#34d399; width:100%; padding:10px; font-weight:900; font-size:12px;" onclick="closeModal()">
+              <button id="btn-offline-continue" class="trade-btn" style="background:#059669; border-color:#34d399; width:100%; padding:12px; font-weight:900; font-size:13px; cursor:pointer;" onclick="closeModal()">
                 ✅ TIẾP TỤC HÀNH TRÌNH
               </button>
             </div>
           `;
           openModal(modalHtml);
+
           const closeBtn = document.getElementById('modal-close-btn');
           if (closeBtn) closeBtn.onclick = closeModal;
+
+          const contBtn = document.getElementById('btn-offline-continue');
+          if (contBtn) {
+            contBtn.onclick = function (e) {
+              if (e) e.stopPropagation();
+              playSfx('reward');
+              closeModal();
+            };
+            contBtn.addEventListener('touchend', function (e) {
+              e.preventDefault();
+              e.stopPropagation();
+              playSfx('reward');
+              closeModal();
+            });
+          }
         }
 
         function loadGameState() {
