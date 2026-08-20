@@ -16,12 +16,13 @@
       rel="stylesheet"
     />
 
-    <!-- Three.js (r128), fflate, GLTFLoader, FBXLoader & SkeletonUtils -->
+    <!-- Three.js (r128), fflate, GLTFLoader, FBXLoader, SkeletonUtils & THREE.Water -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/libs/fflate.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/FBXLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/objects/Water.js"></script>
 
     <style>
       :root {
@@ -1925,21 +1926,6 @@
         ground.receiveShadow = true;
         scene.add(ground);
 
-        // 🌊 VÙNG HỒ NƯỚC & ĐẦM LẦY HOANG CỔ 3D (SWAMP LAKE WATER PLANE)
-        const waterGeo = new THREE.PlaneGeometry(35, 25, 32, 32);
-        const waterMat = new THREE.MeshStandardMaterial({
-          color: 0x1a535c,
-          transparent: true,
-          opacity: 0.85,
-          roughness: 0.15,
-          metalness: 0.85
-        });
-        const waterMesh = new THREE.Mesh(waterGeo, waterMat);
-        waterMesh.rotation.x = -Math.PI / 2;
-        waterMesh.position.set(-18, 0.05, 18);
-        waterMesh.receiveShadow = true;
-        scene.add(waterMesh);
-
         // ----------------------------------------------------
         // HỆ THỐNG QUÉT VÀ BÁM ĐỊA HÌNH 3D (TÍNH TOÁN GIẢI TÍCH O(1))
         // ----------------------------------------------------
@@ -1954,111 +1940,12 @@
           let y = Math.sin(x * 0.03) * Math.cos(z * 0.03) * 1.8;
           if (dist < 14) y *= 0.1;
           const waterDist = Math.hypot(x - (-18), z - 18);
-          if (waterDist < 16) {
-            y -= Math.max(0, (16 - waterDist) * 0.05);
+          if (waterDist < 16.0) {
+            const depth = Math.max(0, 1.0 - (waterDist / 16.0));
+            y -= depth * 0.45;
           }
           return y;
         }
-
-        // Lửa trại trung tâm
-        const campGroup = new THREE.Group();
-        const campFireLight = new THREE.PointLight(0xff7700, 2.5, 20, 2);
-        campFireLight.position.set(0, 1.0, 0);
-        campGroup.add(campFireLight);
-        scene.add(campGroup);
-
-        // 🏛️ TIẾN HÓA 4 ĐỜI NHÀ CHÍNH TIỀN ĐỒN (TOWN HALL MULTI-ERA 3D ENGINE)
-        const townHallGroup = new THREE.Group();
-        townHallGroup.position.set(0, 0, -4.5);
-
-        // Tinh Thể Huyết Thạch Lơ Lửng (Glowing Rune Crystal)
-        const runeCrystal = new THREE.Mesh(
-          new THREE.OctahedronGeometry(0.65, 0),
-          new THREE.MeshStandardMaterial({
-            color: 0x38bdf8,
-            emissive: 0x0284c7,
-            emissiveIntensity: 1.2,
-            roughness: 0.2,
-            metalness: 0.8
-          })
-        );
-        runeCrystal.position.y = 3.2;
-        townHallGroup.add(runeCrystal);
-
-        // Đèn hào quang Nhà Chính
-        const townHallLight = new THREE.PointLight(0x38bdf8, 2.8, 18);
-        townHallLight.position.y = 3.5;
-        townHallGroup.add(townHallLight);
-
-        // Vòng sáng tương tác Nhà Chính
-        const thRing = new THREE.Mesh(
-          new THREE.RingGeometry(3.0, 3.6, 32),
-          new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide, transparent: true, opacity: 0.8 })
-        );
-        thRing.rotation.x = -Math.PI / 2;
-        thRing.position.y = 0.05;
-        townHallGroup.add(thRing);
-
-        scene.add(townHallGroup);
-
-        let currentTownHallMesh = null;
-        const townHallModels = {
-          1: 'building_townhall_era1.glb',
-          2: 'building_townhall_era2.glb',
-          3: 'building_townhall_era3.glb',
-          4: 'building_townhall_era4.glb'
-        };
-        const townHallHeights = { 1: 3.5, 2: 4.5, 3: 5.5, 4: 6.5 };
-
-        function setTownHallEra(era) {
-          const modelFile = townHallModels[era] || townHallModels[1];
-          const targetH = townHallHeights[era] || 3.5;
-          loadGLB(modelFile, (gltf) => {
-            if (currentTownHallMesh) {
-              townHallGroup.remove(currentTownHallMesh);
-            }
-            const model = gltf.scene;
-            setupModelMesh(model);
-            setModelActualHeight(model, targetH, false);
-            model.position.set(0, 0, 0);
-            townHallGroup.add(model);
-            currentTownHallMesh = model;
-          });
-        }
-
-        function isSafeZone(x, z) {
-          return Math.hypot(x, z) < 6.0 || Math.hypot(x - (-6), z - (-5)) < 4.5 || Math.hypot(x, z - (-4.5)) < 4.5;
-        }
-
-        // BIỂN CỎ 3D (THREE.InstancedMesh & MeshLambertMaterial tối ưu GPU)
-        const grassCount = 4500;
-        const bladeGeo = new THREE.PlaneGeometry(0.16, 0.75, 1, 1);
-        bladeGeo.translate(0, 0.375, 0);
-        const bladeMat = new THREE.MeshLambertMaterial({
-          color: 0x487928,
-          side: THREE.DoubleSide
-        });
-        const grassMesh = new THREE.InstancedMesh(bladeGeo, bladeMat, grassCount);
-        grassMesh.receiveShadow = true;
-        const dummy = new THREE.Object3D();
-
-        for (let i = 0; i < grassCount; i++) {
-          let x, z;
-          do {
-            x = (Math.random() - 0.5) * 190;
-            z = (Math.random() - 0.5) * 190;
-          } while (isSafeZone(x, z));
-
-          const gy = getTerrainHeight(x, z);
-          dummy.position.set(x, gy, z);
-          dummy.rotation.set(0, Math.random() * Math.PI * 2, (Math.random() - 0.5) * 0.15);
-          const sc = 0.7 + Math.random() * 0.55;
-          dummy.scale.set(sc, sc, sc);
-          dummy.updateMatrix();
-          grassMesh.setMatrixAt(i, dummy.matrix);
-        }
-        grassMesh.instanceMatrix.needsUpdate = true;
-        scene.add(grassMesh);
 
         // ----------------------------------------------------
         // CHƯƠNG III: TRÌNH QUẢN LÝ HOẠT ẢNH DŨNG SĨ 3D & LOADERS
@@ -2128,27 +2015,14 @@
           });
         }
 
-        /**
-         * Chuẩn hóa kích thước và đặt đáy GLTF Model chạm mặt đất Y = 0
-         * @param {Object} gltf - Đối tượng GLTF từ GLTFLoader
-         * @param {number} targetSize - Kích thước lớn nhất mong muốn (mét)
-         * @param {number} posX - Tọa độ X
-         * @param {number} posZ - Tọa độ Z
-         * @param {number} rotY - Góc xoay quanh trục Y (radian)
-         * @param {THREE.Group|null} parentGroup - Group cha để gắn vào (nếu null gắn vào scene)
-         */
         function setupGLTFModel(gltf, targetSize, posX, posZ, rotY = 0, parentGroup = null) {
           const root = gltf.scene;
-
-          // Tính toán Bounding Box để căn chỉnh scale chuẩn xác
           const box = new THREE.Box3().setFromObject(root);
           const size = box.getSize(new THREE.Vector3());
           const maxDim = Math.max(size.x, size.y, size.z);
           const scaleFactor = targetSize / (maxDim || 1);
-
           root.scale.setScalar(scaleFactor);
 
-          // Đặt đáy model sát mặt đất Y = 0 (tính cả độ cao địa hình)
           const updatedBox = new THREE.Box3().setFromObject(root);
           const groundY = getTerrainHeight(posX, posZ);
           root.position.set(posX, groundY - updatedBox.min.y, posZ);
@@ -2158,7 +2032,7 @@
             if (child.isMesh || child.isSkinnedMesh) {
               child.castShadow = true;
               child.receiveShadow = true;
-              child.frustumCulled = false; // Chống nháy biến mất góc nhìn
+              child.frustumCulled = false;
               if (child.material) {
                 const mats = Array.isArray(child.material) ? child.material : [child.material];
                 mats.forEach((mat) => {
@@ -2177,14 +2051,7 @@
           return root;
         }
 
-        /**
-         * Chuẩn hóa kích thước và đặt đáy chân chạm mặt phẳng Y = 0 (2-Layer Wrapper Group Pattern)
-         * @param {THREE.Object3D} model - Đối tượng 3D (Player hoặc Dinosaur)
-         * @param {number} targetHeight - Chiều cao mong muốn tính bằng mét (vd: 1.85m cho nam, 1.75m cho nữ)
-         * @param {boolean} isFbx - Đánh dấu model FBX (đơn vị cm -> scale 0.01)
-         */
         function normalizeAndGroundModel(model, targetHeight = null, isFbx = true) {
-          // A. Ép tỉ lệ chiều cao chuẩn
           const baseScale = isFbx ? 0.01 : 1.0;
           model.scale.setScalar(baseScale);
           model.position.set(0, 0, 0);
@@ -2200,13 +2067,11 @@
             bbox = new THREE.Box3().setFromObject(model);
           }
 
-          // B. ĐẨY MODEL CON LÊN ĐỂ CHÂN CHẠM ĐÁY GROUP CHA (Y = 0)
           const yOffset = -bbox.min.y;
           if (isFinite(yOffset)) {
             model.position.y = yOffset;
           }
 
-          // C. BẬT BÓNG ĐỔ VÀ TẮT CULLING
           model.traverse((child) => {
             if (child.isMesh || child.isSkinnedMesh) {
               child.castShadow = true;
@@ -2226,6 +2091,311 @@
         }
 
         const setModelActualHeight = normalizeAndGroundModel;
+
+        // 🌊 VÙNG HỒ NƯỚC & ĐẦM LẦY HOANG CỔ 3D HỮU CƠ (ORGANIC SWAMP LAGOON ENGINE)
+        const LAKE_CENTER = { x: -18.0, z: 18.0 };
+        const lakeRadiusX = 14.0;
+        const lakeRadiusZ = 11.0;
+        const pointsCount = 48;
+
+        function isLakeZone(x, z, padding = 0) {
+          const dx = x - LAKE_CENTER.x;
+          const dz = z - LAKE_CENTER.z;
+          const theta = Math.atan2(dz, dx);
+          const noise = Math.sin(theta * 3) * 2.2 + Math.cos(theta * 5) * 1.4;
+          const rx = lakeRadiusX + noise + padding;
+          const rz = lakeRadiusZ + noise + padding;
+          const normDist = (dx * dx) / (rx * rx) + (dz * dz) / (rz * rz);
+          return normDist <= 1.0;
+        }
+
+        const swampLakeGroup = new THREE.Group();
+
+        // 1. Tạo Đường Bao Hình Dáng Uốn Lượn Tự Nhiên Không Góc Vuông (Shape & ShapeGeometry)
+        const lakeShape = new THREE.Shape();
+        for (let i = 0; i <= pointsCount; i++) {
+          const theta = (i / pointsCount) * Math.PI * 2;
+          const noise = Math.sin(theta * 3) * 2.2 + Math.cos(theta * 5) * 1.4;
+          const x = Math.cos(theta) * (lakeRadiusX + noise);
+          const z = Math.sin(theta) * (lakeRadiusZ + noise);
+          if (i === 0) {
+            lakeShape.moveTo(x, z);
+          } else {
+            lakeShape.lineTo(x, z);
+          }
+        }
+        const waterGeometry = new THREE.ShapeGeometry(lakeShape);
+        let water;
+
+        if (typeof THREE.Water !== 'undefined') {
+          const waterNormalsTexture = new THREE.TextureLoader().load(
+            'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/waternormals.jpg',
+            (texture) => {
+              texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+            }
+          );
+
+          water = new THREE.Water(waterGeometry, {
+            textureWidth: 512,
+            textureHeight: 512,
+            waterNormals: waterNormalsTexture,
+            sunDirection: new THREE.Vector3(0.5, 1.0, 0.3).normalize(),
+            sunColor: 0xfff3aa,           // Ánh nắng vàng phản chiếu lấp lánh
+            waterColor: 0x0f4d54,         // Màu xanh ngọc bích đầm lầy sâu thẳm
+            distortionScale: 3.5,         // Độ cuộn sóng dập dềnh
+            fog: scene.fog !== undefined
+          });
+        } else {
+          const fallbackMat = new THREE.MeshStandardMaterial({
+            color: 0x0f4d54,
+            roughness: 0.05,
+            metalness: 0.9,
+            transparent: true,
+            opacity: 0.85,
+            side: THREE.DoubleSide
+          });
+          water = new THREE.Mesh(waterGeometry, fallbackMat);
+        }
+
+        water.rotation.x = -Math.PI / 2;
+        water.position.set(LAKE_CENTER.x, 0.08, LAKE_CENTER.z);
+        water.receiveShadow = true;
+        swampLakeGroup.add(water);
+        const waterMesh = water;
+
+        // 2. Thảm Bờ Cát Uốn Lượn Tự Nhiên (Phóng to hơn mép hồ 2.5m ôm trọn mặt nước)
+        const sandMaterial = new THREE.MeshStandardMaterial({
+          color: 0xc2a649,          // Màu vàng đất thoai thoải
+          roughness: 0.95,
+          metalness: 0.05,
+          side: THREE.DoubleSide
+        });
+
+        const sandShape = new THREE.Shape();
+        for (let i = 0; i <= pointsCount; i++) {
+          const theta = (i / pointsCount) * Math.PI * 2;
+          const noise = Math.sin(theta * 3) * 2.2 + Math.cos(theta * 5) * 1.4;
+          const x = Math.cos(theta) * (lakeRadiusX + noise + 2.5);
+          const z = Math.sin(theta) * (lakeRadiusZ + noise + 2.5);
+          if (i === 0) {
+            sandShape.moveTo(x, z);
+          } else {
+            sandShape.lineTo(x, z);
+          }
+        }
+        const sandGeometry = new THREE.ShapeGeometry(sandShape);
+        const sandMesh = new THREE.Mesh(sandGeometry, sandMaterial);
+        sandMesh.rotation.x = -Math.PI / 2;
+        sandMesh.position.set(LAKE_CENTER.x, 0.02, LAKE_CENTER.z);
+        sandMesh.receiveShadow = true;
+        swampLakeGroup.add(sandMesh);
+
+        // 3. Rải Tảng Đá Lớn Ven Mép Cong Bờ Hồ
+        loadGLB('prop_rock_large.glb', (gltf) => {
+          const rockPoints = [
+            [-32.0, 18.0], [-4.0, 17.5], [-17.5, 5.0], [-19.0, 31.0],
+            [-28.0, 27.0], [-8.0, 27.0], [-27.0, 8.0], [-8.0, 8.5]
+          ];
+          rockPoints.forEach(([rx, rz], idx) => {
+            const rock = gltf.scene.clone(true);
+            setupModelMesh(rock);
+            setModelActualHeight(rock, 1.8 + (idx % 3) * 0.4, false);
+            rock.position.set(rx, 0.02, rz);
+            rock.rotation.y = (idx * Math.PI) / 4;
+            swampLakeGroup.add(rock);
+          });
+        });
+
+        // 4. Vòng Tròn Bọt Sóng Co Giãn Thời Gian Thực (Foam & Shoreline Ripples)
+        const foamGroup = new THREE.Group();
+        const foamRings = [];
+        const foamMat = new THREE.MeshBasicMaterial({
+          color: 0xe0f2fe,
+          transparent: true,
+          opacity: 0.45,
+          side: THREE.DoubleSide
+        });
+        for (let i = 0; i < 16; i++) {
+          const fa = (i / 16) * Math.PI * 2;
+          const fn = Math.sin(fa * 3) * 2.2 + Math.cos(fa * 5) * 1.4;
+          const fx = LAKE_CENTER.x + Math.cos(fa) * (lakeRadiusX + fn);
+          const fz = LAKE_CENTER.z + Math.sin(fa) * (lakeRadiusZ + fn);
+          const ringMesh = new THREE.Mesh(new THREE.RingGeometry(0.8, 1.35, 20), foamMat.clone());
+          ringMesh.rotation.x = -Math.PI / 2;
+          ringMesh.position.set(fx, 0.065, fz);
+          foamGroup.add(ringMesh);
+          foamRings.push({ mesh: ringMesh, baseScale: 1.0 + Math.random() * 0.3, phase: i * 0.5 });
+        }
+        swampLakeGroup.add(foamGroup);
+
+        // 5. Hạt Bọt Khí Sủi Tăm Từ Lòng Hồ (Swamp Bubble Particles)
+        const bubbleCount = 45;
+        const bubbleGeo = new THREE.SphereGeometry(0.09, 8, 8);
+        const bubbleMat = new THREE.MeshStandardMaterial({
+          color: 0x99f6e4,
+          transparent: true,
+          opacity: 0.75,
+          roughness: 0.1,
+          metalness: 0.3
+        });
+        const bubbleMesh = new THREE.InstancedMesh(bubbleGeo, bubbleMat, bubbleCount);
+        const bubbleData = [];
+        const _dummyBubble = new THREE.Object3D();
+        for (let i = 0; i < bubbleCount; i++) {
+          const ba = Math.random() * Math.PI * 2;
+          const br = Math.random() * 9.5;
+          const bx = LAKE_CENTER.x + Math.cos(ba) * br;
+          const bz = LAKE_CENTER.z + Math.sin(ba) * br;
+          const by = -0.3 + Math.random() * 0.45;
+          bubbleData.push({
+            x: bx,
+            baseX: bx,
+            z: bz,
+            baseZ: bz,
+            y: by,
+            speed: 0.15 + Math.random() * 0.25,
+            wobbleSpeed: 2.0 + Math.random() * 3.0,
+            scale: 0.6 + Math.random() * 0.7
+          });
+        }
+        swampLakeGroup.add(bubbleMesh);
+
+        // 6. Hoa Súng & Sen Nổi trên Mặt Hồ
+        const lilyGeo = new THREE.CircleGeometry(0.65, 12);
+        const lilyMat = new THREE.MeshStandardMaterial({ color: 0x2d6a4f, roughness: 0.8, side: THREE.DoubleSide });
+        const flowerMat = new THREE.MeshBasicMaterial({ color: 0xf472b6, side: THREE.DoubleSide });
+        const lilyCoords = [
+          [-19.5, 16.0], [-16.0, 19.5], [-21.0, 22.0], [-14.5, 17.0], [-17.0, 13.5], [-22.5, 18.0]
+        ];
+        lilyCoords.forEach(([lx, lz]) => {
+          const lily = new THREE.Mesh(lilyGeo, lilyMat);
+          lily.rotation.x = -Math.PI / 2;
+          lily.position.set(lx, 0.06, lz);
+          const petal = new THREE.Mesh(new THREE.CircleGeometry(0.22, 6), flowerMat);
+          petal.position.set(0, 0, -0.01);
+          lily.add(petal);
+          swampLakeGroup.add(lily);
+        });
+
+        // Thêm Cụm Hoa Thảo Dược Peace Lily Nổi Ven Bờ Hồ
+        loadGLB('peace_lily_plants__flower.glb', (gltf) => {
+          const lilyPoints = [
+            [-22.0, 14.5], [-13.5, 21.0], [-16.0, 24.5]
+          ];
+          lilyPoints.forEach(([px, pz]) => {
+            const plant = gltf.scene.clone(true);
+            setupModelMesh(plant);
+            setModelActualHeight(plant, 1.2, false);
+            plant.position.set(px, 0.02, pz);
+            swampLakeGroup.add(plant);
+          });
+        });
+
+        scene.add(swampLakeGroup);
+
+
+
+        // Lửa trại trung tâm
+        const campGroup = new THREE.Group();
+        const campFireLight = new THREE.PointLight(0xff7700, 2.5, 20, 2);
+        campFireLight.position.set(0, 1.0, 0);
+        campGroup.add(campFireLight);
+        scene.add(campGroup);
+
+        // 🏛️ TIẾN HÓA 4 ĐỜI NHÀ CHÍNH TIỀN ĐỒN (TOWN HALL MULTI-ERA 3D ENGINE)
+        const townHallGroup = new THREE.Group();
+        townHallGroup.position.set(0, 0, -4.5);
+
+        // Tinh Thể Huyết Thạch Lơ Lửng (Glowing Rune Crystal)
+        const runeCrystal = new THREE.Mesh(
+          new THREE.OctahedronGeometry(0.65, 0),
+          new THREE.MeshStandardMaterial({
+            color: 0x38bdf8,
+            emissive: 0x0284c7,
+            emissiveIntensity: 1.2,
+            roughness: 0.2,
+            metalness: 0.8
+          })
+        );
+        runeCrystal.position.y = 3.2;
+        townHallGroup.add(runeCrystal);
+
+        // Đèn hào quang Nhà Chính
+        const townHallLight = new THREE.PointLight(0x38bdf8, 2.8, 18);
+        townHallLight.position.y = 3.5;
+        townHallGroup.add(townHallLight);
+
+        // Vòng sáng tương tác Nhà Chính
+        const thRing = new THREE.Mesh(
+          new THREE.RingGeometry(3.0, 3.6, 32),
+          new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide, transparent: true, opacity: 0.8 })
+        );
+        thRing.rotation.x = -Math.PI / 2;
+        thRing.position.y = 0.05;
+        townHallGroup.add(thRing);
+
+        scene.add(townHallGroup);
+
+        let currentTownHallMesh = null;
+        const townHallModels = {
+          1: 'building_townhall_era1.glb',
+          2: 'building_townhall_era2.glb',
+          3: 'building_townhall_era3.glb',
+          4: 'building_townhall_era4.glb'
+        };
+        const townHallHeights = { 1: 3.5, 2: 4.5, 3: 5.5, 4: 6.5 };
+
+        function setTownHallEra(era) {
+          const modelFile = townHallModels[era] || townHallModels[1];
+          const targetH = townHallHeights[era] || 3.5;
+          loadGLB(modelFile, (gltf) => {
+            if (currentTownHallMesh) {
+              townHallGroup.remove(currentTownHallMesh);
+            }
+            const model = gltf.scene;
+            setupModelMesh(model);
+            setModelActualHeight(model, targetH, false);
+            model.position.set(0, 0, 0);
+            townHallGroup.add(model);
+            currentTownHallMesh = model;
+          });
+        }
+
+        function isSafeZone(x, z) {
+          return Math.hypot(x, z) < 6.0 || Math.hypot(x - (-6), z - (-5)) < 4.5 || Math.hypot(x, z - (-4.5)) < 4.5 || isLakeZone(x, z, 2.5);
+        }
+
+        // BIỂN CỎ 3D (THREE.InstancedMesh & MeshLambertMaterial tối ưu GPU)
+        const grassCount = 4500;
+        const bladeGeo = new THREE.PlaneGeometry(0.16, 0.75, 1, 1);
+        bladeGeo.translate(0, 0.375, 0);
+        const bladeMat = new THREE.MeshLambertMaterial({
+          color: 0x487928,
+          side: THREE.DoubleSide
+        });
+        const grassMesh = new THREE.InstancedMesh(bladeGeo, bladeMat, grassCount);
+        grassMesh.receiveShadow = true;
+        const dummy = new THREE.Object3D();
+
+        for (let i = 0; i < grassCount; i++) {
+          let x, z;
+          do {
+            x = (Math.random() - 0.5) * 190;
+            z = (Math.random() - 0.5) * 190;
+          } while (isSafeZone(x, z));
+
+          const gy = getTerrainHeight(x, z);
+          dummy.position.set(x, gy, z);
+          dummy.rotation.set(0, Math.random() * Math.PI * 2, (Math.random() - 0.5) * 0.15);
+          const sc = 0.7 + Math.random() * 0.55;
+          dummy.scale.set(sc, sc, sc);
+          dummy.updateMatrix();
+          grassMesh.setMatrixAt(i, dummy.matrix);
+        }
+        grassMesh.instanceMatrix.needsUpdate = true;
+        scene.add(grassMesh);
+
+
 
         // Bộ tạo Skeletal AnimationClips chuẩn cho Khung xương Rig_Medium (Barbarian / Rogue)
         function createWarriorSkeletalClips() {
@@ -2760,17 +2930,26 @@
         function createFishingBoatObject() {
           const boatGroup = new THREE.Group();
           const pos = npcs.fishing_boat.pos;
-          const py = getTerrainHeight(pos.x, pos.z);
+          const py = 0.05;
           boatGroup.position.set(pos.x, py, pos.z);
 
           loadGLB('prop_fishing_boat.glb', (gltf) => {
             const m = gltf.scene;
             setupModelMesh(m);
-            setModelActualHeight(m, 1.8, false);
+            setModelActualHeight(m, 2.0, false);
             m.position.set(0, 0, 0);
             m.rotation.y = Math.PI / 3;
             boatGroup.add(m);
           });
+
+          // Cọc gỗ bến thuyền buộc dây thừng neo đậu sát bờ
+          const postGeo = new THREE.CylinderGeometry(0.12, 0.14, 1.4, 8);
+          const postMat = new THREE.MeshStandardMaterial({ color: 0x5c3d2e, roughness: 0.9 });
+          const postMesh = new THREE.Mesh(postGeo, postMat);
+          postMesh.position.set(1.5, 0.6, 0.9);
+          postMesh.receiveShadow = true;
+          postMesh.castShadow = true;
+          boatGroup.add(postMesh);
 
           // Rải cá tươi resource_fish.glb cạnh bến thuyền
           loadGLB('resource_fish.glb', (gltf) => {
@@ -3792,8 +3971,8 @@
             chaseSpeed: 6.8,
             aggroRadius: 4.0,
             attackRadius: 2.5,
-            origin: new THREE.Vector3(-25, 0, 25),
-            patrolRadius: 14,
+            origin: new THREE.Vector3(5, 0, -15),
+            patrolRadius: 12,
             isDocile: true,
             isFlee: true,
             loot: { meat: 6, fangs: 2, gold: 40 }
@@ -3822,9 +4001,9 @@
             damage: 30,
             speed: 3.2,
             chaseSpeed: 5.8,
-            aggroRadius: 8.0,
+            aggroRadius: 7.0,
             attackRadius: 3.2,
-            origin: new THREE.Vector3(-18, 0, 18),
+            origin: new THREE.Vector3(-18, -0.25, 18),
             patrolRadius: 10,
             isDocile: false,
             isAmbush: true,
@@ -7525,9 +7704,9 @@
 
             const canMove = !p.isAttacking && !p.isPickingUp && !p.isHitReacting;
 
-            // Hiệu ứng lội nước đầm lầy Tây Nam (Water Slowdown -40%, Miễn nhiễm khi có Giáp Da Vảy Bạo Ngạc)
-            const inSwampWater = Math.abs(p.group.position.x - (-18)) < 17.5 && Math.abs(p.group.position.z - 18) < 12.5;
-            const speedFactor = inSwampWater ? (p.hasCrocArmor ? 1.0 : 0.60) : 1.0;
+            // Hiệu ứng lội nước đầm lầy Tây Nam (Organic Lake Zone, Water Slowdown -45%, Miễn nhiễm khi có Giáp Da Vảy Bạo Ngạc)
+            const inSwampWater = isLakeZone(p.group.position.x, p.group.position.z, 0);
+            const speedFactor = inSwampWater ? (p.hasCrocArmor ? 1.0 : 0.55) : 1.0;
             const currentSpeed = p.speed * speedFactor * inputMag;
 
             if (isMoving && !p.isDodging && canMove) {
@@ -7545,11 +7724,29 @@
               const animSpeed = Math.max(0.6, (currentSpeed / baseSpeed) * 1.875);
               playHeroAction('walk', false, 0.2, animSpeed);
 
-              if (inSwampWater && Math.random() < 0.04) {
+              if (inSwampWater && Math.random() < 0.06) {
                 spawnFloatingText('🌊 Bõm...', p.group.position, 'dmg-popup--player');
               }
             } else if (canMove && !p.isDodging) {
               playHeroAction('idle', false, 0.2, 1.0);
+            }
+
+            // Hiệu ứng Vòng Sóng Gợn Dưới Chân khi lội nước (Water Ripple Mesh)
+            if (!p.waterRippleMesh) {
+              const ripGeo = new THREE.RingGeometry(0.35, 0.8, 16);
+              const ripMat = new THREE.MeshBasicMaterial({ color: 0x67e8f9, transparent: true, opacity: 0.6, side: THREE.DoubleSide });
+              p.waterRippleMesh = new THREE.Mesh(ripGeo, ripMat);
+              p.waterRippleMesh.rotation.x = -Math.PI / 2;
+              scene.add(p.waterRippleMesh);
+            }
+            if (inSwampWater) {
+              p.waterRippleMesh.visible = true;
+              p.waterRippleMesh.position.set(p.group.position.x, 0.055, p.group.position.z);
+              const ripScale = 1.0 + (Math.sin(time * 5.0) + 1.0) * 0.35;
+              p.waterRippleMesh.scale.set(ripScale, ripScale, ripScale);
+              p.waterRippleMesh.material.opacity = isMoving ? 0.65 : 0.25;
+            } else if (p.waterRippleMesh) {
+              p.waterRippleMesh.visible = false;
             }
 
             if (p.isDodging) {
@@ -7573,7 +7770,9 @@
             const pdx = p.group.position.x - (p.lastGroundX !== undefined ? p.lastGroundX : -999);
             const pdz = p.group.position.z - (p.lastGroundZ !== undefined ? p.lastGroundZ : -999);
             if (p.cachedGroundY === undefined || (pdx * pdx + pdz * pdz) >= 0.0025) {
-              p.cachedGroundY = getTerrainHeight(p.group.position.x, p.group.position.z);
+              const baseGroundY = getTerrainHeight(p.group.position.x, p.group.position.z);
+              // Khi lội xuống hồ nước, chân chìm nhẹ -0.35m
+              p.cachedGroundY = inSwampWater ? baseGroundY - 0.35 : baseGroundY;
               p.lastGroundX = p.group.position.x;
               p.lastGroundZ = p.group.position.z;
             }
@@ -7713,9 +7912,44 @@
             }
           }
 
-          // 4.5. HOẠT HÓA TINH THỂ NHÀ CHÍNH, STONEHENGE & GỢN SÓNG ĐẦM LẦY
-          if (typeof waterMesh !== 'undefined' && waterMesh) {
-            waterMesh.position.y = 0.05 + Math.sin(time * 2.2) * 0.03;
+          // 4.5. HOẠT HÓA CHUYỂN ĐỘNG SÓNG NƯỚC SHADER THREE.WATER
+          if (typeof water !== 'undefined' && water && water.material && water.material.uniforms && water.material.uniforms['time']) {
+            water.material.uniforms['time'].value += dt * 0.8;
+          }
+
+          // Hoạt hóa Vòng Bọt Sóng (Foam Rings)
+          if (typeof foamRings !== 'undefined' && Array.isArray(foamRings)) {
+            foamRings.forEach((f) => {
+              const pulse = Math.sin(time * 2.5 + f.phase);
+              const sc = f.baseScale * (1.0 + pulse * 0.18);
+              f.mesh.scale.set(sc, sc, sc);
+              f.mesh.material.opacity = 0.25 + Math.cos(time * 2.0 + f.phase) * 0.20;
+            });
+          }
+
+          // Hoạt hóa Hạt Bọt Khí Sủi Tăm (Swamp Bubble Particles)
+          if (typeof bubbleMesh !== 'undefined' && bubbleMesh && typeof bubbleData !== 'undefined') {
+            for (let i = 0; i < bubbleData.length; i++) {
+              const b = bubbleData[i];
+              b.y += dt * b.speed;
+              b.x = b.baseX + Math.sin(time * b.wobbleSpeed + i) * 0.12;
+              b.z = b.baseZ + Math.cos(time * b.wobbleSpeed + i) * 0.12;
+              if (b.y > 0.30) {
+                b.y = -0.28;
+                const ba = Math.random() * Math.PI * 2;
+                const br = Math.random() * 11.5;
+                b.baseX = LAKE_CENTER.x + Math.cos(ba) * br;
+                b.baseZ = LAKE_CENTER.z + Math.sin(ba) * br;
+                b.x = b.baseX;
+                b.z = b.baseZ;
+              }
+              _dummyBubble.position.set(b.x, b.y, b.z);
+              const sc = b.scale * (b.y > 0.15 ? Math.max(0.1, (0.30 - b.y) / 0.15) : 1.0);
+              _dummyBubble.scale.set(sc, sc, sc);
+              _dummyBubble.updateMatrix();
+              bubbleMesh.setMatrixAt(i, _dummyBubble.matrix);
+            }
+            bubbleMesh.instanceMatrix.needsUpdate = true;
           }
           if (typeof runeCrystal !== 'undefined' && runeCrystal) {
             runeCrystal.rotation.y += dt * 0.9;
@@ -8004,6 +8238,22 @@
               }
               dino.group.position.y = THREE.MathUtils.lerp(dino.group.position.y, dino.cachedGroundY, 0.35);
 
+              // 🚧 GIỚI HẠN RANH GIỚI KHỦNG LONG TRÊN CẠN (AI WATER COLLISION)
+              if (dino.id !== 'deinosuchus_swamp' && !dino.isFlying) {
+                if (isLakeZone(dino.group.position.x, dino.group.position.z, 0)) {
+                  // Đẩy ngược lên bờ khô và ép quay lưng 180 độ rời khỏi hồ nước
+                  const pushOut = dino.group.position.clone().sub(new THREE.Vector3(LAKE_CENTER.x, 0, LAKE_CENTER.z));
+                  pushOut.y = 0;
+                  if (pushOut.lengthSq() < 0.01) pushOut.set(1, 0, 1);
+                  pushOut.normalize();
+                  dino.group.position.x = LAKE_CENTER.x + pushOut.x * 16.0;
+                  dino.group.position.z = LAKE_CENTER.z + pushOut.z * 16.0;
+                  dino.target.set(dino.origin.x, 0, dino.origin.z);
+                  dino.group.rotation.y = Math.atan2(pushOut.x, pushOut.z);
+                  if (dino.state === 'AGGRO') dino.state = 'WALK';
+                }
+              }
+
               const distToP = distToPlayer;
               const distToO = dino.group.position.distanceTo(dino.origin);
 
@@ -8046,14 +8296,14 @@
                 }
               }
 
-              // 🐊 Ambush AI cho Đại Ngạc Bạo Chúa Deinosuchus
+              // 🐊 Ambush AI cho Đại Ngạc Bạo Chúa Deinosuchus (Lặn Chìm Dưới Nước -0.25m)
               if (dino.id === 'deinosuchus_swamp') {
-                if (distToP > 8.0 && dino.state !== 'AGGRO') {
-                  dino.group.position.y = -0.55; // Lặn sâu dưới nước, chỉ nhô sống lưng gai
+                if (distToP > 7.0 && dino.state !== 'AGGRO') {
+                  dino.group.position.y = -0.25; // Lặn chìm dưới làn nước trong suốt, bóng đen bơi lội
                   if (dino.hpBarGroup) dino.hpBarGroup.visible = false;
                 } else {
                   if (dino.group.position.y < -0.1) {
-                    dino.group.position.y = 0.05;
+                    dino.group.position.y = 0.05; // Phóng vọt lên mặt nước tấn công bất ngờ
                     if (dino.hpBarGroup) dino.hpBarGroup.visible = true;
                     spawnFloatingText('🐊 PHỤC KÍCH!', dino.group.position, 'dmg-popup--crit');
                     showToast('⚠️ NGUY HIỂM! Đại Ngạc Deinosuchus phóng lên từ Đầm Lầy!');
@@ -8165,7 +8415,13 @@
                   if (dino.patrolWait <= 0) {
                     const rA = Math.random() * Math.PI * 2;
                     const rD = Math.random() * dino.patrolRadius;
-                    dino.target.set(dino.origin.x + Math.cos(rA) * rD, 0, dino.origin.z + Math.sin(rA) * rD);
+                    const tx = dino.origin.x + Math.cos(rA) * rD;
+                    const tz = dino.origin.z + Math.sin(rA) * rD;
+                    if (dino.id !== 'deinosuchus_swamp' && !dino.isFlying && isLakeZone(tx, tz, 2.0)) {
+                      dino.target.set(dino.origin.x, 0, dino.origin.z);
+                    } else {
+                      dino.target.set(tx, 0, tz);
+                    }
                     dino.patrolWait = 5.0 + Math.random() * 5.0;
                   }
 
@@ -8315,7 +8571,6 @@
           camera.lookAt(p.group.position.x, p.group.position.y + 1.1, p.group.position.z);
 
           campFireLight.intensity = 2.4 + Math.sin(time * 14) * 0.5 + Math.random() * 0.3;
-          flameMesh.scale.set(1 + Math.sin(time * 12) * 0.1, 1 + Math.cos(time * 15) * 0.15, 1 + Math.sin(time * 12) * 0.1);
 
           renderer.render(scene, camera);
         }
