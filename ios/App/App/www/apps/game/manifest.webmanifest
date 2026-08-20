@@ -7,7 +7,7 @@
   "start_url": "/apps/game/index.html",
   "scope": "/",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "landscape",
   "background_color": "#12100d",
   "theme_color": "#12100d",
   "categories": ["games", "health", "lifestyle"],
