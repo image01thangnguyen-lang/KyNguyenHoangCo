@@ -1346,9 +1346,68 @@
               rewardRunes: 1,
               completed: false,
               claimed: false
+            },
+            {
+              id: 'swamp_hunt',
+              title: '🐊 SẮC LỆNH 5: Diệt Ngạc Đầm Lầy',
+              desc: 'Tiêu diệt 1 Đại Ngạc Bạo Chúa Deinosuchus tại Đầm Lầy góc Tây Nam',
+              targetType: 'hunt_deinosuchus',
+              current: 0,
+              required: 1,
+              rewardGold: 80,
+              rewardFangs: 5,
+              rewardRunes: 2,
+              completed: false,
+              claimed: false
+            },
+            {
+              id: 'fishery',
+              title: '🎣 SẮC LỆNH 6: Ngư Nghiệp Đầm Lầy',
+              desc: 'Đánh bắt đủ 5 Cá Tươi tại Bến Thuyền Độc Mộc',
+              targetType: 'catch_fish',
+              current: 0,
+              required: 5,
+              rewardGold: 50,
+              rewardFangs: 2,
+              rewardFood: 20,
+              rewardRunes: 1,
+              completed: false,
+              claimed: false
+            },
+            {
+              id: 'shipwreck',
+              title: '🧭 SẮC LỆNH 7: Thám Hiểm Xác Tàu Đắm',
+              desc: 'Tiếp cận Tàn Tích Xác Thuyền Cổ (26, 0, 24) và khai quật Rương Thủy Thần',
+              targetType: 'explore_shipwreck',
+              current: 0,
+              required: 1,
+              rewardGold: 100,
+              rewardFangs: 3,
+              rewardRunes: 2,
+              completed: false,
+              claimed: false
+            },
+            {
+              id: 'antidote',
+              title: '🧪 SẮC LỆNH 8: Bào Chế Giải Độc',
+              desc: 'Dùng 3 Thảo Dược bào chế 1 Bình Thuốc Giải Độc Đầm Lầy tại Quầy Dược Sĩ',
+              targetType: 'brew_antidote',
+              current: 0,
+              required: 1,
+              rewardGold: 60,
+              rewardFangs: 2,
+              rewardRunes: 2,
+              completed: false,
+              claimed: false
             }
           ],
           decreesAllClaimed: false,
+          monsoon: {
+            active: false,
+            timer: 0,
+            interval: 240,
+            duration: 90
+          },
           playTimeSeconds: 0,
           harvestMultiplier: 1.0,
           bloodMoonActive: false,
@@ -1866,7 +1925,21 @@
         ground.receiveShadow = true;
         scene.add(ground);
 
-        // ----------------------------------------------------
+        // 🌊 VÙNG HỒ NƯỚC & ĐẦM LẦY HOANG CỔ 3D (SWAMP LAKE WATER PLANE)
+        const waterGeo = new THREE.PlaneGeometry(35, 25, 32, 32);
+        const waterMat = new THREE.MeshStandardMaterial({
+          color: 0x1a535c,
+          transparent: true,
+          opacity: 0.85,
+          roughness: 0.15,
+          metalness: 0.85
+        });
+        const waterMesh = new THREE.Mesh(waterGeo, waterMat);
+        waterMesh.rotation.x = -Math.PI / 2;
+        waterMesh.position.set(-18, 0.05, 18);
+        waterMesh.receiveShadow = true;
+        scene.add(waterMesh);
+
         // ----------------------------------------------------
         // HỆ THỐNG QUÉT VÀ BÁM ĐỊA HÌNH 3D (TÍNH TOÁN GIẢI TÍCH O(1))
         // ----------------------------------------------------
@@ -1880,6 +1953,10 @@
           const dist = Math.hypot(x, z);
           let y = Math.sin(x * 0.03) * Math.cos(z * 0.03) * 1.8;
           if (dist < 14) y *= 0.1;
+          const waterDist = Math.hypot(x - (-18), z - 18);
+          if (waterDist < 16) {
+            y -= Math.max(0, (16 - waterDist) * 0.05);
+          }
           return y;
         }
 
@@ -2428,10 +2505,17 @@
           },
           fishing_boat: {
             id: 'fishing_boat',
-            name: '🛶 THUYỀN ĐÁNH CÁ',
-            role: 'Thuyền Gỗ Độc Mộc',
-            pos: new THREE.Vector3(-22.0, 0, 22.0),
+            name: '🎣 BẾN THUYỀN ĐÁNH CÁ',
+            role: 'Bến Thuyền Độc Mộc Đầm Lầy',
+            pos: new THREE.Vector3(-20.0, 0, 22.0),
             color: 0x0284c7
+          },
+          swamp_water: {
+            id: 'swamp_water',
+            name: '💧 NGUỒN NƯỚC ĐẦM LẦY',
+            role: 'Đầm Lầy Hoang Cổ Tây Nam',
+            pos: new THREE.Vector3(-18.0, 0, 18.0),
+            color: 0x1a535c
           },
           shipwreck: {
             id: 'shipwreck',
@@ -2682,19 +2766,19 @@
           loadGLB('prop_fishing_boat.glb', (gltf) => {
             const m = gltf.scene;
             setupModelMesh(m);
-            setModelActualHeight(m, 1.4, false);
+            setModelActualHeight(m, 1.8, false);
             m.position.set(0, 0, 0);
             m.rotation.y = Math.PI / 3;
             boatGroup.add(m);
           });
 
-          // Rải cá tươi resource_fish.glb cạnh thuyền
+          // Rải cá tươi resource_fish.glb cạnh bến thuyền
           loadGLB('resource_fish.glb', (gltf) => {
-            for (let i = 0; i < 3; i++) {
+            for (let i = 0; i < 4; i++) {
               const fish = gltf.scene.clone(true);
               setupModelMesh(fish);
-              setModelActualHeight(fish, 0.4, false);
-              fish.position.set((i - 1) * 0.7, 0.1, 0.8 + (i % 2) * 0.3);
+              setModelActualHeight(fish, 0.45, false);
+              fish.position.set((i - 1.5) * 0.6, 0.1, 0.9 + (i % 2) * 0.3);
               fish.rotation.y = (i * Math.PI) / 3;
               boatGroup.add(fish);
             }
@@ -2710,6 +2794,53 @@
 
           scene.add(boatGroup);
           npcs.fishing_boat.group = boatGroup;
+        }
+
+        function createSwampWaterObject() {
+          const swampGroup = new THREE.Group();
+          const pos = npcs.swamp_water.pos;
+          const py = 0.05;
+          swampGroup.position.set(pos.x, py, pos.z);
+
+          // Rải đá lớn bờ hồ
+          loadGLB('prop_rock_large.glb', (gltf) => {
+            const rockCoords = [
+              [-12.0, 4.5, 0.4],
+              [11.0, -3.5, -0.6],
+              [-4.0, 10.0, 1.2],
+              [6.0, -9.0, 2.1]
+            ];
+            rockCoords.forEach(([rx, rz, rot]) => {
+              const rock = gltf.scene.clone(true);
+              setupModelMesh(rock);
+              setModelActualHeight(rock, 2.4, false);
+              const ry = getTerrainHeight(pos.x + rx, pos.z + rz);
+              rock.position.set(rx, ry, rz);
+              rock.rotation.y = rot;
+              swampGroup.add(rock);
+            });
+          });
+
+          // Xác tàu đắm chìm nghiêng trong đầm lầy Tây Nam
+          loadGLB('prop_shipwreck.glb', (gltf) => {
+            const wreck = gltf.scene.clone(true);
+            setupModelMesh(wreck);
+            setModelActualHeight(wreck, 4.2, false);
+            wreck.position.set(-6.5, -0.4, -3.5);
+            wreck.rotation.set(0.15, -Math.PI / 3, 0.1);
+            swampGroup.add(wreck);
+          });
+
+          const swampRing = new THREE.Mesh(
+            new THREE.RingGeometry(2.0, 2.5, 24),
+            new THREE.MeshBasicMaterial({ color: 0x1a535c, side: THREE.DoubleSide, transparent: true, opacity: 0.8 })
+          );
+          swampRing.rotation.x = -Math.PI / 2;
+          swampRing.position.y = 0.04;
+          swampGroup.add(swampRing);
+
+          scene.add(swampGroup);
+          npcs.swamp_water.group = swampGroup;
         }
 
         function createShipwreckObject() {
@@ -2938,6 +3069,10 @@
           }
           if (npc.id === 'fishing_boat') {
             createFishingBoatObject();
+            return;
+          }
+          if (npc.id === 'swamp_water') {
+            createSwampWaterObject();
             return;
           }
           if (npc.id === 'shipwreck') {
@@ -3676,6 +3811,24 @@
             isFlying: true,
             isDocile: true,
             loot: { meat: 4, fangs: 2, pelt: 1 }
+          }),
+          new DinosaurEntity({
+            id: 'deinosuchus_swamp',
+            name: '🐊 ĐẠI NGẠC BẠO CHÚA (DEINOSUCHUS)',
+            tag: 'SÁT THỦ ĐẦM LẦY',
+            file: 'dinosaur.glb',
+            targetHeight: 2.2,
+            hp: 700,
+            damage: 30,
+            speed: 3.2,
+            chaseSpeed: 5.8,
+            aggroRadius: 8.0,
+            attackRadius: 3.2,
+            origin: new THREE.Vector3(-18, 0, 18),
+            patrolRadius: 10,
+            isDocile: false,
+            isAmbush: true,
+            loot: { meat: 6, gold: 80, fangs: 5, crocScale: 3, crocFang: 2 }
           })
         ];
 
@@ -3785,6 +3938,14 @@
             if (loot.trexFang) {
               inv.trexFang = (inv.trexFang || 0) + loot.trexFang;
               lootSummary.push(`+${loot.trexFang} Nanh Bạo Long 🦖`);
+            }
+            if (loot.crocScale) {
+              inv.crocScale = (inv.crocScale || 0) + loot.crocScale;
+              lootSummary.push(`+${loot.crocScale} Vảy Cá Sấu 🐊`);
+            }
+            if (loot.crocFang) {
+              inv.crocFang = (inv.crocFang || 0) + loot.crocFang;
+              lootSummary.push(`+${loot.crocFang} Nanh Răng Cá Sấu 🦷`);
             }
             if (loot.bloodGem) {
               inv.bloodGem = (inv.bloodGem || 0) + loot.bloodGem;
@@ -4292,6 +4453,20 @@
 
               spawnFloatingText(`-${dmg}`, nearest.group.position, isCrit ? 'dmg-popup--crit' : 'dmg-popup--player');
 
+              // Hiệu ứng Đại Thương Răng Cá Sấu: Vết thương ướt / Xuất huyết (-12 HP/s trong 4 giây)
+              if (p.hasGatorSpear && nearest.alive) {
+                let crocBleedTicks = 4;
+                const crocBleedTimer = setInterval(() => {
+                  if (!nearest || !nearest.alive || crocBleedTicks <= 0) {
+                    clearInterval(crocBleedTimer);
+                    return;
+                  }
+                  crocBleedTicks--;
+                  nearest.takeDamage(12, null);
+                  spawnFloatingText('-12 🐊🩸', nearest.group.position, 'dmg-popup--crit');
+                }, 1000);
+              }
+
               // Hiệu ứng Tier 4: Xuất huyết (-15 HP/s trong 3 giây)
               if (p.weaponLevel >= 4 && nearest.alive) {
                 let bleedTicks = 3;
@@ -4323,6 +4498,9 @@
                 document.getElementById('target-banner').hidden = true;
                 showToast(`🏆 CHIẾN CÔNG VANG DỘI: ĐÃ HẠ GỤC ${nearest.name}!`);
                 trackDecreeProgress('hunt_dino', 1);
+                if (nearest.id === 'deinosuchus_swamp') {
+                  trackDecreeProgress('hunt_deinosuchus', 1);
+                }
                 if (nearest.id === 'trex_boss') {
                   checkQuest('kill_trex', 1);
                   triggerVictoryFinale();
@@ -5306,14 +5484,36 @@
             playHeroAction('pickup', true, 0.15, 2.025);
             setTimeout(() => {
               p.isPickingUp = false;
-              GameState.inventory.meatRaw = (GameState.inventory.meatRaw || 0) + 2;
-              GameState.economy.gold = (GameState.economy.gold || 0) + 10;
-              GameState.empire.food = (GameState.empire.food || 0) + 2;
+              const isMonsoon = GameState.monsoon && GameState.monsoon.active;
+              const fishYield = isMonsoon ? 6 : 3;
+              const goldYield = isMonsoon ? 40 : 20;
+              const foodYield = isMonsoon ? 60 : 30;
+
+              GameState.inventory.meatRaw = (GameState.inventory.meatRaw || 0) + fishYield;
+              GameState.economy.gold = (GameState.economy.gold || 0) + goldYield;
+              GameState.empire.food = (GameState.empire.food || 0) + foodYield;
               GameState.empire.gold = GameState.economy.gold;
+              trackDecreeProgress('catch_fish', fishYield);
+
               playSfx('reward');
-              spawnFloatingText('+2 Cá Tươi 🐟, +10 Vàng 🪙', npcs.fishing_boat.pos, 'dmg-popup--food');
-              showToast('🛶 Thu hoạch mẻ cá tươi thành công: +2 Cá Tươi, +10 Vàng!');
+              spawnFloatingText(`+${fishYield} Cá Tươi 🐟, +${goldYield} Vàng 🪙`, npcs.fishing_boat.pos, 'dmg-popup--food');
+              showToast(`🎣 Thu hoạch mẻ lưới tại bến thuyền: +${fishYield} Cá Tươi 🐟 (+${foodYield} Thực Phẩm, +${goldYield} Vàng)${isMonsoon ? ' [⛈️ MÙA MƯA BÃO X2 SẢN LƯỢNG!]' : ''}!`);
             }, 400);
+            return;
+          }
+          if (npcId === 'swamp_water') {
+            const p = GameState.player;
+            p.thirst = Math.min(100, (p.thirst || 100) + 35);
+            playSfx('eat');
+            const isToxic = Math.random() < 0.35;
+            if (isToxic) {
+              p.hp = Math.max(10, p.hp - 5);
+              spawnFloatingText('💧 UỐNG NƯỚC ĐẦM LẦY (-5 HP)', p.group.position, 'dmg-popup--crit');
+              showToast('⚠️ Nước đầm lầy chưa qua xử lý! Bị đau bụng nhẹ (-5 HP). Hãy đun sôi trước khi dùng.');
+            } else {
+              spawnFloatingText('💧 +35% ĐỘ KHÁT', p.group.position, 'dmg-popup--food');
+              showToast('💧 Đã uống nước đầm lầy: Hồi phục +35% Độ Khát!');
+            }
             return;
           }
           if (npcId === 'shipwreck') {
@@ -5324,13 +5524,16 @@
               p.isPickingUp = false;
               GameState.inventory.wood = (GameState.inventory.wood || 0) + 6;
               GameState.inventory.stone = (GameState.inventory.stone || 0) + 2;
-              GameState.economy.gold = (GameState.economy.gold || 0) + 30;
+              GameState.economy.gold = (GameState.economy.gold || 0) + 100;
+              GameState.inventory.relicWater = (GameState.inventory.relicWater || 0) + 1;
               GameState.empire.wood = GameState.inventory.wood;
               GameState.empire.stone = GameState.inventory.stone;
               GameState.empire.gold = GameState.economy.gold;
+              trackDecreeProgress('explore_shipwreck', 1);
+
               playSfx('reward');
-              spawnFloatingText('+6 Gỗ 🪵, +2 Đá 🪨, +30 Vàng 🪙', npcs.shipwreck.pos, 'dmg-popup--wood');
-              showToast('⚓ Khai quật Xác Thuyền Đắm: +6 Gỗ Quý, +2 Đá, +30 Vàng!');
+              spawnFloatingText('+1 Cổ Vật Thủy Tộc 💎, +100 Vàng 🪙', npcs.shipwreck.pos, 'dmg-popup--crit');
+              showToast('⚓ Khai quật Rương Thủy Thần tại Xác Thuyền Đắm: +1 Cổ Vật Thủy Tộc 💎, +100 Vàng 🪙!');
             }, 400);
             return;
           }
@@ -5354,6 +5557,15 @@
               <div class="trade-item"><span>🔥 Đuốc Lửa (+Sáng đêm)</span><button class="trade-btn" onclick="window.buyItem('torch', 35)">Mua (35🪙)</button></div>
               <div class="trade-item"><span>🧪 Thuốc Đại Hồi Phục (+60 HP)</span><button class="trade-btn" onclick="window.buyItem('potion', 80)">Mua (80🪙)</button></div>
               <div class="trade-item"><span>🌿 Túi Hương Ngải Cứu (Khử Mùi Máu)</span><button class="trade-btn" onclick="window.buyItem('mugwortPouch', 120)">${GameState.inventory.hasMugwortPouch ? 'Đã Có ✔️' : 'Mua (120🪙)'}</button></div>
+
+              <div style="font-size:12px; font-weight:900; color:#34d399; margin:10px 0 6px;">BÀO CHẾ DƯỢC LIỆU ĐẦM LẦY (ALCHEMY):</div>
+              <div class="trade-item">
+                <div>
+                  <div style="font-weight:800; font-size:11.5px; color:#6ee7b7;">🧪 Thuốc Giải Độc Đầm Lầy (Có: ${GameState.inventory.antidote || 0})</div>
+                  <div style="font-size:9.5px; color:#cbd5e1;">Bào chế từ 3 Thảo Dược 🌿 (Nhận +30 Vàng 🪙 & Hoàn thành Sắc Lệnh 8).</div>
+                </div>
+                <button class="trade-btn" style="background:#059669; border-color:#34d399;" onclick="window.brewAntidote()">🧪 Bào Chế (3🌿)</button>
+              </div>
 
               <div style="font-size:12px; font-weight:900; color:#38bdf8; margin:10px 0 6px;">MỤC BÁN (SELL):</div>
               <div class="trade-item"><span>🪵 Bán 1 Cành Cây (Có: ${GameState.inventory.wood})</span><button class="trade-btn" onclick="window.sellItem('wood', 10)">Bán (+10🪙)</button></div>
@@ -5417,6 +5629,24 @@
           GameState.empire.fangs = GameState.economy.fangs;
           playSfx('reward');
           showToast(`💰 Đã bán 1 Răng Nanh, nhận +${price} Vàng!`);
+          openNpcModal('merchant');
+        };
+
+        window.brewAntidote = function () {
+          const inv = GameState.inventory;
+          const herbs = inv.flower || 0;
+          if (herbs < 3) {
+            showToast('⚠️ Cần 3 Thảo Dược 🌿 để bào chế Thuốc Giải Độc Đầm Lầy!');
+            return;
+          }
+          inv.flower -= 3;
+          inv.antidote = (inv.antidote || 0) + 1;
+          GameState.economy.gold = (GameState.economy.gold || 0) + 30;
+          GameState.empire.gold = GameState.economy.gold;
+          playSfx('reward');
+          trackDecreeProgress('brew_antidote', 1);
+          spawnFloatingText('+1 Thuốc Giải Độc 🧪 (+30 Vàng 🪙)', GameState.player.group.position, 'dmg-popup--crit');
+          showToast('🧪 ĐÃ BÀO CHẾ THÀNH CÔNG THUỐC GIẢI ĐỘC ĐẦM LẦY: +1 Thuốc Giải Độc, +30 Vàng!');
           openNpcModal('merchant');
         };
 
@@ -5611,7 +5841,7 @@
             </div>
             ${allClaimed && !GameState.decreesAllClaimed ? `
               <div style="margin-top:10px; padding:8px; background:rgba(234,179,8,0.2); border:1px solid #eab308; border-radius:8px; text-align:center;">
-                <div style="font-size:11.5px; font-weight:900; color:#fef08a; margin-bottom:4px;">🏆 ĐÃ HOÀN THÀNH TOÀN BỘ 4 SẮC LỆNH HÔM NAY!</div>
+                <div style="font-size:11.5px; font-weight:900; color:#fef08a; margin-bottom:4px;">🏆 ĐÃ HOÀN THÀNH TOÀN BỘ SẮC LỆNH HÔM NAY!</div>
                 <button class="trade-btn" style="background:#eab308; color:#000; font-weight:900; font-size:11px; padding:6px 14px;" onclick="window.claimAllDecreesReward()">
                   🎁 MỞ RƯƠNG ĐẠI PHÚC LÀNH BỘ TỘC (+200🪙 +5🦷)
                 </button>
@@ -5628,9 +5858,17 @@
           if (!d || d.claimed || d.current < d.required) return;
           d.claimed = true;
           d.completed = true;
-          GameState.economy.gold += d.rewardGold;
+          GameState.economy.gold += (d.rewardGold || 0);
           GameState.empire.gold = GameState.economy.gold;
-          GameState.economy.fangs += d.rewardFangs;
+          GameState.economy.fangs += (d.rewardFangs || 0);
+          GameState.empire.fangs = GameState.economy.fangs;
+          if (d.rewardFood) {
+            GameState.empire.food += d.rewardFood;
+            GameState.inventory.meatRaw = (GameState.inventory.meatRaw || 0) + d.rewardFood;
+          }
+          if (d.rewardRunes) {
+            GameState.stonehenge.runesActivated = Math.min(4, GameState.stonehenge.runesActivated + d.rewardRunes);
+          }
           playSfx('reward');
           spawnFloatingText(`+${d.rewardGold} Vàng 🪙`, GameState.player.group.position, 'dmg-popup--food');
           showToast(`🎉 Đã nhận thưởng Sắc Lệnh: +${d.rewardGold} Vàng, +${d.rewardFangs} Nanh Thú!`);
@@ -5927,10 +6165,22 @@
 
               <div style="display:flex; gap:8px;">
                 <button class="trade-btn" style="flex:1; background:#059669; border-color:#34d399; font-weight:900; font-size:11px; padding:10px 0;" ${!farm.planted && (GameState.inventory.flower || 0) >= 2 ? '' : 'disabled style="opacity:0.5; cursor:not-allowed;"'} onclick="window.plantCrops()">
-                  🌱 GIEO HẠT (2 Thảo Dược 🌿)
+                  🌱 GIEO HẠT (2🌿)
                 </button>
                 <button class="trade-btn" style="flex:1; background:#e11d48; border-color:#f43f5e; font-weight:900; font-size:11px; padding:10px 0;" ${farm.growthStage === 3 ? '' : 'disabled style="opacity:0.5; cursor:not-allowed;"'} onclick="window.harvestCrops()">
-                  🌸 THU HOẠCH HOA (+6🌿 +2🍄)
+                  🌸 THU HOẠCH (+6🌿 +2🍄)
+                </button>
+              </div>
+
+              <!-- BÀO CHẾ GIẢI ĐỘC ĐẦM LẦY -->
+              <div style="margin-top:4px; padding:8px; background:rgba(5,150,105,0.2); border:1px solid #34d399; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                  <div style="font-weight:900; font-size:11.5px; color:#6ee7b7;">🧪 BÀO CHẾ THUỐC GIẢI ĐỘC ĐẦM LẦY</div>
+                  <div style="font-size:9.5px; color:#cbd5e1;">Dùng 3 Thảo Dược 🌿 bào chế giải độc (+30 Vàng 🪙, hoàn thành Sắc Lệnh 8).</div>
+                  <div style="font-size:9px; color:#fcd34d;">Thảo Dược hiện có: ${GameState.inventory.flower || 0} / 3</div>
+                </div>
+                <button class="trade-btn" style="background:#059669; border-color:#34d399; font-weight:900; font-size:10.5px; padding:6px 12px;" ${(GameState.inventory.flower || 0) >= 3 ? '' : 'disabled style="opacity:0.5; cursor:not-allowed;"'} onclick="window.brewAntidote(); openFarmModal();">
+                  🧪 BÀO CHẾ
                 </button>
               </div>
             </div>
@@ -6245,6 +6495,39 @@
               ${tierCardsHtml}
             </div>
 
+            <div style="font-size:12px; font-weight:900; color:#34d399; margin:10px 0 6px;">🐊 TRANG BỊ ĐẦM LẦY (SWAMP TECH TREE):</div>
+            <!-- GIÁP DA VẢY BẠO NGẠC -->
+            <div class="trade-item" style="flex-direction:column; align-items:flex-start; gap:4px; border-color:${p.hasCrocArmor ? '#34d399' : 'rgba(52, 211, 153, 0.4)'}; background:${p.hasCrocArmor ? 'rgba(6,78,59,0.4)' : 'rgba(0,0,0,0.35)'};">
+              <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+                <div>
+                  <div style="font-weight:900; font-size:11.5px; color:#6ee7b7;">🛡️ Giáp Da Vảy Bạo Ngạc (Thủy Bộ Tự Do)</div>
+                  <div style="font-size:9.5px; color:#cbd5e1;">+200 Max HP & <b>Miễn nhiễm 100% làm chậm</b> khi lội nước/đầm lầy.</div>
+                  <div style="font-size:9px; color:#fcd34d; margin-top:2px;">3 Vảy Cá Sấu 🐊 (Có: ${inv.crocScale || 0}) • 15 Da Thú 🐺 (Có: ${inv.pelt || 0}) • 300 Vàng 🪙</div>
+                </div>
+                <div>
+                  ${p.hasCrocArmor
+                    ? '<span style="color:#34d399; font-weight:900; font-size:11px;">ĐÃ SỞ HỮU ✔️</span>'
+                    : `<button class="trade-btn" style="background:#059669; border-color:#34d399;" onclick="window.craftCrocArmor()">🛡️ Chế Tác</button>`}
+                </div>
+              </div>
+            </div>
+
+            <!-- ĐẠI THƯƠNG RĂNG CÁ SẤU -->
+            <div class="trade-item" style="flex-direction:column; align-items:flex-start; gap:4px; border-color:${p.hasGatorSpear ? '#38bdf8' : 'rgba(56, 189, 248, 0.4)'}; background:${p.hasGatorSpear ? 'rgba(3,105,161,0.4)' : 'rgba(0,0,0,0.35)'}; margin-top:4px;">
+              <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+                <div>
+                  <div style="font-weight:900; font-size:11.5px; color:#7dd3fc;">🔱 Đại Thương Răng Cá Sấu (55 ATK)</div>
+                  <div style="font-size:9.5px; color:#cbd5e1;">Đòn đánh gây hiệu ứng <b>Xuất Huyết Ướt (-12 HP/giây)</b> trong 4 giây.</div>
+                  <div style="font-size:9px; color:#fcd34d; margin-top:2px;">2 Nanh Cá Sấu 🦷 (Có: ${inv.crocFang || 0}) • 10 Gỗ 🪵 (Có: ${inv.wood || 0}) • 250 Vàng 🪙</div>
+                </div>
+                <div>
+                  ${p.hasGatorSpear
+                    ? '<span style="color:#38bdf8; font-weight:900; font-size:11px;">ĐÃ SỞ HỮU ✔️</span>'
+                    : `<button class="trade-btn" style="background:#0284c7; border-color:#38bdf8;" onclick="window.craftGatorSpear()">🔱 Chế Tác</button>`}
+                </div>
+              </div>
+            </div>
+
             <!-- NÂNG CẤP THÁP NỎ LỬA -->
             <div style="margin-top:8px; padding:8px 10px; background:rgba(239,68,68,0.18); border:1px solid #ef4444; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
               <div>
@@ -6326,6 +6609,58 @@
           openBlacksmithModal();
         };
 
+        window.craftCrocArmor = function () {
+          const inv = GameState.inventory;
+          const eco = GameState.economy;
+          const emp = GameState.empire;
+          const p = GameState.player;
+          if (p.hasCrocArmor) {
+            showToast('⚠️ Bạn đã sở hữu Giáp Da Vảy Bạo Ngạc!');
+            return;
+          }
+          if ((inv.crocScale || 0) < 3 || (inv.pelt || 0) < 15 || (eco.gold || 0) < 300) {
+            showToast('⚠️ Cần 3 Vảy Cá Sấu 🐊, 15 Da Thú 🐺 và 300 Vàng 🪙!');
+            return;
+          }
+          inv.crocScale -= 3;
+          inv.pelt -= 15;
+          eco.gold -= 300;
+          emp.gold = eco.gold;
+          p.hasCrocArmor = true;
+          p.maxHp += 200;
+          p.hp = Math.min(p.maxHp, p.hp + 200);
+          playSfx('reward');
+          spawnFloatingText('🛡️ GIÁP VẢY BẠO NGẠC (+200 HP, MIỄN CHẬM NƯỚC)!', p.group.position, 'dmg-popup--crit');
+          showToast('🛡️ ĐÃ CHẾ TÁC GIÁP DA VẢY BẠO NGẠC: +200 Max HP & Miễn nhiễm 100% làm chậm đầm lầy!');
+          openBlacksmithModal();
+        };
+
+        window.craftGatorSpear = function () {
+          const inv = GameState.inventory;
+          const eco = GameState.economy;
+          const emp = GameState.empire;
+          const p = GameState.player;
+          if (p.hasGatorSpear) {
+            showToast('⚠️ Bạn đã sở hữu Đại Thương Răng Cá Sấu!');
+            return;
+          }
+          if ((inv.crocFang || 0) < 2 || (inv.wood || 0) < 10 || (eco.gold || 0) < 250) {
+            showToast('⚠️ Cần 2 Nanh Cá Sấu 🦷, 10 Gỗ 🪵 và 250 Vàng 🪙!');
+            return;
+          }
+          inv.crocFang -= 2;
+          inv.wood -= 10;
+          eco.gold -= 250;
+          emp.wood = inv.wood;
+          emp.gold = eco.gold;
+          p.hasGatorSpear = true;
+          p.attackPower = Math.max(p.attackPower || 25, 55);
+          playSfx('reward');
+          spawnFloatingText('🔱 ĐẠI THƯƠNG RĂNG CÁ SẤU (55 ATK + XUẤT HUYẾT)!', p.group.position, 'dmg-popup--crit');
+          showToast('🔱 ĐÃ CHẾ TÁC ĐẠI THƯƠNG RĂNG CÁ SẤU: 55 ATK & Gây Xuất Huyết -12 HP/s trong 4s!');
+          openBlacksmithModal();
+        };
+
         window.upgradeTowerFire = function () {
           const inv = GameState.inventory;
           const eco = GameState.economy;
@@ -6385,6 +6720,8 @@
               stonehenge: GameState.stonehenge,
               playTimeSeconds: GameState.playTimeSeconds,
               weaponLevel: GameState.player.weaponLevel,
+              hasCrocArmor: GameState.player.hasCrocArmor || false,
+              hasGatorSpear: GameState.player.hasGatorSpear || false,
               gender: GameState.player.gender,
               saveTimestamp: Date.now()
             };
@@ -6484,11 +6821,16 @@
             if (data.playTimeSeconds) GameState.playTimeSeconds = data.playTimeSeconds;
 
             if (data.gender) GameState.player.gender = data.gender;
+            if (data.hasCrocArmor) GameState.player.hasCrocArmor = true;
+            if (data.hasGatorSpear) {
+              GameState.player.hasGatorSpear = true;
+              GameState.player.attackPower = Math.max(GameState.player.attackPower || 25, 55);
+            }
             if (data.weaponLevel) {
               GameState.player.weaponLevel = data.weaponLevel;
               const w = WEAPON_TIERS[data.weaponLevel];
               if (w) {
-                GameState.player.attackPower = w.atk;
+                GameState.player.attackPower = Math.max(GameState.player.attackPower || 25, w.atk);
                 GameState.player.weaponName = w.name;
               }
             }
@@ -7183,9 +7525,14 @@
 
             const canMove = !p.isAttacking && !p.isPickingUp && !p.isHitReacting;
 
+            // Hiệu ứng lội nước đầm lầy Tây Nam (Water Slowdown -40%, Miễn nhiễm khi có Giáp Da Vảy Bạo Ngạc)
+            const inSwampWater = Math.abs(p.group.position.x - (-18)) < 17.5 && Math.abs(p.group.position.z - 18) < 12.5;
+            const speedFactor = inSwampWater ? (p.hasCrocArmor ? 1.0 : 0.60) : 1.0;
+            const currentSpeed = p.speed * speedFactor * inputMag;
+
             if (isMoving && !p.isDodging && canMove) {
               _moveVec.normalize();
-              p.group.position.addScaledVector(_moveVec, p.speed * inputMag * dt);
+              p.group.position.addScaledVector(_moveVec, currentSpeed * dt);
               const targetAngle = Math.atan2(_moveVec.x, _moveVec.z);
               let diff = targetAngle - p.facingAngle;
               while (diff > Math.PI) diff -= Math.PI * 2;
@@ -7193,12 +7540,14 @@
               p.facingAngle += diff * Math.min(1, 14 * dt);
               p.group.rotation.y = p.facingAngle;
 
-              // Cơ chế Đồng bộ Vận tốc & Tần số bước chân (Kinematic Synchronization):
-              // Tự động điều chỉnh timeScale tỷ lệ thuận với tốc độ di chuyển thực tế để bám chặt mặt đất (1.875x)
+              // Cơ chế Đồng bộ Vận tốc & Tần số bước chân (Kinematic Synchronization)
               const baseSpeed = 5.2;
-              const currentSpeed = p.speed * inputMag;
-              const animSpeed = Math.max(0.7, (currentSpeed / baseSpeed) * 1.875);
+              const animSpeed = Math.max(0.6, (currentSpeed / baseSpeed) * 1.875);
               playHeroAction('walk', false, 0.2, animSpeed);
+
+              if (inSwampWater && Math.random() < 0.04) {
+                spawnFloatingText('🌊 Bõm...', p.group.position, 'dmg-popup--player');
+              }
             } else if (canMove && !p.isDodging) {
               playHeroAction('idle', false, 0.2, 1.0);
             }
@@ -7329,8 +7678,11 @@
                   _elInteractLabel.textContent = '🔭 CHÒI CANH';
                   if (_elInteractIcon) _elInteractIcon.textContent = '🔭';
                 } else if (nearestTarget.npcId === 'fishing_boat') {
-                  _elInteractLabel.textContent = '🛶 THUYỀN ĐÁNH CÁ';
-                  if (_elInteractIcon) _elInteractIcon.textContent = '🛶';
+                  _elInteractLabel.textContent = '🎣 CÂU CÁ / THU LƯỚI';
+                  if (_elInteractIcon) _elInteractIcon.textContent = '🎣';
+                } else if (nearestTarget.npcId === 'swamp_water') {
+                  _elInteractLabel.textContent = '💧 UỐNG NƯỚC ĐẦM LẦY';
+                  if (_elInteractIcon) _elInteractIcon.textContent = '💧';
                 } else if (nearestTarget.npcId === 'shipwreck') {
                   _elInteractLabel.textContent = '⚓ XÁC THUYỀN ĐẮM';
                   if (_elInteractIcon) _elInteractIcon.textContent = '⚓';
@@ -7361,7 +7713,10 @@
             }
           }
 
-          // 4.5. HOẠT HÓA TINH THỂ NHÀ CHÍNH & STONEHENGE
+          // 4.5. HOẠT HÓA TINH THỂ NHÀ CHÍNH, STONEHENGE & GỢN SÓNG ĐẦM LẦY
+          if (typeof waterMesh !== 'undefined' && waterMesh) {
+            waterMesh.position.y = 0.05 + Math.sin(time * 2.2) * 0.03;
+          }
           if (typeof runeCrystal !== 'undefined' && runeCrystal) {
             runeCrystal.rotation.y += dt * 0.9;
             runeCrystal.position.y = 3.2 + Math.sin(Date.now() * 0.003) * 0.12;
@@ -7375,7 +7730,8 @@
           // 4.6. SINH TRƯỞNG KHU VƯỜN ƯƠM NÔNG NGHIỆP
           const farm = GameState.farm;
           if (farm && farm.planted && farm.growthStage < 3) {
-            const rainBoost = GameState.weather.isRaining ? 2.0 : 1.0;
+            const isMonsoon = GameState.monsoon && GameState.monsoon.active;
+            const rainBoost = (GameState.weather.isRaining || isMonsoon) ? 2.0 : 1.0;
             farm.growTimer += dt * rainBoost;
 
             if (farm.growTimer >= farm.requiredTime) {
@@ -7389,7 +7745,36 @@
             }
           }
 
-          // 4.7. LINH THÚ ĐỒNG HÀNH (PET COMPANION AI — BẢO VỆ & HỘ VỆ, KHÔNG NHẶT THỤ ĐỘNG)
+          // 4.7. HIỆU ỨNG THỜI TIẾT MỚI: MÙA MƯA BÃO TIỀN SỬ (MONSOON EVENT)
+          if (!GameState.monsoon) {
+            GameState.monsoon = { active: false, timer: 0, interval: 240, duration: 90 };
+          }
+          const ms = GameState.monsoon;
+          ms.timer += dt;
+          if (!ms.active && ms.timer >= ms.interval) {
+            ms.active = true;
+            ms.timer = 0;
+            rainParticles.visible = true;
+            showToast('⛈️ MÙA MƯA BÃO TIỀN SỬ! Sản lượng đánh bắt cá x2 & Thảo dược lớn nhanh gấp đôi! Cẩn trọng cá sấu lên bờ!');
+            spawnFloatingText('⛈️ MƯA BÃO TIỀN SỬ!', p.group.position, 'dmg-popup--crit');
+            playSfx('thunder');
+          }
+          if (ms.active) {
+            if (ms.timer >= ms.duration) {
+              ms.active = false;
+              ms.timer = 0;
+              if (!GameState.weather.isRaining) rainParticles.visible = false;
+              showToast('🌤️ Mưa bão tiền sử đã tan, trời quang mây tạnh.');
+            } else {
+              // Sấm chớp giật nhẹ
+              if (Math.random() < 0.015 && typeof sunLight !== 'undefined' && sunLight) {
+                sunLight.intensity = 3.5;
+                setTimeout(() => { if (sunLight) sunLight.intensity = 1.0; }, 80);
+              }
+            }
+          }
+
+          // 4.8. LINH THÚ ĐỒNG HÀNH (PET COMPANION AI — BẢO VỆ & HỘ VỆ, KHÔNG NHẶT THỤ ĐỘNG)
           if (petCompanionMesh && GameState.pet && GameState.pet.active) {
             const followDist = 1.8;
             const heroAngle = p.facingAngle || 0;
@@ -7406,7 +7791,7 @@
             }
           }
 
-          // 4.8. HOẠT HÓA CỔ ĐỒ TẦM BẢO & ĐỘI SĂN ĐỒNG ĐỘI CO-OP
+          // 4.9. HOẠT HÓA CỔ ĐỒ TẦM BẢO & ĐỘI SĂN ĐỒNG ĐỘI CO-OP
           if (ancientTreasureGroup) {
             ancientTreasureGroup.rotation.y += dt * 0.4;
           }
@@ -7661,6 +8046,22 @@
                 }
               }
 
+              // 🐊 Ambush AI cho Đại Ngạc Bạo Chúa Deinosuchus
+              if (dino.id === 'deinosuchus_swamp') {
+                if (distToP > 8.0 && dino.state !== 'AGGRO') {
+                  dino.group.position.y = -0.55; // Lặn sâu dưới nước, chỉ nhô sống lưng gai
+                  if (dino.hpBarGroup) dino.hpBarGroup.visible = false;
+                } else {
+                  if (dino.group.position.y < -0.1) {
+                    dino.group.position.y = 0.05;
+                    if (dino.hpBarGroup) dino.hpBarGroup.visible = true;
+                    spawnFloatingText('🐊 PHỤC KÍCH!', dino.group.position, 'dmg-popup--crit');
+                    showToast('⚠️ NGUY HIỂM! Đại Ngạc Deinosuchus phóng lên từ Đầm Lầy!');
+                    playSfx('hit');
+                  }
+                }
+              }
+
               if (dino.hitStun > 0) {
                 dino.hitStun -= dt;
               } else {
@@ -7702,7 +8103,9 @@
 
                     if (chaseDir.length() > dino.attackRadius) {
                       chaseDir.normalize();
-                      dino.group.position.addScaledVector(chaseDir, dino.chaseSpeed * dt);
+                      const isMonsoon = GameState.monsoon && GameState.monsoon.active;
+                      const speed = (dino.id === 'deinosuchus_swamp' && isMonsoon) ? dino.chaseSpeed * 1.2 : dino.chaseSpeed;
+                      dino.group.position.addScaledVector(chaseDir, speed * dt);
                       dino.group.rotation.y = Math.atan2(chaseDir.x, chaseDir.z);
                       dino.setAnimation('Run');
                     } else {
