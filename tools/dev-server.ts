@@ -39,6 +39,10 @@ const MIME: Record<string, string> = {
   '.woff2': 'font/woff2',
   '.ogg': 'audio/ogg',
   '.mp3': 'audio/mpeg',
+  '.glb': 'model/gltf-binary',
+  '.gltf': 'model/gltf+json',
+  '.fbx': 'application/octet-stream',
+  '.bin': 'application/octet-stream',
 };
 
 /** Chặn path traversal: mọi đường dẫn phải nằm trong thư mục dự án. */

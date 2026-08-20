@@ -4,21 +4,23 @@
 
 ---
 
-## 🟢 PHẦN 1: BẢNG KIỂM KÊ 62 ASSETS 3D ĐÃ NẠP TRỰC TIẾP VÀO ENGINE
-*Toàn bộ 62 files (12 FBX Animations + 50 GLB Models) hiện đang nằm trong thư mục `/models` và `/apps/game/models`, đã được kết nối hoàn chỉnh vào `index.html`:*
+## 🟢 PHẦN 1: BẢNG KIỂM KÊ 74 ASSETS 3D ĐÃ NẠP TRỰC TIẾP VÀO ENGINE
+*Toàn bộ 74 files (24 FBX Animations & Models + 50 GLB Models) hiện đang nằm trong thư mục `/models` và `/apps/game/models`, đã được kết nối hoàn chỉnh vào `index.html`:*
 
-### A. Hệ Thống Nhân Vật & Hoạt Ảnh Modular FBX (12 Files FBX):
+### A. Hệ Thống Nhân Vật & Hoạt Ảnh Modular FBX (19 Files FBX):
 > [!IMPORTANT]
 > **TÌNH TRẠNG VẬN HÀNH THỰC TẾ:**
-> * Nhân vật người chơi (Nam / Nữ), Đồng đội Co-op, Trưởng lão Mo và Dân làng hiện đang vận hành **100% bằng hệ thống 12 File Modular FBX** (có đầy đủ xương Rigging & Animation Clips chuẩn hóa).
+> * Toàn bộ Dũng Sĩ Nam, Dũng Sĩ Nữ, Trưởng lão Mo và Dân Làng Đế Chế hiện đang vận hành **100% bằng hệ thống 19 File Modular FBX** (có đầy đủ xương Rigging & Animation Clips chuẩn hóa).
 
-* **6 Hoạt Cảnh Modular FBX cho Dũng Sĩ Nam (Tỉ lệ chuẩn 1.85m):**
+* **8 Hoạt Cảnh Modular FBX cho Dũng Sĩ Nam (Tỉ lệ chuẩn 1.85m):**
   1. `warrior_idle.fbx`: Mô hình gốc Dũng Sĩ Nam + Đứng thở nhịp nhàng.
-  2. `warrior_walk.fbx`: Bước chân dứt khoát (Tự động đồng bộ tần số bước theo tốc độ di chuyển).
-  3. `warrior_attack.fbx`: Vung đòn chém quét diện rộng.
-  4. `warrior_hit_reaction.fbx`: Giật lùi phản ứng khi trúng đòn dã thú.
-  5. `warrior_picking_up.fbx`: Cúi người nhặt tài nguyên / hái thảo dược / thu lưới cá.
-  6. `warrior_death.fbx`: Gục ngã khi cạn kiệt sinh lực.
+  2. `warrior_walk.fbx`: Bước chân dứt khoát khi đi bộ chậm.
+  3. `warrior_run.fbx`: Chạy nhanh nước rút mạnh mẽ khi đẩy joystick tối đa.
+  4. `warrior_dodge_roll.fbx`: Lộn nhào né đòn dứt khoát né vuốt thú.
+  5. `warrior_attack.fbx`: Vung đòn chém quét diện rộng.
+  6. `warrior_hit_reaction.fbx`: Giật lùi phản ứng khi trúng đòn dã thú.
+  7. `warrior_picking_up.fbx`: Cúi người nhặt tài nguyên / hái thảo dược / thu lưới cá.
+  8. `warrior_death.fbx`: Gục ngã khi cạn kiệt sinh lực.
 * **6 Hoạt Cảnh Modular FBX cho Dũng Sĩ Nữ (Tỉ lệ chuẩn 1.75m):**
   1. `female_warrior_idle.fbx`: Mô hình gốc Dũng Sĩ Nữ + Đứng thở nhẹ nhàng.
   2. `female_warrior_walk.fbx`: Bước chân nhanh nhẹn, thanh thoát.
@@ -26,10 +28,26 @@
   4. `female_warrior_hit_reaction.fbx`: Phản ứng né giật khi dính sát thương.
   5. `female_warrior_picking_up.fbx`: Động tác cúi thu hái / mổ xẻ chiến lợi phẩm.
   6. `female_warrior_death.fbx`: Gục ngã khi hết máu.
+* **4 Hoạt Cảnh Modular FBX cho Dân Làng Nam Đế Chế (Khóa chuẩn 1.50m):**
+  1. `villager_male_idle.fbx`: Mô hình gốc Dân Làng Nam + Đứng thở nghỉ ngơi / đình công.
+  2. `villager_male_walking.fbx`: Bước chân cần cù gánh vác ra mỏ và về kho.
+  3. `villager_male_digging.fbx`: Động tác bổ cuốc đập đá / vung rìu đốn củi.
+  4. `villager_male_picking_up.fbx`: Động tác cúi hái thảo dược / nộp đồ vào kho.
+* **1 Mô Hình & Hoạt Cảnh FBX cho Trưởng Lão Elder Mo (Tỉ lệ chuẩn 1.80m):**
+  1. `npc_elder_shaman.fbx`: Mô hình gốc Trưởng Lão Thổ Dân Mo + Hoạt ảnh cử động thực tế.
 
 ---
 
-### B. Quần Xã Dã Thú & Khủng Long 3D Animated (8 Loài Cốt Lõi - 9 Files GLB):
+### B. Hệ Thống 5 Bậc Thần Binh 3D Gắn Vào Tay Dũng Sĩ (5 Files FBX):
+1. 🪵 `weapon_tier1_stone_spear.fbx`: **Tier 1 - Giáo Gỗ Mũi Đá** (25 ATK, cán gỗ quấn dây mộc mạc).
+2. 🦏 `weapon_tier2_tri_lance.fbx`: **Tier 2 - Xuyên Vân Thương Tam Sừng** (45 ATK, mũi vuốt Sừng Khủng Long + Hào quang Bạc Trắng).
+3. 🗡️ `weapon_tier3_bronze_sword.fbx`: **Tier 3 - Cự Kiếm Đồng Đỏ** (75 ATK + 200 HP, đúc Đồng Đỏ + Hào quang Vàng Hổ Phách).
+4. 🦖 `weapon_tier4_trex_glaive.fbx`: **Tier 4 - Đại Giáo Nanh Quỷ T-Rex** (120 ATK + Xuất huyết, bọc Nanh Bạo Chúa + Hào quang Đỏ Rực).
+5. ⚡ `weapon_tier5_thunder_spear.fbx`: **Tier 5 - Thánh Khí Lôi Thần Huyết Thạch** (210 ATK + Sấm sét diện rộng 8m + Hào quang Lôi Điện Xanh Hoàng Kim).
+
+---
+
+### C. Quần Xã Dã Thú & Khủng Long 3D Animated (8 Loài Cốt Lõi - 9 Files GLB):
 1. 🦖 `trex.glb`: **Đại Bạo Long T-Rex (Boss Thung Lũng)** — 1500 HP, 42 DMG, 3 Phase Progression & Gầm thét làm chậm 50%.
 2. 🐆 `Velociraptor.glb`: **Velociraptor Săn Mồi Bầy Đàn (x3 con)** — 220 HP, 15 DMG, Tốc độ 6.2 m/s.
 3. 🦏 `Triceratops.glb` & `triceratops_dinosaur.glb`: **Khủng Long Tam Sừng Alpha & Beta** — 650 HP, 22 DMG.
@@ -42,31 +60,31 @@
 ---
 
 ### C. Công Trình Đế Chế, Tiền Đồn & Di Tích 3D (20 Files GLB):
-1. 🏕️ `building_townhall_era1.glb`: **Nhà Chính Đời I (Thời Đồ Đá)** — Túp lều cỏ khởi nguyên (Size 5.0m).
-2. 🪵 `building_townhall_era2.glb`: **Nhà Chính Đời II (Thời Đồ Gỗ)** — Doanh trại tiền đồn vững chắc (Size 6.0m).
-3. 🏰 `building_townhall_era3.glb`: **Nhà Chính Đời III (Thời Đồ Đá Cự Thạch)** — Pháo đài thành đá kiên cố (Size 7.0m).
-4. 🏛️ `building_townhall_era4.glb`: **Nhà Chính Đời IV (Thời Đồ Đồng Thau)** — Điện thờ hoàng kim uy nghiêm (Size 8.0m).
-5. ⚒️ `building_forge.glb`: **Lò Rèn Thần Binh Thợ Kra** — Xưởng rèn đúc vũ khí than hồng rực lửa.
+1. 🏕️ `building_townhall_era1.glb`: **Nhà Chính Đời I (Thời Đồ Đá)** — Túp lều cỏ khởi nguyên (Size 4.5m).
+2. 🪵 `building_townhall_era2.glb`: **Nhà Chính Đời II (Thời Đồ Gỗ)** — Doanh trại tiền đồn vững chắc (Size 5.2m).
+3. 🏰 `building_townhall_era3.glb`: **Nhà Chính Đời III (Thời Đồ Đá Cự Thạch)** — Pháo đài thành đá kiên cố (Size 6.0m).
+4. 🏛️ `building_townhall_era4.glb`: **Nhà Chính Đời IV (Thời Đồ Đồng Thau)** — Điện thờ hoàng kim uy nghiêm (Size 7.0m).
+5. ⚒️ `building_forge.glb`: **Lò Rèn Thần Binh Thợ Kra** — Xưởng rèn đúc vũ khí than hồng rực lửa (Size 2.2m).
 6. 🔨 `tool_hammer.glb`: **Búa Rèn Cổ Thạch** — Đặt cạnh đe đá của thợ Kra.
-7. 🍖 `building_meat_smoker.glb`: **Giàn Hun Khói Thịt** — Chế biến thịt tươi thành lương thực dự trữ lâu dài.
-8. 🏹 `building_crossbow_tower.glb`: **Tháp Canh Nỏ Đá (x2 Tháp Đông/Tây)** — Tự động quay ngắm bắn quái vật bán kính 18m.
+7. 🍖 `building_meat_smoker.glb`: **Giàn Hun Khói Thịt** — Chế biến thịt tươi thành lương thực dự trữ lâu dài (Size 2.0m).
+8. 🏹 `building_crossbow_tower.glb`: **Tháp Canh Nỏ Đá Gác Cổng (x2 Tháp Đông/Tây)** — Tự động quay ngắm bắn quái vật bán kính 18m.
 9. 🎯 `prop_ballista.glb`: **Bệ Nỏ Bắn Đá** — Đặt trên nóc 2 tháp canh nỏ.
 10. 🔭 `prop_wooden_watchtower.glb`: **Chòi Canh Gỗ Tiền Tuyến** — Trạm trinh sát báo động phía Bắc.
-11. 🪵 `prop_wooden_wall.glb`: **Hàng Rào Cọc Gỗ** — Bao quanh bán kính 15m bảo vệ căn cứ.
-12. 🚪 `prop_wooden_gate.glb`: **Cổng Trại Gỗ Phía Nam** — Cửa ngõ xuất chinh của dũng sĩ.
+11. 🪵 `prop_wooden_wall.glb`: **Hàng Rào Cọc Gỗ Pháo Đài** — Bao quanh pháo đài $24\text{m} \times 18\text{m}$ không kẽ hở có va chạm cứng.
+12. 🚪 `prop_wooden_gate.glb`: **Cổng Trại Gỗ Phía Nam** — Lối ra vào duy nhất của pháo đài tại $(X: 6, Z: 8)$.
 13. 🚩 `prop_tribal_banner.glb`: **Cờ Hiệu Bộ Tộc** — Cắm trang nghiêm hai bên cổng Nam.
-14. 🏮 `prop_lantern.glb`: **Đèn Lồng Tiền Đồn** — Thắp sáng 4 góc căn cứ ban đêm.
-15. 📦 `prop_storage_chest.glb`: **Két An Toàn / Rương Rơi Xác Quái** — Cất giữ tài nguyên & rơi chiến lợi phẩm.
-16. 💧 `prop_water_well.glb`: **Giếng Nước Tiền Đồn** — Hồi phục 100% Cơn Khát & Thể Lực.
-17. 🛒 `prop_supply_cart.glb`: **Xe Kéo Tiếp Tế Viễn Chinh** — Kho lưu động đồng hành.
-18. 🏪 `prop_merchant_stall.glb`: **Quầy Hàng Thương Nhân Grug** — Điểm giao thương buôn bán.
+14. 🏮 `prop_lantern.glb`: **Đèn Lồng Tiền Đồn** — Thắp sáng 4 góc pháo đài ban đêm.
+15. 📦 `prop_storage_chest.glb`: **Két An Toàn Tiền Đồn** — Cất giữ tài nguyên & rơi chiến lợi phẩm (Size 1.2m).
+16. 💧 `prop_water_well.glb`: **Giếng Nước Tiền Đồn** — Hồi phục 100% Cơn Khát & Thể Lực (Size 1.8m).
+17. 🛒 `prop_supply_cart.glb`: **Xe Kéo Tiếp Tế Viễn Chinh** — Kho lưu động đồng hành (Size 2.0m).
+18. 🏪 `prop_merchant_stall.glb`: **Quầy Hàng Thương Nhân Grug** — Điểm giao thương buôn bán (Size 2.5m).
 19. 🧪 `prop_potion.glb`: **Bình Thần Dược** — Bày bán trên quầy thương nhân Grug.
 20. 🪨 `structure_stonehenge.glb`: **Trận Đồ Cự Thạch Stonehenge** — Tế đàn phong ấn Huyết Ngữ cổ đại.
 
 ---
 
 ### D. Hệ Sinh Thái Đầm Lầy, Bến Nước & Thám Hiểm (4 Files GLB):
-1. 🛶 `prop_fishing_boat.glb`: **Bến Thuyền Độc Mộc Đầm Lầy** — Tương tác câu cá / thu lưới $+3$ Cá Tươi.
+1. 🛶 `prop_fishing_boat.glb`: **Bến Thuyền Độc Mộc Đầm Lầy** — Tương tác câu cá / thu lưới $+3$ Cá Tươi (Size 2.5m).
 2. 🐟 `resource_fish.glb`: **Cá Tươi Thực Phẩm** — Rải sinh động quanh bến thuyền.
 3. ⚓ `prop_shipwreck.glb`: **Xác Thuyền Đắm Hoang Cổ** — Nửa chìm nghiêng trong đầm lầy Tây Nam & tàn tích Đông Nam.
 4. 👑 `prop_ancient_treasure.glb`: **Rương Cổ Báu Hoang Cổ** — Điểm khai quật Cổ Đồ Tầm Bảo với cột sáng vàng vút trời.
@@ -86,7 +104,7 @@
 1. 🌴 `stylized_palm_tree_1k_pbr.glb`: Cây cọ cổ thụ nhiệt đới khai thác Gỗ.
 2. 🪵 `fallen_stump_tree_optimized.glb`: Thân cây cổ thụ đổ ngang.
 3. 🪵 `tree_stump_model.glb`: Gốc cây mục khai thác Gỗ Rừng.
-4. 🪵 `prop_fallen_log.glb`: Cành cây khô rải rác thu thập củi.
+4. 🪵 `prop_fallen_log.glb`: Cành cây khô rải rác thu thập củi & Lửa trại trung tâm.
 5. 🪨 `stylized_rock.glb`: Mỏ đá nhọn khai thác Đá xây dựng.
 6. 🪨 `stylized_stones_minipack.glb`: Cụm đá cuội ven đường mòn.
 7. 🪨 `prop_rock_large.glb`: Cự thạch lớn viền quanh bờ hồ đầm lầy & bìa rừng.
@@ -100,29 +118,17 @@
 
 ## 🔴 PHẦN 2: DANH MỤC ĐỐI TƯỢNG CÒN THIẾU FILE .GLB & HOẠT CẢNH (CẦN BỔ SUNG)
 
-*Mặc dù game đã vận hành $100\%$ mượt mà nhờ các cơ chế tái sử dụng khung xương và Procedural System, để đạt chất lượng AAA / Hoàn hảo nhất, dưới đây là danh sách chính xác các assets còn thiếu file chuyên biệt:*
+*Dưới đây là danh sách chi tiết và chính xác các mô hình và hoạt ảnh còn thiếu file chuyên biệt:*
 
-### 🗡️ I. THIẾU MÔ HÌNH 3D CHO 5 BẬC THẦN BINH (WEAPON PROPS):
-*(Hiện tại Dũng Sĩ đánh bằng hoạt ảnh tay không / vệt chém hào quang, chưa có model 3D vũ khí gắn vào xương bàn tay `mixamorig:RightHand`)*
-
-| Cấp Bậc (Tier) | Tên File Cần Tìm | Tên Thần Binh | Mô Tả Ngoại Hình 3D Đề Xuất | Từ Khóa Sketchfab / Kenney |
-| :---: | :--- | :--- | :--- | :--- |
-| **Tier 1** | `weapon_tier1_stone_spear.glb` | **Giáo Gỗ Mũi Đá** | Cán gỗ thô quấn dây da, mũi đá phiến vót nhọn. | `stone spear`, `primitive spear` |
-| **Tier 2** | `weapon_tier2_tri_lance.glb` | **Xuyên Vân Thương Tam Sừng**| Cán thương quấn lông chim, mũi thương vuốt từ Sừng Khủng Long. | `bone spear`, `horn lance` |
-| **Tier 3** | `weapon_tier3_bronze_sword.glb`| **Cự Kiếm Đồng Đỏ** | Đại kiếm bản rộng đúc bằng Đồng Đỏ nguyên khối. | `bronze sword`, `tribal greatsword` |
-| **Tier 4** | `weapon_tier4_trex_glaive.glb` | **Đại Giáo Nanh Quỷ T-Rex** | Đại giáo lưỡi cong uốn từ Nanh Bạo Chúa T-Rex tỏa sắc đỏ. | `dinosaur fang glaive`, `dragon spear` |
-| **Tier 5** | `weapon_tier5_thunder_spear.glb`| **Thánh Khí Lôi Thần Huyết Thạch** | Thánh trượng cổ đại khảm ngọc phát sáng tia sét. | `thunder spear`, `lightning staff` |
-
----
-
-### 👤 II. THIẾU MÔ HÌNH NPC & DÂN LÀNG RIÊNG BIỆT (CUSTOM CHARACTER MESHES):
-*(Hiện tại game đang dùng chung mô hình Warrior FBX đổi màu áo / gắn Billboard 3D để phân biệt)*
+### 👤 I. THIẾU MÔ HÌNH NPC & DÂN LÀNG RIÊNG BIỆT (CUSTOM CHARACTER MESHES):
+*(Trưởng lão Mo đã có file `npc_elder_shaman.fbx`. Các NPC khác hiện đang dùng chung mô hình Warrior FBX đổi màu áo / gắn Billboard 3D)*
 
 | Tên File Cần Tìm | Định Dạng | Đối Tượng Hiện Tại Đang Tạm Dùng | Ngoại Hình Đề Xuất | Từ Khóa Tìm Kiếm |
 | :--- | :---: | :--- | :--- | :--- |
-| `npc_elder_shaman.glb` | `.glb` | FBX Warrior Nam + Áo choàng xanh + Billboard 3D | Ông lão thổ dân râu bạc, áo da thú, tay cầm trượng gỗ. | `shaman npc`, `druid elder` |
-| `villager_male.glb` | `.glb` | Clone từ Player Nam + Đổi màu áo | Nam thổ dân mặc khố da, dáng vóc người lao động. | `caveman`, `tribal peasant` |
-| `villager_female.glb` | `.glb` | Clone từ Player Nữ + Đổi màu áo | Nữ thổ dân đội vòng lá, gùi giỏ hái thuốc sau lưng. | `cavewoman`, `gatherer female` |
+| `villager_male.glb` / `.fbx` | `.glb` / `.fbx` | Clone từ Player Nam + Đổi màu áo | Nam thổ dân mặc khố da, dáng vóc người lao động. | `caveman`, `tribal peasant` |
+| `villager_female.glb` / `.fbx` | `.glb` / `.fbx` | Clone từ Player Nữ + Đổi màu áo | Nữ thổ dân đội vòng lá, gùi giỏ hái thuốc sau lưng. | `cavewoman`, `gatherer female` |
+| `npc_merchant_grug.glb` / `.fbx` | `.glb` / `.fbx` | Billboard 3D tại quầy thương nhân | Thương nhân du mục gù lưng, túi hàng da thú, râu quai nón. | `tribal merchant`, `nomad trader` |
+| `npc_blacksmith_kra.glb` / `.fbx` | `.glb` / `.fbx` | Bàn đúc lò rèn + Billboard 3D | Thợ rèn lực lưỡng quấn tạp dề da thú, tay cầm búa đe đá. | `blacksmith npc`, `tribal forger` |
 | `dino_pet_baby.glb` | `.glb` | Velociraptor thu nhỏ 0.45m | Khủng long con / thú cưng nhỏ mập mạp đáng yêu. | `baby dinosaur`, `cute raptor` |
 | `prop_hunting_trap.glb` | `.glb` | Tạo hình tạm bằng cọc gỗ đan dây | Khung bẫy kẹp thú bằng ngà voi / cọc gỗ có mồi thịt. | `hunting trap`, `bear trap low poly` |
 
@@ -132,8 +138,8 @@
 *(Có thể tải miễn phí định dạng `.fbx` Without Skin từ [Mixamo.com](https://www.mixamo.com))*
 
 1. **Hoạt cảnh mở rộng cho Dũng Sĩ (Player):**
-   * `warrior_run.fbx` / `female_warrior_run.fbx`: Hoạt cảnh **Chạy Nước Rút (Sprint)** (Hiện tại đang tăng tốc hoạt ảnh đi bộ `walk` $1.875\times$).
-   * `warrior_dodge_roll.fbx` / `female_warrior_dodge_roll.fbx`: Hoạt cảnh **Lộn Nhào Né Đòn (Dodge Roll)** (Hiện tại đang lướt trượt ngang).
+   * `female_warrior_run.fbx`: Hoạt cảnh **Chạy Nước Rút (Sprint) cho Dũng Sĩ Nữ** (Hiện đang chia sẻ chung clip với Nam).
+   * `female_warrior_dodge_roll.fbx`: Hoạt cảnh **Lộn Nhào Né Đòn (Dodge Roll) cho Dũng Sĩ Nữ** (Hiện đang chia sẻ chung clip với Nam).
    * `warrior_chop_wood.fbx`: Hoạt cảnh **Vung rìu đốn củi chuyên biệt** (Mixamo: `Wood Cutting`).
    * `warrior_mine_rock.fbx`: Hoạt cảnh **Bổ cuốc đập đá chuyên biệt** (Mixamo: `Mining`).
    * `warrior_cheer_victory.fbx`: Hoạt cảnh **Hò reo ăn mừng chiến thắng khi hạ T-Rex** (Mixamo: `Cheering`).
@@ -143,8 +149,8 @@
    * `villager_panic.fbx`: Hoạt cảnh **Chạy tán loạn ôm đầu** khi bị dã thú đột kích (Mixamo: `Terrified Run`).
 
 3. **Hoạt cảnh cho Quần Xã Khủng Long:**
-   * `dino_roar.glb`: Hoạt cảnh **Khủng Long ngửa cổ gầm thét** kích hoạt hiệu ứng sóng âm (Dinosaur Roar).
-   * `dino_tail_whip.glb`: Hoạt cảnh **Quật đuôi gai 360 độ** của Stegosaurus / Apatosaurus.
+   * `dino_roar`: Hoạt cảnh **Khủng Long ngửa cổ gầm thét** kích hoạt hiệu ứng sóng âm (Dinosaur Roar).
+   * `dino_tail_whip`: Hoạt cảnh **Quật đuôi gai 360 độ** của Stegosaurus / Apatosaurus.
 
 ---
 
