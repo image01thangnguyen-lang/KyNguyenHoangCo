@@ -1,10 +1,10 @@
 {
-  "_note": "Quy đổi bước chân thành tài nguyên — §5.2. Mọi con số ở đây là điểm xuất phát để playtest.",
+  "_note": "Hệ thống quy đổi điểm hoạt động thám hiểm thành tài nguyên sinh tồn.",
   "version": 1,
 
   "stepsPerPickup": 250,
   "dailyStepRewardCap": 15000,
-  "_capReason": "Chống gian lận §4.4: quá 15.000 bước/ngày thì không cấp thêm lượt nhặt (bước vẫn được đếm và hiển thị để không trừng phạt người đi bộ thật). Với stepsPerPickup=250: 10.000 bước → tối đa 40 lượt nhặt/ngày ở trail, 60 lượt ở rừng — vừa đủ sống, không dễ leo cấp.",
+  "_capReason": "Cân bằng sản lượng thu thập tài nguyên sinh tồn mỗi ngày.",
 
   "zones": {
     "trail":      { "nameVi": "Đường mòn hoang dã",       "pickupMultiplier": 1.0 },

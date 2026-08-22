@@ -2761,6 +2761,11 @@ function startLoops(): void {
   scheduleSyncTimer();
 
   let lastFrameTime = 0;
+  let lastMapRenderTime = 0;
+  // Canvas 2D already renders every visual detail at the native canvas resolution.
+  // Capping redraws prevents 120/144 Hz panels from doing duplicate expensive map
+  // work while retaining the same image quality and a smooth 60 FPS presentation.
+  const MAP_RENDER_INTERVAL_MS = 1000 / 60;
 
   const frame = (timestamp: number) => {
     rafHandle = requestAnimationFrame(frame);
@@ -2920,9 +2925,18 @@ function startLoops(): void {
       }
     }
 
-    // Tốc độ làm tươi mượt mà theo tần số quét màn hình (60Hz / 120Hz / 144Hz) với Delta Time chuẩn xác
+    // Keep simulation/input responsive at the display refresh rate, but redraw the
+    // full Canvas 2D scene at most at 60 FPS. This avoids needless full-scene work
+    // on high-refresh displays without lowering DPR, textures, or visual effects.
+    if (lastMapRenderTime > 0 && timestamp - lastMapRenderTime < MAP_RENDER_INTERVAL_MS) {
+      return;
+    }
+
+    // Delta time is measured between actual renders so animated visual effects keep
+    // their original real-time speed after the render cap.
     const renderDt = lastFrameTime > 0 ? Math.min(0.1, (timestamp - lastFrameTime) / 1000) : 0.016;
     lastFrameTime = timestamp;
+    lastMapRenderTime = timestamp;
 
     app.simTick++;
     drawMap(renderDt);

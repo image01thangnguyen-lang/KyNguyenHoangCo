@@ -1,8 +1,8 @@
 /**
- * Hệ thống Thú Cưng Tiền Sử & Ấp Trứng Bằng Bước Chân (Phụ lục B).
+ * Hệ thống Thú Cưng Tiền Sử & Ấp Trứng Bằng Năng Lượng Sinh Tồn.
  *
  * Người chơi nhặt được trứng cổ đại tại các bí cảnh/rừng sâu.
- * Mỗi bước chân đi bộ thực tế làm ấm quả trứng. Khi đủ số bước, trứng nở ra Linh Thú tiền sử!
+ * Quá trình phiêu lưu sinh tồn và thám hiểm làm ấm quả trứng. Khi đủ điểm, trứng nở ra Linh Thú tiền sử!
  * Linh thú đồng hành, tăng sức chứa túi đồ, hỗ trợ chiến đấu và gia tăng sản lượng nhặt đồ.
  */
 

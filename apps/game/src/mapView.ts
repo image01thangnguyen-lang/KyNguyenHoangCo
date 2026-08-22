@@ -359,6 +359,28 @@ const OSM_ROADS: OsmRoad[] = (osmRoadsRaw as any[]).map((r) => {
   };
 });
 
+// Static roads never change during a session. Index their precomputed bounds once
+// so each frame inspects only roads near the camera instead of all 7,913 records.
+// A road is inserted into every intersecting cell, preserving exactly the previous
+// visibility result even for long roads crossing a cell boundary.
+const ROAD_GRID_CELL_DEGREES = 0.01;
+const ROAD_SPATIAL_INDEX = new Map<string, OsmRoad[]>();
+const roadGridKey = (latCell: number, lonCell: number): string => `${latCell}:${lonCell}`;
+for (const road of OSM_ROADS) {
+  const minLatCell = Math.floor(road.minLat / ROAD_GRID_CELL_DEGREES);
+  const maxLatCell = Math.floor(road.maxLat / ROAD_GRID_CELL_DEGREES);
+  const minLonCell = Math.floor(road.minLon / ROAD_GRID_CELL_DEGREES);
+  const maxLonCell = Math.floor(road.maxLon / ROAD_GRID_CELL_DEGREES);
+  for (let latCell = minLatCell; latCell <= maxLatCell; latCell++) {
+    for (let lonCell = minLonCell; lonCell <= maxLonCell; lonCell++) {
+      const key = roadGridKey(latCell, lonCell);
+      const bucket = ROAD_SPATIAL_INDEX.get(key);
+      if (bucket) bucket.push(road);
+      else ROAD_SPATIAL_INDEX.set(key, [road]);
+    }
+  }
+}
+
 export interface ViewportState {
   isPannedOrZoomed: boolean;
   zoomFactor: number;
@@ -2399,12 +2421,20 @@ export class MapView {
   ): void {
     const { ctx } = this;
 
-    // 1. TỶ LỆ KÍCH THƯỚC METRIC THỰC TẾ & CO GIÃN THEO ZOOM (pxPerMeter)
-    // Zoom in (pxPerMeter tăng): Khủng long to lớn hùng vĩ chiếm tỉ lệ thật trên màn hình
-    // Zoom out (pxPerMeter giảm): Khủng long thu nhỏ mượt mà theo bản đồ
-    const visualScale = Math.max(0.42 * this.dpr, pxPerMeter * 1.6);
-    const drawW = Math.max(28 * this.dpr, meterW * visualScale);
-    const drawH = Math.max(18 * this.dpr, meterH * visualScale);
+    // 1. TỈ LỆ KÍCH THƯỚC THẬT: 1 mét trong game phải giống nhau với
+    // người chơi và dã thú. entityCatalog là nguồn số đo duy nhất; các
+    // tham số meterW/meterH chỉ là fallback cho loài chưa có catalog.
+    // Nhờ vậy sprite không thể vô tình dùng lại kích thước minh họa cũ.
+    const catalogId = mapBeastSpeciesToCatalog(beast?.species ?? beastKey.replace('beast_', ''));
+    const catalogEntry = getCatalogEntry(catalogId);
+    const actualMeterW = catalogEntry?.meterWidth ?? meterW;
+    const actualMeterH = catalogEntry?.meterHeight ?? meterH;
+
+    // Dùng cùng hệ số mét → pixel với PlayerEntity (2.5 px/m), thay vì
+    // hệ số riêng khiến khủng long bị nhỏ hơn người dù số đo tính bằng mét.
+    const visualScale = Math.max(0.42 * this.dpr, pxPerMeter * 2.5);
+    const drawW = Math.max(28 * this.dpr, actualMeterW * visualScale);
+    const drawH = Math.max(18 * this.dpr, actualMeterH * visualScale);
 
     // 2. Cảnh báo Nộ Khí & Thanh Máu trên đầu
     this.drawBeastAggroWarning(sx, sy, Math.max(0.6, drawH / (42 * this.dpr)), distToPlayerMeters, nameVi, iconEmoji, beast);
@@ -3191,10 +3221,22 @@ export class MapView {
     const vMinLon = centerPanLon - halfSpanLon;
     const vMaxLon = centerPanLon + halfSpanLon;
 
-    // Lọc các tuyến đường nằm trong tầm mắt
+    // Query the static spatial index before the precise viewport test. This keeps
+    // the road artwork unchanged while removing a full 7,913-road scan per frame.
     const visibleRoads: { road: OsmRoad; pts: [number, number][] }[] = [];
+    const candidateRoads = new Set<OsmRoad>();
+    const minLatCell = Math.floor(vMinLat / ROAD_GRID_CELL_DEGREES);
+    const maxLatCell = Math.floor(vMaxLat / ROAD_GRID_CELL_DEGREES);
+    const minLonCell = Math.floor(vMinLon / ROAD_GRID_CELL_DEGREES);
+    const maxLonCell = Math.floor(vMaxLon / ROAD_GRID_CELL_DEGREES);
+    for (let latCell = minLatCell; latCell <= maxLatCell; latCell++) {
+      for (let lonCell = minLonCell; lonCell <= maxLonCell; lonCell++) {
+        const bucket = ROAD_SPATIAL_INDEX.get(roadGridKey(latCell, lonCell));
+        if (bucket) for (const road of bucket) candidateRoads.add(road);
+      }
+    }
 
-    for (const road of OSM_ROADS) {
+    for (const road of candidateRoads) {
       if (road.maxLat < vMinLat || road.minLat > vMaxLat || road.maxLon < vMinLon || road.minLon > vMaxLon) {
         continue;
       }
@@ -5844,5 +5886,3 @@ export function featureAtPoint(
 
   return best;
 }
-
-

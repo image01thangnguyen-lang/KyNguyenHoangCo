@@ -608,6 +608,220 @@
       }
       .btn-interact-name { font-size: 7px; font-weight: 800; color: #fef08a; }
 
+      /* QUEST HUD BANNER (TOP-LEFT / DƯỚI THANH CHỈ SỐ) */
+      .hud-quest-banner {
+        position: fixed;
+        top: calc(var(--safe-t) + 52px);
+        left: 12px;
+        z-index: 45;
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.94), rgba(30, 41, 59, 0.94));
+        border: 1.5px solid rgba(200, 150, 62, 0.85);
+        border-radius: 12px;
+        padding: 7px 12px;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.65), 0 0 12px rgba(200, 150, 62, 0.2);
+        backdrop-filter: blur(10px);
+        max-width: min(88vw, 420px);
+        cursor: pointer;
+        transition: transform 0.2s ease, border-color 0.2s ease;
+        pointer-events: auto;
+      }
+      .hud-quest-banner:hover {
+        transform: translateY(-1px);
+        border-color: #ffd700;
+      }
+      .quest-icon-badge {
+        font-size: 18px;
+        animation: floatQuestIcon 2s ease-in-out infinite alternate;
+        flex-shrink: 0;
+      }
+      @keyframes floatQuestIcon {
+        from { transform: translateY(0); }
+        to { transform: translateY(-3px); }
+      }
+      .quest-info-box {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        overflow: hidden;
+      }
+      .quest-header-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .quest-tag {
+        font-size: 8.5px;
+        font-weight: 900;
+        color: #f59e0b;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+      }
+      .quest-chapter-badge {
+        font-size: 8px;
+        font-weight: 700;
+        color: #94a3b8;
+        background: rgba(148, 163, 184, 0.15);
+        padding: 1px 5px;
+        border-radius: 4px;
+        white-space: nowrap;
+      }
+      .quest-title-text {
+        font-size: 11px;
+        font-weight: 700;
+        color: #f8fafc;
+        line-height: 1.3;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .quest-beacon-btn {
+        background: rgba(200, 150, 62, 0.2);
+        border: 1px solid rgba(200, 150, 62, 0.6);
+        border-radius: 8px;
+        padding: 3px 6px;
+        font-size: 13px;
+        color: #ffd700;
+        cursor: pointer;
+        margin-left: auto;
+        flex-shrink: 0;
+      }
+
+      /* CINEMATIC DIALOGUE OVERLAY UI (HỘP THOẠI ĐIỆN ẢNH ĐÔNG SƠN) */
+      .cinematic-dialogue-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        justify-content: center;
+        align-items: flex-end;
+        padding: 0 16px 20px 16px;
+        pointer-events: auto;
+        background: linear-gradient(to top, rgba(5, 8, 14, 0.75) 0%, rgba(5, 8, 14, 0.2) 40%, transparent 100%);
+        animation: fadeInDialogue 0.3s ease-out;
+      }
+      @keyframes fadeInDialogue {
+        from { opacity: 0; transform: translateY(12px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .dialogue-box {
+        width: min(94vw, 780px);
+        background: linear-gradient(135deg, rgba(12, 16, 24, 0.96) 0%, rgba(20, 26, 38, 0.94) 100%);
+        border: 2px solid #c8963e;
+        border-radius: 14px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.85), 0 0 24px rgba(200, 150, 62, 0.3);
+        backdrop-filter: blur(14px);
+        display: flex;
+        gap: 16px;
+        padding: 16px 20px;
+        position: relative;
+      }
+      .dialogue-skip-btn {
+        position: absolute;
+        top: 10px;
+        right: 14px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(200, 150, 62, 0.4);
+        border-radius: 6px;
+        color: #94a3b8;
+        font-size: 10px;
+        font-weight: 700;
+        padding: 3px 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      .dialogue-skip-btn:hover {
+        color: #ffd700;
+        border-color: #ffd700;
+        background: rgba(200, 150, 62, 0.2);
+      }
+      .dialogue-avatar-container {
+        position: relative;
+        width: 64px;
+        height: 64px;
+        flex-shrink: 0;
+      }
+      .dialogue-avatar-img {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background: radial-gradient(circle, #334155 0%, #0f172a 100%);
+        border: 2.5px solid #c8963e;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
+        position: relative;
+        z-index: 2;
+      }
+      .dialogue-avatar-glow {
+        position: absolute;
+        inset: -4px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(200, 150, 62, 0.4) 0%, transparent 70%);
+        z-index: 1;
+        animation: avatarPulse 2s infinite alternate;
+      }
+      @keyframes avatarPulse {
+        from { transform: scale(0.95); opacity: 0.5; }
+        to { transform: scale(1.1); opacity: 0.9; }
+      }
+      .dialogue-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-height: 80px;
+      }
+      .dialogue-speaker-name {
+        font-size: 13.5px;
+        font-weight: 900;
+        color: #ffd700;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        text-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
+        margin-bottom: 4px;
+      }
+      .dialogue-text-body {
+        font-size: 14px;
+        line-height: 1.5;
+        color: #f1f5f9;
+        min-height: 44px;
+        word-break: break-word;
+      }
+      .dialogue-controls {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 8px;
+        padding-top: 6px;
+        border-top: 1px solid rgba(200, 150, 62, 0.2);
+      }
+      .dialogue-hint-pc {
+        font-size: 10px;
+        color: #64748b;
+        font-style: italic;
+      }
+      .dialogue-next-btn {
+        background: linear-gradient(135deg, #d97706, #b45309);
+        border: 1.5px solid #fbbf24;
+        border-radius: 8px;
+        color: #fff;
+        font-size: 12px;
+        font-weight: 800;
+        padding: 6px 14px;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(217, 119, 6, 0.4);
+        transition: all 0.15s ease;
+      }
+      .dialogue-next-btn:hover {
+        transform: scale(1.04);
+        box-shadow: 0 4px 14px rgba(251, 191, 36, 0.6);
+      }
+
       /* SIDEBAR QUICK MENU (TOP-RIGHT UNDER RESOURCES - ZERO OVERLAP WITH JOYSTICK/COMBAT) */
       .sidebar-menu-container {
         position: fixed;
@@ -1085,6 +1299,19 @@
           </div>
         </div>
 
+        <!-- QUEST PROGRESS BANNER (TOP-LEFT / DƯỚI THANH CHỈ SỐ) -->
+        <div id="hud-quest-banner" class="hud-quest-banner">
+          <div class="quest-icon-badge">📜</div>
+          <div class="quest-info-box">
+            <div class="quest-header-row">
+              <span class="quest-tag">NHIỆM VỤ CHÍNH</span>
+              <span id="quest-chapter-badge" class="quest-chapter-badge">ĐỜI I: KHỞI NGUYÊN</span>
+            </div>
+            <div id="quest-title-text" class="quest-title-text">Nhiệm vụ 1: Nhặt 5 Cành Cây & 3 Khối Đá quanh Doanh Trại (0/5 Wood, 0/3 Stone)</div>
+          </div>
+          <button class="quest-beacon-btn" id="btn-quest-guide" title="Bật/Tắt định vị mục tiêu">🧭</button>
+        </div>
+
         <!-- TARGET BOSS HP BANNER -->
         <div class="target-banner" id="target-banner" hidden>
           <div class="target-top">
@@ -1165,6 +1392,25 @@
               <span class="dock-btn-lbl">Cài Đặt</span>
             </button>
           </nav>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. CINEMATIC DIALOGUE OVERLAY UI (HỘP THOẠI ĐIỆN ẢNH ĐÔNG SƠN) -->
+    <div id="cinematic-dialogue-overlay" class="cinematic-dialogue-overlay" hidden>
+      <div class="dialogue-box">
+        <button id="btn-dialogue-skip" class="dialogue-skip-btn" title="Bỏ qua hội thoại (Esc / Skip)">Bỏ qua ⏭️</button>
+        <div class="dialogue-avatar-container">
+          <div id="dialogue-avatar-img" class="dialogue-avatar-img">🧙‍♂️</div>
+          <div class="dialogue-avatar-glow"></div>
+        </div>
+        <div class="dialogue-content">
+          <div id="dialogue-speaker-name" class="dialogue-speaker-name">TRƯỞNG LÃO MO - Vu Sư Khởi Nguyên</div>
+          <div id="dialogue-text-body" class="dialogue-text-body"></div>
+          <div class="dialogue-controls">
+            <span class="dialogue-hint-pc">Nhấn [Space] / [Enter] / [Click] để tiếp tục</span>
+            <button id="btn-dialogue-next" class="dialogue-next-btn">Tiếp Tục ➔</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1702,29 +1948,170 @@
         // ----------------------------------------------------
         // CHƯƠNG II: THREE.JS ENGINE & ORBITAL SUN SYSTEM
         // ----------------------------------------------------
+        // CHƯƠNG II: THREE.JS ENGINE, ĐỒ HỌA IOS RETINA & ORBITAL SUN SYSTEM
+        // ----------------------------------------------------
         const canvas = document.getElementById('game3d');
         const renderer = new THREE.WebGLRenderer({
           canvas: canvas,
           antialias: true,
           powerPreference: 'high-performance',
-          alpha: false
+          alpha: false,
+          stencil: false,
+          depth: true
         });
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         renderer.outputEncoding = THREE.sRGBEncoding;
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
         renderer.toneMappingExposure = 1.2;
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFShadowMap; // PCF nhanh gấp 3x so với PCFSoft trên GPU di động
+
+        // 🎮 HỆ THỐNG CẤU HÌNH ĐỒ HỌA & TỐI ƯU HÓA DI ĐỘNG / IOS RETINA
+        const GRAPHICS_STORAGE_KEY = 'KY_NGUYEN_HOANG_CO_GRAPHICS_PROFILE';
+        let currentGraphicsProfile = localStorage.getItem(GRAPHICS_STORAGE_KEY) || ((window.devicePixelRatio && window.devicePixelRatio >= 2) ? 'ultra' : 'balanced');
+
+        function getPixelRatioForProfile(profile) {
+          const dpr = window.devicePixelRatio || 1;
+          if (profile === 'ultra') return Math.min(dpr, 2.25);
+          if (profile === 'balanced') return Math.min(dpr, 1.75);
+          return Math.min(dpr, 1.25);
+        }
+
+        function applyGraphicsProfile(profile, isInit = false) {
+          currentGraphicsProfile = profile;
+          try {
+            localStorage.setItem(GRAPHICS_STORAGE_KEY, profile);
+          } catch (e) {}
+
+          const pixelRatio = getPixelRatioForProfile(profile);
+          renderer.setPixelRatio(pixelRatio);
+          renderer.setSize(window.innerWidth, window.innerHeight);
+
+          if (profile === 'performance') {
+            renderer.shadowMap.enabled = false;
+            if (typeof sunLight !== 'undefined' && sunLight) sunLight.castShadow = false;
+          } else {
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFShadowMap;
+            if (typeof sunLight !== 'undefined' && sunLight) {
+              sunLight.castShadow = true;
+              sunLight.shadow.mapSize.width = 1024;
+              sunLight.shadow.mapSize.height = 1024;
+            }
+          }
+
+          if (typeof grassTexture !== 'undefined' && grassTexture) {
+            const maxAniso = renderer.capabilities.getMaxAnisotropy() || 1;
+            grassTexture.anisotropy = profile === 'ultra' ? Math.min(maxAniso, 4) : profile === 'balanced' ? Math.min(maxAniso, 2) : 1;
+            grassTexture.needsUpdate = true;
+          }
+
+          if (!isInit && typeof showToast === 'function') {
+            const nameMap = {
+              ultra: '💎 SIÊU NÉT (Retina 2.25x • Đồ Họa Đỉnh Cao)',
+              balanced: '⚡ CÂN BẰNG (1.75x • Mượt Mà & Sắc Nét)',
+              performance: '🔋 TIẾT KIỆM PIN (1.25x • Tối Đa FPS)'
+            };
+            showToast(`⚙️ Đã chuyển cấu hình: ${nameMap[profile] || profile}`);
+          }
+        }
+
+        // Áp dụng pixel ratio ban đầu
+        renderer.setPixelRatio(getPixelRatioForProfile(currentGraphicsProfile));
+        renderer.setSize(window.innerWidth, window.innerHeight);
 
         const scene = new THREE.Scene();
+        // 🗺️ HỆ THỐNG WORLD CHUNK STREAMING & DISTANCE CULLING CHUẨN AAA
+        const worldChunks = [];
+        const worldStreamingState = {
+          campActive: true,
+          swampActive: true,
+          stonehengeActive: true,
+          lastUpdate: -Infinity,
+          intervalMs: 500
+        };
+
+        function registerWorldChunk(id, center, radius, getGroup, onVisibilityChanged) {
+          const chunk = {
+            id,
+            center: center.clone(),
+            radius,
+            radiusSq: radius * radius,
+            getGroup,
+            visible: true,
+            show() {
+              this.visible = true;
+              const group = this.getGroup ? this.getGroup() : null;
+              if (group) group.visible = true;
+              if (this.onVisibilityChanged) this.onVisibilityChanged(true);
+            },
+            hide() {
+              this.visible = false;
+              const group = this.getGroup ? this.getGroup() : null;
+              if (group) group.visible = false;
+              if (this.onVisibilityChanged) this.onVisibilityChanged(false);
+            },
+            onVisibilityChanged
+          };
+          worldChunks.push(chunk);
+          return chunk;
+        }
+
+        function updateWorldStreaming(playerPos, nowMs = performance.now()) {
+          if (!playerPos || nowMs - worldStreamingState.lastUpdate < worldStreamingState.intervalMs) return;
+          worldStreamingState.lastUpdate = nowMs;
+
+          // 1. Cập nhật hiển thị và nạp/hủy theo khoảng cách cho 3 Phân Vùng Đại Lục
+          for (const chunk of worldChunks) {
+            const distSq = playerPos.distanceToSquared(chunk.center);
+            const nextVisible = distSq <= chunk.radiusSq;
+            if (nextVisible === chunk.visible) continue;
+            chunk.visible = nextVisible;
+            const group = chunk.getGroup ? chunk.getGroup() : null;
+            if (group) group.visible = nextVisible;
+            if (chunk.onVisibilityChanged) chunk.onVisibilityChanged(nextVisible);
+          }
+
+          // 2. Distance Culling cho Khủng Long (Bán kính 35m) & Đóng băng AI ngoài vùng
+          if (typeof dinosaurs !== 'undefined' && Array.isArray(dinosaurs)) {
+            for (const dino of dinosaurs) {
+              if (!dino.group || !dino.alive) continue;
+              if (dino.id === 'deinosuchus_swamp') {
+                dino.group.visible = worldStreamingState.swampActive;
+                dino.isFrozen = !worldStreamingState.swampActive;
+                continue;
+              }
+              if (dino.id === 'trex_boss') {
+                dino.group.visible = worldStreamingState.stonehengeActive;
+                dino.isFrozen = !worldStreamingState.stonehengeActive;
+                continue;
+              }
+              const distSq = playerPos.distanceToSquared(dino.group.position);
+              const inRange = distSq <= 35 * 35;
+              dino.group.visible = inRange;
+              dino.isFrozen = !inRange;
+            }
+          }
+
+          // 3. 👁️ Kích hoạt Frustum Culling toàn bộ Mesh trong Scene (GPU tự ngắt vẽ khi ngoài camera)
+          scene.traverse((object) => {
+            if (object.isMesh || object.isSkinnedMesh || object.isInstancedMesh) {
+              object.frustumCulled = true;
+            }
+          });
+
+          const swampPos = npcs.swamp_water && npcs.swamp_water.pos;
+          const stonehengePos = npcs.stonehenge && npcs.stonehenge.pos;
+          worldStreamingState.swampActive = !!swampPos && playerPos.distanceToSquared(swampPos) <= 35 * 35;
+          worldStreamingState.stonehengeActive = !!stonehengePos && playerPos.distanceToSquared(stonehengePos) <= 28 * 28;
+        }
         const skyColor = new THREE.Color(0x87ceeb);
         scene.background = skyColor;
         const fog = new THREE.FogExp2(0x87ceeb, 0.009);
         scene.fog = fog;
 
         const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 300);
-        const camOffset = new THREE.Vector3(20, 26, 20);
+        // 📷 GÓC NHÌN CAMERA RPG CẬN CẢNH (Cự ly thu gần giúp nhân vật & chi tiết to gấp 2 lần)
+        const camOffset = new THREE.Vector3(10, 13, 10);
         camera.position.copy(camOffset);
 
         // Ánh sáng Quỹ Đạo Mặt Trời
@@ -1734,18 +2121,18 @@
         const ambientLight = new THREE.AmbientLight(0xd9eafd, 0.45);
         scene.add(ambientLight);
 
-        // 1. Hệ Thống Bóng Động Bám Theo Tầm Nhìn (Dynamic Follow-Shadow System)
+        // 1. Hệ Thống Bóng Động Bám Theo Tầm Nhìn (Dynamic Follow-Shadow System - Mobile Optimized)
         const sunLight = new THREE.DirectionalLight(0xfff2cc, 1.35);
-        sunLight.castShadow = true;
+        sunLight.castShadow = currentGraphicsProfile !== 'performance';
         sunLight.shadow.mapSize.width = 1024;
         sunLight.shadow.mapSize.height = 1024;
         sunLight.shadow.camera.near = 0.5;
-        sunLight.shadow.camera.far = 120;
-        sunLight.shadow.camera.left = -28;
-        sunLight.shadow.camera.right = 28;
-        sunLight.shadow.camera.top = 28;
-        sunLight.shadow.camera.bottom = -28;
-        sunLight.shadow.bias = -0.0005;
+        sunLight.shadow.camera.far = 75;
+        sunLight.shadow.camera.left = -22;
+        sunLight.shadow.camera.right = 22;
+        sunLight.shadow.camera.top = 22;
+        sunLight.shadow.camera.bottom = -22;
+        sunLight.shadow.bias = -0.0004;
         sunLight.shadow.normalBias = 0.02;
         scene.add(sunLight);
         scene.add(sunLight.target);
@@ -1965,11 +2352,218 @@
         }
         groundGeo.computeVertexNormals();
 
+        // 🌿 HỆ THỐNG PROCEDURAL SEAMLESS LUSH GRASS TEXTURE 1024x1024 (GHIBLI / ZELDA BOTW STYLE)
+        function createStylizedLushGrassTexture() {
+          const size = 1024;
+          const canvas = document.createElement('canvas');
+          canvas.width = size;
+          canvas.height = size;
+          const ctx = canvas.getContext('2d');
+
+          function drawWrapping(c, x, y, drawFn) {
+            const offsets = [
+              [0, 0],
+              [-size, 0], [size, 0],
+              [0, -size], [0, size],
+              [-size, -size], [size, -size],
+              [-size, size], [size, size]
+            ];
+            for (let i = 0; i < offsets.length; i++) {
+              const nx = x + offsets[i][0];
+              const ny = y + offsets[i][1];
+              if (nx >= -120 && nx <= size + 120 && ny >= -120 && ny <= size + 120) {
+                drawFn(c, nx, ny);
+              }
+            }
+          }
+
+          // 1. Nền tảng màu vàng lục tươi tắn, ấm áp (#76c043 to #8ed853)
+          const baseGrad = ctx.createLinearGradient(0, 0, size, size);
+          baseGrad.addColorStop(0, '#78c244');
+          baseGrad.addColorStop(0.5, '#88d24c');
+          baseGrad.addColorStop(1, '#72ba3e');
+          ctx.fillStyle = baseGrad;
+          ctx.fillRect(0, 0, size, size);
+
+          // Lưới Perlin/Value Noise liền mạch tạo biến thiên sáng tối tự nhiên
+          const gridN = 16;
+          const vals = [];
+          for (let gy = 0; gy < gridN; gy++) {
+            vals[gy] = [];
+            for (let gx = 0; gx < gridN; gx++) {
+              vals[gy][gx] = Math.random();
+            }
+          }
+          function sampleNoise(u, v) {
+            const x = ((u % 1 + 1) % 1) * gridN;
+            const y = ((v % 1 + 1) % 1) * gridN;
+            const x0 = Math.floor(x) % gridN;
+            const y0 = Math.floor(y) % gridN;
+            const x1 = (x0 + 1) % gridN;
+            const y1 = (y0 + 1) % gridN;
+            const sx = (1 - Math.cos((x - Math.floor(x)) * Math.PI)) / 2;
+            const sy = (1 - Math.cos((y - Math.floor(y)) * Math.PI)) / 2;
+            const top = vals[y0][x0] * (1 - sx) + vals[y0][x1] * sx;
+            const bot = vals[y1][x0] * (1 - sx) + vals[y1][x1] * sx;
+            return top * (1 - sy) + bot * sy;
+          }
+
+          // Rải các mảng chuyển màu hữu cơ (mảng sáng nắng vàng & mảng thung lũng xanh êm)
+          for (let y = 0; y < size; y += 32) {
+            for (let x = 0; x < size; x += 32) {
+              const n = sampleNoise(x / size, y / size);
+              const rad = 28 + n * 30;
+              drawWrapping(ctx, x, y, (c, cx, cy) => {
+                const radGrad = c.createRadialGradient(cx, cy, 2, cx, cy, rad);
+                if (n > 0.55) {
+                  radGrad.addColorStop(0, 'rgba(164, 234, 104, 0.42)');
+                  radGrad.addColorStop(1, 'rgba(164, 234, 104, 0)');
+                } else {
+                  radGrad.addColorStop(0, 'rgba(74, 136, 38, 0.38)');
+                  radGrad.addColorStop(1, 'rgba(74, 136, 38, 0)');
+                }
+                c.fillStyle = radGrad;
+                c.beginPath();
+                c.arc(cx, cy, rad, 0, Math.PI * 2);
+                c.fill();
+              });
+            }
+          }
+
+          // 2. Điểm xuyết 4 đốm đất tự nhiên mềm mại (#bfa36c đến #967d49) cùng sỏi nhỏ
+          const dirtPatches = [
+            { x: 260, y: 320, rx: 65, ry: 45, angle: 0.2 },
+            { x: 740, y: 220, rx: 55, ry: 40, angle: -0.4 },
+            { x: 520, y: 780, rx: 70, ry: 50, angle: 0.6 },
+            { x: 860, y: 710, rx: 48, ry: 36, angle: -0.2 }
+          ];
+
+          dirtPatches.forEach((dp) => {
+            drawWrapping(ctx, dp.x, dp.y, (c, cx, cy) => {
+              c.save();
+              c.translate(cx, cy);
+              c.rotate(dp.angle);
+
+              const dGrad = c.createRadialGradient(0, 0, dp.rx * 0.2, 0, 0, dp.rx);
+              dGrad.addColorStop(0, 'rgba(175, 142, 90, 0.85)');
+              dGrad.addColorStop(0.6, 'rgba(191, 163, 108, 0.60)');
+              dGrad.addColorStop(0.85, 'rgba(150, 125, 73, 0.30)');
+              dGrad.addColorStop(1, 'rgba(120, 194, 68, 0)');
+
+              c.fillStyle = dGrad;
+              c.beginPath();
+              for (let a = 0; a <= Math.PI * 2; a += Math.PI / 12) {
+                const rVar = 1.0 + Math.sin(a * 4 + dp.angle) * 0.15 + Math.cos(a * 7) * 0.08;
+                const px = Math.cos(a) * dp.rx * rVar;
+                const py = Math.sin(a) * dp.ry * rVar;
+                if (a === 0) c.moveTo(px, py);
+                else c.lineTo(px, py);
+              }
+              c.closePath();
+              c.fill();
+
+              // Sỏi đá nhỏ điểm xuyết
+              for (let p = 0; p < 4; p++) {
+                const pbx = (Math.sin(p * 2.3) * dp.rx * 0.45);
+                const pby = (Math.cos(p * 3.1) * dp.ry * 0.45);
+                const pr = 2.5 + (p % 2) * 1.5;
+                c.fillStyle = 'rgba(78, 62, 38, 0.50)';
+                c.beginPath();
+                c.arc(pbx + 1, pby + 1, pr, 0, Math.PI * 2);
+                c.fill();
+                c.fillStyle = 'rgba(215, 195, 155, 0.90)';
+                c.beginPath();
+                c.arc(pbx, pby, pr, 0, Math.PI * 2);
+                c.fill();
+              }
+
+              c.restore();
+            });
+          });
+
+          // 3. Khóm cỏ mềm mại vẽ nét cọ tay anime (Shadow -> Midtones -> Sunlit tips)
+          const tuftCount = 1400;
+          for (let i = 0; i < tuftCount; i++) {
+            const tx = (i * 137.5 + Math.sin(i * 3.7) * 50) % size;
+            const ty = (i * 269.3 + Math.cos(i * 2.9) * 50) % size;
+            const bladeCount = 3 + (i % 4);
+            const scale = 0.75 + (i % 5) * 0.15;
+            const baseAngle = -Math.PI / 2 + (Math.sin(i * 5.1) * 0.45);
+
+            drawWrapping(ctx, tx, ty, (c, cx, cy) => {
+              c.save();
+              c.translate(cx, cy);
+
+              for (let b = 0; b < bladeCount; b++) {
+                const spread = (b - (bladeCount - 1) / 2) * 0.22;
+                const bAngle = baseAngle + spread;
+                const bLen = (11 + (b % 3) * 4) * scale;
+                const curve = (Math.sin(i + b) * 3.5) * scale;
+
+                c.save();
+                c.rotate(bAngle);
+
+                // Lớp bóng tối bên dưới (#4a8826 / #5a9e32)
+                c.strokeStyle = (b % 2 === 0) ? 'rgba(74, 136, 38, 0.60)' : 'rgba(90, 158, 50, 0.55)';
+                c.lineWidth = 3.0 * scale;
+                c.lineCap = 'round';
+                c.beginPath();
+                c.moveTo(0, 0);
+                c.quadraticCurveTo(curve, bLen * 0.5, curve * 0.6, bLen);
+                c.stroke();
+
+                // Lớp viền cỏ non đón nắng vàng (#a6ec68 / #c4f788)
+                c.strokeStyle = (b === 1 || i % 3 === 0) ? 'rgba(180, 246, 115, 0.75)' : 'rgba(142, 216, 83, 0.70)';
+                c.lineWidth = 1.5 * scale;
+                c.beginPath();
+                c.moveTo(0, 0);
+                c.quadraticCurveTo(curve * 0.9, bLen * 0.55, curve * 0.5, bLen * 0.95);
+                c.stroke();
+
+                c.restore();
+              }
+
+              c.restore();
+            });
+          }
+
+          // 4. Hoa dại nhỏ li ti điểm xuyết khắp cánh đồng
+          for (let f = 0; f < 70; f++) {
+            const fx = (f * 311.7) % size;
+            const fy = (f * 487.1) % size;
+            drawWrapping(ctx, fx, fy, (c, cx, cy) => {
+              c.fillStyle = (f % 3 === 0) ? '#fef08a' : '#ffffff';
+              c.beginPath();
+              c.arc(cx, cy, 1.8, 0, Math.PI * 2);
+              c.fill();
+              c.fillStyle = '#ca8a04';
+              c.beginPath();
+              c.arc(cx, cy, 0.8, 0, Math.PI * 2);
+              c.fill();
+            });
+          }
+
+          const texture = new THREE.CanvasTexture(canvas);
+          texture.wrapS = THREE.RepeatWrapping;
+          texture.wrapT = THREE.RepeatWrapping;
+          texture.repeat.set(40, 40);
+          texture.encoding = THREE.sRGBEncoding;
+          texture.generateMipmaps = true;
+          texture.minFilter = THREE.LinearMipmapLinearFilter;
+          texture.magFilter = THREE.LinearFilter;
+          const maxAniso = renderer.capabilities.getMaxAnisotropy() || 1;
+          texture.anisotropy = currentGraphicsProfile === 'ultra' ? Math.min(maxAniso, 4) : currentGraphicsProfile === 'balanced' ? Math.min(maxAniso, 2) : 1;
+          texture.needsUpdate = true;
+          return texture;
+        }
+
+        const grassTexture = createStylizedLushGrassTexture();
         const groundMat = new THREE.MeshStandardMaterial({
-          color: 0x3b5822,
-          roughness: 0.9,
-          metalness: 0.04,
-          flatShading: true
+          map: grassTexture,
+          color: 0xffffff, // Giữ nguyên màu tươi sáng nguyên bản của texture
+          roughness: 0.85,
+          metalness: 0.05,
+          flatShading: false
         });
         const ground = new THREE.Mesh(groundGeo, groundMat);
         ground.receiveShadow = true;
@@ -2089,6 +2683,7 @@
                 } else {
                   scene.add(root);
                 }
+                freezeStaticModel(root);
                 console.log(`✅ Loaded model successfully: ${path} at (${posX}, ${posZ})`);
               },
               undefined,
@@ -2102,13 +2697,17 @@
         }
         window.loadAndPlaceModel = loadAndPlaceModel;
 
+        // Static props mặc định không phát shadow động; actor gọi configureDynamicActor().
         function setupModelMesh(model) {
           if (!model) return;
+          // Props được setup qua helper này đều là static; dynamic actors gọi
+          // configureDynamicActor() ngay sau đó và sẽ ghi đè cờ này.
+          model.userData.isStaticProp = true;
           model.traverse((child) => {
             if (child.isMesh || child.isSkinnedMesh) {
-              child.castShadow = true;
+              child.castShadow = false;
               child.receiveShadow = true;
-              child.frustumCulled = false; // Chống nháy hình khi camera lia
+              child.frustumCulled = true;
               if (child.material) {
                 const mats = Array.isArray(child.material) ? child.material : [child.material];
                 mats.forEach((mat) => {
@@ -2119,6 +2718,43 @@
                 });
               }
             }
+          });
+        }
+
+        function configureDynamicActor(model) {
+          if (!model) return;
+          model.userData.isDynamicActor = true;
+          model.userData.isStaticProp = false;
+          model.traverse((child) => {
+            if (child.isMesh || child.isSkinnedMesh) {
+              child.castShadow = true;
+              child.receiveShadow = true;
+              child.frustumCulled = true; // 👁️ Bật culling: Ngoài khung hình camera là GPU tự ngắt lệnh vẽ
+              if (child.geometry && !child.geometry.boundingSphere) {
+                child.geometry.computeBoundingSphere();
+              }
+            }
+            child.matrixAutoUpdate = true;
+          });
+        }
+
+        function freezeStaticModel(model) {
+          if (!model) return;
+          model.userData.isStaticProp = true;
+          model.userData.isDynamicActor = false;
+          model.traverse((child) => {
+            if (child.isMesh || child.isSkinnedMesh) {
+              child.castShadow = false;
+              child.receiveShadow = true;
+              child.frustumCulled = true;
+              if (child.geometry && !child.geometry.boundingSphere) {
+                child.geometry.computeBoundingSphere();
+              }
+            }
+            // Freeze every node, not only meshes: this prevents transform
+            // propagation through large static hierarchies each frame.
+            child.updateMatrix();
+            child.matrixAutoUpdate = false;
           });
         }
 
@@ -2159,7 +2795,10 @@
             if (child.isMesh || child.isSkinnedMesh) {
               child.castShadow = true;
               child.receiveShadow = true;
-              child.frustumCulled = false;
+              child.frustumCulled = true; // 👁️ Bật culling
+              if (child.geometry && !child.geometry.boundingSphere) {
+                child.geometry.computeBoundingSphere();
+              }
               if (child.material) {
                 const mats = Array.isArray(child.material) ? child.material : [child.material];
                 mats.forEach((mat) => {
@@ -2207,9 +2846,12 @@
 
           model.traverse((child) => {
             if (child.isMesh || child.isSkinnedMesh) {
-              child.castShadow = true;
+              child.castShadow = model.userData.isDynamicActor === true;
               child.receiveShadow = true;
-              child.frustumCulled = false;
+              child.frustumCulled = true; // 👁️ Bật Frustum Culling toàn bộ
+              if (child.geometry && !child.geometry.boundingSphere) {
+                child.geometry.computeBoundingSphere();
+              }
               if (child.material) {
                 const mats = Array.isArray(child.material) ? child.material : [child.material];
                 mats.forEach((mat) => {
@@ -2500,7 +3142,7 @@
         const bladeGeo = new THREE.PlaneGeometry(0.16, 0.75, 1, 1);
         bladeGeo.translate(0, 0.375, 0);
         const bladeMat = new THREE.MeshLambertMaterial({
-          color: 0x487928,
+          color: 0x78c442,
           side: THREE.DoubleSide
         });
         const grassMesh = new THREE.InstancedMesh(bladeGeo, bladeMat, grassCount);
@@ -2806,6 +3448,13 @@
             role: 'Trưởng Lão Bộ Tộc',
             pos: new THREE.Vector3(3.0, 0, -5.5),
             color: 0x3b82f6
+          },
+          a_thao: {
+            id: 'a_thao',
+            name: '🏹 NỮ THỢ SĂN A THAO',
+            role: 'Nữ Thợ Săn Dũng Mãnh',
+            pos: new THREE.Vector3(9.0, 0, -3.0),
+            color: 0x10b981
           },
           chest: {
             id: 'chest',
@@ -3319,6 +3968,62 @@
           npcs.elder.group = elderGroup;
         }
 
+        function createAThaoObject() {
+          const aThaoGroup = new THREE.Group();
+          const pos = npcs.a_thao.pos;
+          const py = getTerrainHeight(pos.x, pos.z);
+          aThaoGroup.position.set(pos.x, py, pos.z);
+
+          let aThaoLoaded = false;
+          function applyAThaoMesh(modelRoot, isFbx = false) {
+            if (aThaoLoaded) return;
+            aThaoLoaded = true;
+            setupModelMesh(modelRoot);
+            setModelActualHeight(modelRoot, 1.75, isFbx);
+            aThaoGroup.add(modelRoot);
+          }
+
+          loadFBX('female_warrior_idle.fbx').then((fbx) => {
+            applyAThaoMesh(fbx, true);
+            if (fbx.animations && fbx.animations.length > 0) {
+              const mixer = new THREE.AnimationMixer(fbx);
+              const act = mixer.clipAction(fbx.animations[0]);
+              act.play();
+              activeMixers.push(mixer);
+            }
+            console.log('🏹 [NPC A Thao] Đã nạp thành công mô hình female_warrior_idle.fbx!');
+          }).catch((err) => {
+            console.warn('🏹 [NPC A Thao] Fallback generic hunter:', err);
+          });
+
+          // Billboard nhãn tên 3D Nữ Thợ Săn A Thao
+          const canvas = document.createElement('canvas');
+          canvas.width = 256;
+          canvas.height = 64;
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = 'rgba(6, 78, 59, 0.88)';
+          ctx.roundRect(4, 4, 248, 56, 12);
+          ctx.fill();
+          ctx.strokeStyle = '#34d399';
+          ctx.lineWidth = 3;
+          ctx.stroke();
+          ctx.fillStyle = '#6ee7b7';
+          ctx.font = 'bold 22px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('🏹 Nữ Thợ Săn A Thao', 128, 32);
+
+          const texture = new THREE.CanvasTexture(canvas);
+          const tagMat = new THREE.SpriteMaterial({ map: texture, transparent: true });
+          const tagSprite = new THREE.Sprite(tagMat);
+          tagSprite.position.set(0, 2.3, 0);
+          tagSprite.scale.set(1.8, 0.45, 1);
+          aThaoGroup.add(tagSprite);
+
+          scene.add(aThaoGroup);
+          npcs.a_thao.group = aThaoGroup;
+        }
+
         function createNpcObject(npc) {
           if (npc.id === 'townhall') {
             npc.group = townHallGroup;
@@ -3326,6 +4031,10 @@
           }
           if (npc.id === 'elder') {
             createElderMoObject();
+            return;
+          }
+          if (npc.id === 'a_thao') {
+            createAThaoObject();
             return;
           }
           if (npc.id === 'blacksmith') {
@@ -3554,6 +4263,7 @@
           // Nạp model Baby Raptor - models/Velociraptor.glb
           loadGLB('Velociraptor.glb', (gltf) => {
             const m = gltf.scene;
+            configureDynamicActor(m);
             normalizeAndGroundModel(m, 0.85, false); // Chiều cao mini 0.85m
             m.userData.baseY = m.position.y;
             petGroup.add(m);
@@ -3705,6 +4415,7 @@
           loadFBX(fbxFile).then((fbx) => {
             if (!fbx) return;
             const m = fbx;
+            configureDynamicActor(m);
             normalizeAndGroundModel(m, isFemaleCompanion ? 1.75 : 1.85, false);
             m.userData.baseY = m.position.y;
             coopHeroGroup.add(m);
@@ -3734,6 +4445,55 @@
         createCropGarden();
         createAncientTreasure();
         createCoopCompanionHero();
+
+        // 🗺️ PHÂN VÙNG BẢN ĐỒ & NẠP THEO KHOẢNG CÁCH (DYNAMIC DISTANCE STREAMING - 3 VÙNG ĐỘC LẬP)
+        // Vùng 1: Doanh Trại Trung Tâm (R <= 22m) - Nạp ngay lúc mở game để vào tức thì < 0.5s
+        registerWorldChunk(
+          'camp_center',
+          new THREE.Vector3(6, 0, -1),
+          22,
+          () => townHallGroup,
+          (visible) => {
+            worldStreamingState.campActive = visible;
+          }
+        );
+
+        // Vùng 2: Đại Vịnh Đầm Lầy & Cá Sấu Deinosuchus (Góc Tây Nam - R <= 35m)
+        registerWorldChunk(
+          'swamp',
+          new THREE.Vector3(LAKE_CENTER.x, 0, LAKE_CENTER.z),
+          35,
+          () => swampLakeGroup,
+          (visible) => {
+            worldStreamingState.swampActive = visible;
+            if (npcs.swamp_water && npcs.swamp_water.group) npcs.swamp_water.group.visible = visible;
+            if (typeof dinosaurs !== 'undefined' && Array.isArray(dinosaurs)) {
+              const croc = dinosaurs.find((d) => d.id === 'deinosuchus_swamp');
+              if (croc && croc.group) {
+                croc.group.visible = visible && croc.alive;
+                croc.isFrozen = !visible;
+              }
+            }
+          }
+        );
+
+        // Vùng 3: Trận Đồ Stonehenge & Hang T-Rex (Phía Bắc - R <= 28m)
+        registerWorldChunk(
+          'stonehenge',
+          npcs.stonehenge.pos,
+          28,
+          () => npcs.stonehenge.group,
+          (visible) => {
+            worldStreamingState.stonehengeActive = visible;
+            if (typeof dinosaurs !== 'undefined' && Array.isArray(dinosaurs)) {
+              const trex = dinosaurs.find((d) => d.id === 'trex_boss');
+              if (trex && trex.group) {
+                trex.group.visible = visible && trex.alive;
+                trex.isFrozen = !visible;
+              }
+            }
+          }
+        );
 
         // ----------------------------------------------------
         // CHƯƠNG V: HỆ THỐNG KHỦNG LONG ANIMATED 3D
@@ -3790,18 +4550,29 @@
           createHealthBar() {
             if (this.hpBarGroup || this.isFlying) return;
             const barGroup = new THREE.Group();
-            barGroup.position.y = this.targetHeight + 0.65;
+            let barY = 3.0;
+            if (this.model) {
+              const b = new THREE.Box3().setFromObject(this.model);
+              barY = Math.max(b.max.y + 0.6, 2.2);
+            } else {
+              barY = Math.min(this.targetHeight * 0.42 + 0.8, 8.5);
+            }
+            barGroup.position.y = barY;
+
+            const isBig = this.isBoss || this.targetHeight >= 12.0;
+            const w = isBig ? 2.6 : 1.8;
+            const h = isBig ? 0.28 : 0.22;
 
             // Khung nền đen
             const bgMesh = new THREE.Mesh(
-              new THREE.PlaneGeometry(1.6, 0.2),
+              new THREE.PlaneGeometry(w, h),
               new THREE.MeshBasicMaterial({ color: 0x09090b, side: THREE.DoubleSide })
             );
             barGroup.add(bgMesh);
 
             // Thanh Máu Fill
             const fillMesh = new THREE.Mesh(
-              new THREE.PlaneGeometry(1.54, 0.15),
+              new THREE.PlaneGeometry(w - 0.08, h - 0.06),
               new THREE.MeshBasicMaterial({ color: 0xef4444, side: THREE.DoubleSide })
             );
             fillMesh.position.z = 0.01;
@@ -3810,6 +4581,7 @@
             this.group.add(barGroup);
             this.hpBarGroup = barGroup;
             this.hpFillMesh = fillMesh;
+            this._hpBarWidth = w - 0.08;
           }
 
           updateHealthBar() {
@@ -3820,8 +4592,9 @@
             }
             this.hpBarGroup.quaternion.copy(camera.quaternion); // Billboarding
             const pct = Math.max(0, this.hp / this.maxHp);
+            const w = this._hpBarWidth || 1.72;
             this.hpFillMesh.scale.x = pct;
-            this.hpFillMesh.position.x = -0.77 * (1 - pct);
+            this.hpFillMesh.position.x = (-w / 2) * (1 - pct);
             this.hpFillMesh.material.color.setHex(pct > 0.5 ? 0x22c55e : pct > 0.25 ? 0xf59e0b : 0xef4444);
           }
 
@@ -3912,13 +4685,13 @@
             name: '🦖 ĐẠI BẠO LONG T-REX',
             tag: 'BOSS THUNG LŨNG',
             file: 'trex.glb',
-            targetHeight: 5.5,
+            targetHeight: 12.0, // Dài 12m, cao 5.5m — chuẩn cổ sinh vật học
             hp: 1500,
             damage: 42,
             speed: 3.5,
             chaseSpeed: 7.5,
-            aggroRadius: 22.0,
-            attackRadius: 4.0,
+            aggroRadius: 28.0,
+            attackRadius: 5.5,
             origin: new THREE.Vector3(15, 0, -45),
             patrolRadius: 20,
             isDocile: false,
@@ -3930,13 +4703,13 @@
             name: '🐆 VELOCIRAPTOR I',
             tag: 'SĂN MỒI BẦY ĐÀN',
             file: 'Velociraptor.glb',
-            targetHeight: 1.6,
+            targetHeight: 3.6, // Dài 3.6m, cao 1.8m — săn mồi ngang tầm vóc dũng sĩ
             hp: 220,
             damage: 15,
             speed: 4.8,
             chaseSpeed: 6.2,
-            aggroRadius: 14.0,
-            attackRadius: 2.2,
+            aggroRadius: 16.0,
+            attackRadius: 3.0,
             origin: new THREE.Vector3(8, 0, -38),
             patrolRadius: 14,
             isDocile: false,
@@ -3947,13 +4720,13 @@
             name: '🐆 VELOCIRAPTOR II',
             tag: 'SĂN MỒI BẦY ĐÀN',
             file: 'Velociraptor.glb',
-            targetHeight: 1.6,
+            targetHeight: 3.6, // Dài 3.6m, cao 1.8m — săn mồi ngang tầm vóc dũng sĩ
             hp: 220,
             damage: 15,
             speed: 4.8,
             chaseSpeed: 6.2,
-            aggroRadius: 14.0,
-            attackRadius: 2.2,
+            aggroRadius: 16.0,
+            attackRadius: 3.0,
             origin: new THREE.Vector3(22, 0, -42),
             patrolRadius: 14,
             isDocile: false,
@@ -3964,13 +4737,13 @@
             name: '🐆 VELOCIRAPTOR III',
             tag: 'SĂN MỒI BẦY ĐÀN',
             file: 'Velociraptor.glb',
-            targetHeight: 1.6,
+            targetHeight: 3.6, // Dài 3.6m, cao 1.8m — săn mồi ngang tầm vóc dũng sĩ
             hp: 220,
             damage: 15,
             speed: 4.8,
             chaseSpeed: 6.2,
-            aggroRadius: 14.0,
-            attackRadius: 2.2,
+            aggroRadius: 16.0,
+            attackRadius: 3.0,
             origin: new THREE.Vector3(15, 0, -55),
             patrolRadius: 14,
             isDocile: false,
@@ -3981,13 +4754,13 @@
             name: '🦏 KHỦNG LONG 3 SỪNG ALPHA',
             tag: 'TAM SỪNG HÙNG MẠNH',
             file: 'Triceratops.glb',
-            targetHeight: 3.5,
+            targetHeight: 9.0, // Dài 9m, cao 3m — chuẩn cổ sinh vật học
             hp: 650,
             damage: 22,
             speed: 2.8,
             chaseSpeed: 5.5,
-            aggroRadius: 4.5,
-            attackRadius: 3.0,
+            aggroRadius: 6.0,
+            attackRadius: 4.2,
             origin: new THREE.Vector3(38, 0, 15),
             patrolRadius: 14,
             isDocile: true,
@@ -3998,13 +4771,13 @@
             name: '🦏 KHỦNG LONG 3 SỪNG BETA',
             tag: 'TAM SỪNG BẦY ĐÀN',
             file: 'Triceratops.glb',
-            targetHeight: 3.2,
+            targetHeight: 7.5, // Con nhỏ hơn Alpha
             hp: 650,
             damage: 22,
             speed: 2.8,
             chaseSpeed: 5.2,
-            aggroRadius: 4.0,
-            attackRadius: 2.8,
+            aggroRadius: 5.5,
+            attackRadius: 3.8,
             origin: new THREE.Vector3(45, 0, 25),
             patrolRadius: 12,
             isDocile: true,
@@ -4015,13 +4788,13 @@
             name: '🌾 KHỦNG LONG PHIẾN GAI',
             tag: 'THIẾT GIÁP GAI NHỌN',
             file: 'Stegosaurus.glb',
-            targetHeight: 3.2,
+            targetHeight: 9.0, // Dài 9m, cao 4m (tính cả phiến) — chuẩn cổ sinh vật học
             hp: 550,
             damage: 20,
             speed: 2.6,
             chaseSpeed: 5.0,
-            aggroRadius: 4.5,
-            attackRadius: 3.0,
+            aggroRadius: 5.5,
+            attackRadius: 4.0,
             origin: new THREE.Vector3(35, 0, 35),
             patrolRadius: 12,
             isDocile: true,
@@ -4032,13 +4805,13 @@
             name: '🦕 ĐẠI KHỦNG LONG CỔ DÀI',
             tag: 'CỰ THÚ KHỔNG LỒ',
             file: 'Apatosaurus.glb',
-            targetHeight: 7.0,
+            targetHeight: 22.0, // Dài 22m, cao 7-8m — siêu cự thú cổ đại
             hp: 1200,
             damage: 25,
             speed: 2.0,
             chaseSpeed: 3.8,
-            aggroRadius: 3.5,
-            attackRadius: 4.2,
+            aggroRadius: 5.0,
+            attackRadius: 6.0,
             origin: new THREE.Vector3(-35, 0, -35),
             patrolRadius: 15,
             isDocile: true,
@@ -4049,13 +4822,13 @@
             name: '🎺 KHỦNG LONG MÀO PARASAUROLOPHUS',
             tag: 'NHÚT NHÁT BỎ CHẠY',
             file: 'Parasaurolophus.glb',
-            targetHeight: 3.8,
+            targetHeight: 10.0, // Dài 10m, cao 3m — chuẩn cổ sinh vật học
             hp: 300,
             damage: 12,
             speed: 3.5,
             chaseSpeed: 6.8,
-            aggroRadius: 4.0,
-            attackRadius: 2.5,
+            aggroRadius: 5.5,
+            attackRadius: 3.5,
             origin: new THREE.Vector3(5, 0, -15),
             patrolRadius: 12,
             isDocile: true,
@@ -4067,11 +4840,11 @@
             name: '🦅 DỰC LONG BAY PTERODACTYL',
             tag: 'CHÚA TỂ BẦU TRỜI',
             file: 'animated_flying_pteradactal_dinosaur_loop.glb',
-            targetHeight: 3.5,
+            targetHeight: 7.5, // Sải cánh 7.5m — cự long thống trị bầu trời
             hp: 250,
             damage: 15,
             speed: 6.5,
-            origin: new THREE.Vector3(0, 14.0, 0),
+            origin: new THREE.Vector3(0, 16.0, 0),
             isFlying: true,
             isDocile: true,
             loot: { meat: 4, fangs: 2, pelt: 1 }
@@ -4081,13 +4854,13 @@
             name: '🐊 ĐẠI NGẠC BẠO CHÚA (DEINOSUCHUS)',
             tag: 'SÁT THỦ ĐẦM LẦY',
             file: 'dinosaur.glb',
-            targetHeight: 2.2,
+            targetHeight: 8.5, // Dài 8.5m, cao 1.8m — cá sấu khổng lồ tiền sử
             hp: 700,
             damage: 30,
             speed: 3.2,
             chaseSpeed: 5.8,
-            aggroRadius: 7.0,
-            attackRadius: 3.2,
+            aggroRadius: 10.0,
+            attackRadius: 4.0,
             origin: new THREE.Vector3(-18, -0.25, 18),
             patrolRadius: 10,
             isDocile: false,
@@ -4254,6 +5027,7 @@
             console.log('⏳ Đang nạp mô hình Dũng Sĩ Nam (warrior_idle.fbx)...');
             const idleFbx = await loadFBX('warrior_idle.fbx');
             const model = idleFbx;
+            configureDynamicActor(model);
 
             model.traverse((child) => {
               if (child.isMesh || child.isSkinnedMesh) {
@@ -4411,6 +5185,7 @@
             console.log('⏳ Đang nạp mô hình Dũng Sĩ Nữ (female_warrior_idle.fbx)...');
             const idleFbx = await loadFBX('female_warrior_idle.fbx');
             const model = idleFbx;
+            configureDynamicActor(model);
 
             model.traverse((child) => {
               if (child.isMesh || child.isSkinnedMesh) {
@@ -4610,7 +5385,7 @@
         dinosaurs.forEach((dino) => {
           loadGLB(dino.file, (gltf) => {
             const m = gltf.scene;
-
+            configureDynamicActor(m);
             normalizeAndGroundModel(m, dino.targetHeight, false);
             m.userData.baseY = m.position.y;
             dino.group.add(m);
@@ -4673,6 +5448,7 @@
                 o.receiveShadow = true;
               }
             });
+            freezeStaticModel(clone);
             scene.add(clone);
 
             if (type) {
@@ -4717,6 +5493,19 @@
 
         window.addEventListener('keydown', (e) => {
           input.keys[e.key.toLowerCase()] = true;
+          if (window.isDialogueActive) {
+            if (e.code === 'Space' || e.code === 'Enter') {
+              e.preventDefault();
+              QuestManager.onDialogueAdvance();
+              return;
+            }
+            if (e.code === 'Escape') {
+              e.preventDefault();
+              QuestManager.skipDialogue();
+              return;
+            }
+            return;
+          }
           if (e.key === ' ' || e.key.toLowerCase() === 'j') triggerAttack();
           if (e.key.toLowerCase() === 'e' || e.key.toLowerCase() === 'f') triggerContextAction();
           if (e.key.toLowerCase() === 'l' || e.key.toLowerCase() === 'k' || e.key.toLowerCase() === 'q') triggerDodge();
@@ -4882,6 +5671,9 @@
                 if (nearest.id === 'deinosuchus_swamp') {
                   trackDecreeProgress('hunt_deinosuchus', 1);
                 }
+                if (typeof QuestManager !== 'undefined') {
+                  setTimeout(() => QuestManager.checkProgress(), 400);
+                }
                 if (nearest.id === 'trex_boss') {
                   checkQuest('kill_trex', 1);
                   triggerVictoryFinale();
@@ -4918,12 +5710,575 @@
           playSfx('dodge');
         }
 
+        // ----------------------------------------------------
+        // HỆ THỐNG CỐT TRUYỆN, NPC DẪN ĐƯỜNG & HỘP THOẠI ĐIỆN ẢNH (QUEST & DIALOGUE ENGINE)
+        // ----------------------------------------------------
+        let questBeaconGroup = null;
+        let beaconRing = null;
+        let beaconBeam = null;
+
+        function createQuestBeacon() {
+          questBeaconGroup = new THREE.Group();
+
+          const ringGeo = new THREE.RingGeometry(0.6, 2.2, 32);
+          ringGeo.rotateX(-Math.PI / 2);
+          const ringMat = new THREE.MeshBasicMaterial({
+            color: 0xffd700,
+            transparent: true,
+            opacity: 0.75,
+            side: THREE.DoubleSide
+          });
+          beaconRing = new THREE.Mesh(ringGeo, ringMat);
+          questBeaconGroup.add(beaconRing);
+
+          const beamGeo = new THREE.CylinderGeometry(0.35, 0.55, 24, 16, 1, true);
+          const beamMat = new THREE.MeshBasicMaterial({
+            color: 0xfbbf24,
+            transparent: true,
+            opacity: 0.35,
+            side: THREE.DoubleSide
+          });
+          beaconBeam = new THREE.Mesh(beamGeo, beamMat);
+          beaconBeam.position.y = 12;
+          questBeaconGroup.add(beaconBeam);
+
+          const light = new THREE.PointLight(0xffd700, 2.5, 14);
+          light.position.y = 1.5;
+          questBeaconGroup.add(light);
+
+          scene.add(questBeaconGroup);
+          questBeaconGroup.visible = true;
+        }
+
+        const QuestManager = {
+          currentQuestIndex: 0,
+          isDialogueActive: false,
+          activeScene: null,
+          activeLineIndex: 0,
+          typewriterTimer: null,
+          isTyping: false,
+          currentFullText: '',
+          beaconEnabled: true,
+          onFinishCallback: null,
+
+          dialogueScenes: {
+            scene_1_awakening: {
+              chapterTitle: 'ĐỜI I: KHỞI NGUYÊN SINH TỒN',
+              lines: [
+                {
+                  speaker: 'TRƯỞNG LÃO MO',
+                  title: 'Vu Sư Khởi Nguyên',
+                  avatar: '🧙‍♂️',
+                  text: 'Dũng sĩ của Đất Mẹ... Cuối cùng con cũng tỉnh lại! Một Vết Nứt Không Gian bí ẩn đã xé toạc bầu trời Pangaea, ngọn lửa của bộ tộc ta sắp lụi tàn rồi!'
+                },
+                {
+                  speaker: 'DŨNG SĨ',
+                  title: 'Chiến Binh Sống Sót',
+                  avatar: '🛡️',
+                  text: 'Trưởng lão... Đây là đâu? Mọi người trong bộ tộc đâu cả rồi?'
+                },
+                {
+                  speaker: 'TRƯỞNG LÃO MO',
+                  title: 'Vu Sư Khởi Nguyên',
+                  avatar: '🧙‍♂️',
+                  text: 'Đại lục này đang bị cự thú kỷ Jura và dã thú xâm chiếm. Đêm tối sắp buông xuống, con hãy mau nhặt 5 Cành Cây Khô [🪵] và 3 Hòn Đá Nhọn [🪨] quanh trại để thắp lại Lửa Khởi Nguyên!'
+                }
+              ]
+            },
+            scene_2_crafting: {
+              chapterTitle: 'ĐỜI I: KHỞI NGUYÊN SINH TỒN',
+              lines: [
+                {
+                  speaker: 'TRƯỞNG LÃO MO',
+                  title: 'Vu Sư Khởi Nguyên',
+                  avatar: '🧙‍♂️',
+                  text: 'Rất nhanh nhẹn! Giờ hãy đến bên Đống Lửa Trại (0, 0), mở Bảng Chế Tạo để rèn Rìu Đá và Cuốc Đá thô sơ. Không có công cụ, con không thể đốn hạ đại thụ hay khai thác quặng thạch đâu.'
+                }
+              ]
+            },
+            scene_3_swamp_water: {
+              chapterTitle: 'ĐỜI I: KHỞI NGUYÊN SINH TỒN',
+              lines: [
+                {
+                  speaker: 'TRƯỞNG LÃO MO',
+                  title: 'Vu Sư Khởi Nguyên',
+                  avatar: '🧙‍♂️',
+                  text: 'Tốt lắm! Thanh Đói và Khát của con đang cạn dần. Hãy đi về phía Tây Nam đến bờ Đại Vịnh Đầm Lầy (-18, 18) múc nước ngọt và hái vài quả dại.'
+                },
+                {
+                  speaker: 'TRƯỞNG LÃO MO (CẢNH BÁO)',
+                  title: 'Vu Sư Khởi Nguyên',
+                  avatar: '🧙‍♂️',
+                  text: 'CỰC KỲ CẨN TRỌNG! Dưới làn nước đầm lầy có Đại Ngạc Deinosuchus dài 8 mét đang lặn rình mồi. Đừng lội quá sâu nếu chưa đủ trang bị!'
+                }
+              ]
+            },
+            scene_4_rescue_athao: {
+              chapterTitle: 'ĐỜI I: KHỞI NGUYÊN SINH TỒN',
+              lines: [
+                {
+                  speaker: 'TRƯỞNG LÃO MO',
+                  title: 'Vu Sư Khởi Nguyên',
+                  avatar: '🧙‍♂️',
+                  text: 'Có tiếng kêu cứu ở Bìa Rừng Phía Đông (45, 25)! Đó là A Thao - nữ thợ săn dũng mãnh nhất của bộ tộc. Cô ấy đang bị bầy Raptor nhỏ bao vây, hãy dùng Rìu Đá đến ứng cứu mau!'
+                },
+                {
+                  speaker: 'A THAO',
+                  title: 'Nữ Thợ Săn Dũng Mãnh',
+                  avatar: '🏹',
+                  text: 'Cảm ơn Dũng sĩ! Vuốt của lũ Raptor suýt chút nữa đã xé rách giáp da của ta. Ta nợ con mạng sống này! Từ giờ, ta sẽ đốn gỗ và thu lượm tài nguyên nộp về Nhà Chính giúp người.'
+                }
+              ]
+            },
+            scene_5_bronze_age: {
+              chapterTitle: 'ĐỜI II: THỜI KỲ ĐỒ ĐỒNG',
+              lines: [
+                {
+                  speaker: 'TRƯỞNG LÃO MO',
+                  title: 'Vu Sư Khởi Nguyên',
+                  avatar: '🧙‍♂️',
+                  text: 'Bộ tộc bắt đầu đông đúc hơn. Để chống chọi với thời tiết khắc nghiệt, chúng ta cần gom 150 Gỗ và 100 Đá để nâng cấp Nhà Chính lên Đời 2!'
+                },
+                {
+                  speaker: 'TRƯỞNG LÃO MO',
+                  title: 'Vu Sư Khởi Nguyên',
+                  avatar: '🧙‍♂️',
+                  text: 'Mở khóa Lò Rèn Cổ và Nhà Xông Khói! Hãy dùng Đồng Vàng Cổ đúc Kiếm Đồng Mũi Nhọn và xông khói thịt thú để dự trữ lương thực lâu dài.'
+                }
+              ]
+            },
+            scene_6_pet_incubation: {
+              chapterTitle: 'ĐỜI II: THỜI KỲ ĐỒ ĐỒNG',
+              lines: [
+                {
+                  speaker: 'A THAO',
+                  title: 'Nữ Thợ Săn Dũng Mãnh',
+                  avatar: '🏹',
+                  text: 'Dũng sĩ, trong lúc thám hiểm rừng rậm ta tìm thấy một Trứng Cổ Đại Linh Thú! Hãy bỏ nó vào Tổ Ấp Năng Lượng. Khi con tích lũy đủ điểm vận động sinh tồn, nó sẽ nở thành Linh thú hộ vệ đắc lực!'
+                },
+                {
+                  speaker: 'A THAO',
+                  title: 'Nữ Thợ Săn Dũng Mãnh',
+                  avatar: '🏹',
+                  text: 'Tuyệt vời! Chú Hổ Răng Kiếm này sẽ luôn đồng hành bên cạnh, tăng 25% uy lực đòn đánh và cùng con cắn xé dã thú!'
+                }
+              ]
+            },
+            scene_7_raptor_hunt: {
+              chapterTitle: 'ĐỜI II: THỜI KỲ ĐỒ ĐỒNG',
+              lines: [
+                {
+                  speaker: 'A THAO',
+                  title: 'Nữ Thợ Săn Dũng Mãnh',
+                  avatar: '🏹',
+                  text: 'Bầy Báo Săn Velociraptor 3 con đầu đàn đang đe dọa các thợ đốn củi. Chúng cực kỳ nhanh và có móng vuốt liềm chí mạng. Hãy dùng Bẫy Thú Kẹp Chân, kết hợp Lướt Né Đòn (Dodge i-frame) để tiêu diệt chúng lấy Nanh Cổ!'
+                }
+              ]
+            },
+            scene_8_west_plains: {
+              chapterTitle: 'ĐỜI III: THỜI KỲ ĐỒ SẮT & CỰ THÚ',
+              lines: [
+                {
+                  speaker: 'TRƯỞNG LÃO MO',
+                  title: 'Vu Sư Khởi Nguyên',
+                  avatar: '🧙‍♂️',
+                  text: 'Bên kia sông là Đại Thảo Nguyên - nơi ngự trị của Tam Sừng Triceratops, Phiến Gai Stegosaurus và cự thú khổng lồ Apatosaurus dài 22m!'
+                },
+                {
+                  speaker: 'A THAO',
+                  title: 'Nữ Thợ Săn Dũng Mãnh',
+                  avatar: '🏹',
+                  text: 'Hãy săn bắn hoặc thu thập Vảy Sừng của chúng để rèn Đại Giáp Thiết Ngưu và nâng cấp Doanh Trại lên Pháo Đài Cự Thạch Đời 3!'
+                }
+              ]
+            },
+            scene_9_blood_moon: {
+              chapterTitle: 'ĐỜI III: PHÒNG THỦ TRĂNG MÁU',
+              lines: [
+                {
+                  speaker: 'TRƯỞNG LÃO MO (HỐT HOẢNG)',
+                  title: 'Vu Sư Khởi Nguyên',
+                  avatar: '🧙‍♂️',
+                  text: 'TRĂNG MÁU ĐÃ XUẤT HIỆN! Vết Nứt Không Gian đã mở rộng tối đa! Toàn bộ dã thú đang bị cuồng nộ hóa và tràn về Cổng Nam (6, 8)!'
+                },
+                {
+                  speaker: 'A THAO',
+                  title: 'Nữ Thợ Săn Dũng Mãnh',
+                  avatar: '🏹',
+                  text: 'Mau dựng Tháp Nỏ Canh Gác (Crossbow Tower) và kéo toàn bộ Dân Làng ẩn nấp vào Nhà Chính! Dũng sĩ, hãy cùng ta rút vũ khí tử thủ bảo vệ Cổng Thành!'
+                }
+              ]
+            },
+            scene_10_stonehenge_trex: {
+              chapterTitle: 'CHƯƠNG 12: ĐẠI CHIẾN BẠO CHÚA',
+              lines: [
+                {
+                  speaker: 'TRƯỞNG LÃO MO',
+                  title: 'Vu Sư Khởi Nguyên',
+                  avatar: '🧙‍♂️',
+                  text: 'Con đã tôi luyện nên Thần Binh và Giáp Trụ tối thượng. Giờ là lúc kết thúc cơn ác mộng này mãi mãi. Hãy tiến lên Thung Lũng Cực Bắc, bước vào vòng tròn Cự Thạch Stonehenge tiêu diệt ĐẠI BẠO LONG T-REX (HP 1500)!'
+                },
+                {
+                  speaker: 'A THAO',
+                  title: 'Nữ Thợ Săn Dũng Mãnh',
+                  avatar: '🏹',
+                  text: 'Hãy cẩn thận 3 Phase biến hình của nó: Tiếng Gầm Gây Choáng ➔ Dậm Chân Địa Chấn Triệu Hồi Đàn Em ➔ Cuồng Nộ Đẫm Máu 150% Tốc Độ! Toàn thể bộ tộc đặt trọn niềm tin vào người!'
+                }
+              ]
+            },
+            scene_11_victory_ending: {
+              chapterTitle: '🏆 KỶ NGUYÊN HOÀNG KIM (PHÁ ĐẢO)',
+              lines: [
+                {
+                  speaker: 'TRƯỞNG LÃO MO (XÚC ĐỘNG)',
+                  title: 'Vu Sư Khởi Nguyên',
+                  avatar: '🧙‍♂️',
+                  text: 'Bạo Chúa đã ngã xuống! Lời nguyền Trăng Máu đã vĩnh viễn bị phong ấn! Ánh sáng thái bình đã trở lại với Pangaea!'
+                },
+                {
+                  speaker: 'A THAO (REO HÒ)',
+                  title: 'Nữ Thợ Săn Dũng Mãnh',
+                  avatar: '🏹',
+                  text: 'Vạn tuế Đại Tù Trưởng! Người đã dẫn dắt chúng ta đi từ đống tro tàn đến một Đế Chế Khởi Nguyên bất diệt!'
+                },
+                {
+                  speaker: 'TRƯỞNG LÃO MO',
+                  title: 'Vu Sư Khởi Nguyên',
+                  avatar: '🧙‍♂️',
+                  text: 'Từ nay, con chính là Chúa Tể của Đại Lục. Hãy nhận lấy Vương Miện Khởi Nguyên và tiếp tục xây dựng bộ tộc trong Chế Độ Tự Do Vô Tận (Endless Sandbox)!'
+                }
+              ]
+            }
+          },
+
+          quests: [
+            {
+              id: 'q1',
+              title: 'Nhiệm vụ 1: Nhặt 5 Cành Cây & 3 Khối Đá quanh Doanh Trại',
+              chapter: 'ĐỜI I: KHỞI NGUYÊN',
+              target: new THREE.Vector3(5, 0, -2),
+              scene: 'scene_1_awakening',
+              checkComplete: () => {
+                const wood = GameState.inventory.wood || 0;
+                const stone = GameState.inventory.stone || 0;
+                return wood >= 5 && stone >= 3;
+              },
+              getProgressText: () => {
+                const wood = GameState.inventory.wood || 0;
+                const stone = GameState.inventory.stone || 0;
+                return `Nhiệm vụ 1: Nhặt 5 Cành Cây & 3 Khối Đá quanh Doanh Trại (${wood}/5 Wood, ${stone}/3 Stone)`;
+              }
+            },
+            {
+              id: 'q2',
+              title: 'Nhiệm vụ 2: Đến Lửa Trại chế tạo 1 Rìu Đá & 1 Cuốc Đá',
+              chapter: 'ĐỜI I: KHỞI NGUYÊN',
+              target: new THREE.Vector3(0, 0, 0),
+              scene: 'scene_2_crafting',
+              checkComplete: () => {
+                return GameState.player.weaponLevel >= 1 || (GameState.inventory.stone_axe || 0) >= 1;
+              },
+              getProgressText: () => 'Nhiệm vụ 2: Đến Lửa Trại chế tạo 1 Rìu Đá & 1 Cuốc Đá'
+            },
+            {
+              id: 'q3',
+              title: 'Nhiệm vụ 3: Tới Đầm Lầy lấy Nước & Quả dại (Tránh xa bóng lưng Cá Sấu)',
+              chapter: 'ĐỜI I: KHỞI NGUYÊN',
+              target: new THREE.Vector3(-18, 0, 18),
+              scene: 'scene_3_swamp_water',
+              checkComplete: () => {
+                return GameState.player.thirst >= 90 || (GameState.inventory.wild_berry || 0) >= 2;
+              },
+              getProgressText: () => 'Nhiệm vụ 3: Tới Đầm Lầy lấy Nước & Quả dại (Tránh xa bóng lưng Cá Sấu)'
+            },
+            {
+              id: 'q4',
+              title: 'Nhiệm vụ 4: Phân công A Thao làm Tiều Phu tại Bảng Quản Lý Dân Làng',
+              chapter: 'ĐỜI I: KHỞI NGUYÊN',
+              target: new THREE.Vector3(6, 0, -7),
+              scene: 'scene_4_rescue_athao',
+              checkComplete: () => {
+                return GameState.villagers.some(v => v.role === 'LUMBERJACK');
+              },
+              getProgressText: () => 'Nhiệm vụ 4: Phân công A Thao làm Tiều Phu tại Bảng Quản Lý Dân Làng'
+            },
+            {
+              id: 'q5',
+              title: 'Nhiệm vụ 5: Rèn Kiếm Đồng tại Lò Rèn & Xây Giàn Xông Khói',
+              chapter: 'ĐỜI II: ĐỒ ĐỒNG',
+              target: new THREE.Vector3(14, 0, -3),
+              scene: 'scene_5_bronze_age',
+              checkComplete: () => {
+                return GameState.empire.era >= 2 || GameState.player.weaponLevel >= 2;
+              },
+              getProgressText: () => 'Nhiệm vụ 5: Rèn Kiếm Đồng tại Lò Rèn & Xây Giàn Xông Khói'
+            },
+            {
+              id: 'q6',
+              title: 'Nhiệm vụ 6: Đồng hành cùng Linh Thú chiến đấu',
+              chapter: 'ĐỜI II: ĐỒ ĐỒNG',
+              target: new THREE.Vector3(3, 0, -5.5),
+              scene: 'scene_6_pet_incubation',
+              checkComplete: () => {
+                return GameState.petActive || (GameState.inventory.saber_cub || 0) >= 1;
+              },
+              getProgressText: () => 'Nhiệm vụ 6: Đồng hành cùng Linh Thú chiến đấu'
+            },
+            {
+              id: 'q7',
+              title: 'Nhiệm vụ 7: Tiêu diệt Đàn Velociraptor tại Tọa Độ (275, 145)',
+              chapter: 'ĐỜI II: ĐỒ ĐỒNG',
+              target: new THREE.Vector3(275, 0, 145),
+              scene: 'scene_7_raptor_hunt',
+              checkComplete: () => {
+                const raptor = dinosaurs.find(d => d.id.startsWith('raptor_'));
+                return !raptor || !raptor.alive;
+              },
+              getProgressText: () => 'Nhiệm vụ 7: Tiêu diệt Đàn Velociraptor tại Tọa Độ (275, 145)'
+            },
+            {
+              id: 'q8',
+              title: 'Nhiệm vụ 8: Thu thập Vảy Sừng Cổ & Nâng Cấp Pháo Đài Đời 3',
+              chapter: 'ĐỜI III: ĐỒ SẮT',
+              target: new THREE.Vector3(-260, 0, -130),
+              scene: 'scene_8_west_plains',
+              checkComplete: () => {
+                return GameState.empire.era >= 3;
+              },
+              getProgressText: () => 'Nhiệm vụ 8: Thu thập Vảy Sừng Cổ & Nâng Cấp Pháo Đài Đời 3'
+            },
+            {
+              id: 'q9',
+              title: 'Nhiệm vụ 9: KÍCH HOẠT TỬ THỦ: Đánh lui Đợt Quái Cuồng Bạo trong Đêm Trăng Máu!',
+              chapter: 'ĐỜI III: TRĂNG MÁU',
+              target: new THREE.Vector3(6, 0, 8),
+              scene: 'scene_9_blood_moon',
+              checkComplete: () => {
+                return GameState.bloodMoonDefended || false;
+              },
+              getProgressText: () => 'Nhiệm vụ 9: KÍCH HOẠT TỬ THỦ: Đánh lui Đợt Quái Cuồng Bạo trong Đêm Trăng Máu!'
+            },
+            {
+              id: 'q10',
+              title: 'Nhiệm vụ 10: TIÊU DIỆT HOÀNG ĐẾ BẠO LONG T-REX TẠI STONEHENGE (0, -380)',
+              chapter: 'CHƯƠNG 12: T-REX',
+              target: new THREE.Vector3(0, 0, -380),
+              scene: 'scene_10_stonehenge_trex',
+              checkComplete: () => {
+                const trex = dinosaurs.find(d => d.id === 'trex_boss');
+                return !trex || !trex.alive;
+              },
+              getProgressText: () => 'Nhiệm vụ 10: TIÊU DIỆT HOÀNG ĐẾ BẠO LONG T-REX TẠI STONEHENGE (0, -380)'
+            },
+            {
+              id: 'q11',
+              title: '🏆 CHIẾN THẮNG TUYỆT ĐỐI: MỞ KHÓA CHẾ ĐỘ ENDLESS SANDBOX & TOÀN BỘ DANH HIỆU THẦN THOẠI!',
+              chapter: '🏆 PHÁ ĐẢO',
+              target: new THREE.Vector3(0, 0, 0),
+              scene: 'scene_11_victory_ending',
+              checkComplete: () => true,
+              getProgressText: () => '🏆 CHIẾN THẮNG TUYỆT ĐỐI: MỞ KHÓA CHẾ ĐỘ ENDLESS SANDBOX!'
+            }
+          ],
+
+          init() {
+            this.updateQuestUI();
+            const btnSkip = document.getElementById('btn-dialogue-skip');
+            const btnNext = document.getElementById('btn-dialogue-next');
+            const overlay = document.getElementById('cinematic-dialogue-overlay');
+            const btnGuide = document.getElementById('btn-quest-guide');
+            const questBanner = document.getElementById('hud-quest-banner');
+
+            if (btnSkip) btnSkip.onclick = () => this.skipDialogue();
+            if (btnNext) btnNext.onclick = () => this.onDialogueAdvance();
+            if (overlay) {
+              overlay.onclick = (e) => {
+                if (e.target === overlay || e.target.classList.contains('dialogue-box') || e.target.closest('.dialogue-box')) {
+                  this.onDialogueAdvance();
+                }
+              };
+            }
+            if (btnGuide) {
+              btnGuide.onclick = (e) => {
+                e.stopPropagation();
+                this.beaconEnabled = !this.beaconEnabled;
+                if (questBeaconGroup) questBeaconGroup.visible = this.beaconEnabled;
+                showToast(this.beaconEnabled ? '🧭 Đã BẬT Cột Sáng Định Vị Mục Tiêu!' : '🧭 Đã TẮT Cột Sáng Định Vị.');
+              };
+            }
+            if (questBanner) {
+              questBanner.onclick = () => {
+                const cur = this.quests[this.currentQuestIndex];
+                if (cur && cur.target) {
+                  showToast(`🧭 Mục tiêu hiện tại nằm tại Tọa độ (${Math.round(cur.target.x)}, ${Math.round(cur.target.z)})`);
+                }
+              };
+            }
+          },
+
+          updateQuestUI() {
+            const cur = this.quests[this.currentQuestIndex] || this.quests[this.quests.length - 1];
+            const badgeEl = document.getElementById('quest-chapter-badge');
+            const titleEl = document.getElementById('quest-title-text');
+            if (badgeEl) badgeEl.textContent = cur.chapter || 'NHIỆM VỤ';
+            if (titleEl) titleEl.textContent = typeof cur.getProgressText === 'function' ? cur.getProgressText() : cur.title;
+
+            if (questBeaconGroup && cur.target) {
+              questBeaconGroup.position.copy(cur.target);
+              questBeaconGroup.position.y = getTerrainHeight(cur.target.x, cur.target.z);
+              questBeaconGroup.visible = this.beaconEnabled;
+            }
+          },
+
+          triggerDialogue(sceneKey, onFinish = null) {
+            const sceneData = this.dialogueScenes[sceneKey];
+            if (!sceneData || !sceneData.lines || sceneData.lines.length === 0) {
+              if (typeof onFinish === 'function') onFinish();
+              return;
+            }
+
+            this.activeScene = sceneData;
+            this.activeLineIndex = 0;
+            this.onFinishCallback = onFinish;
+            this.isDialogueActive = true;
+            window.isDialogueActive = true;
+
+            const overlay = document.getElementById('cinematic-dialogue-overlay');
+            if (overlay) overlay.hidden = false;
+
+            this.displayLine(0);
+          },
+
+          displayLine(index) {
+            if (!this.activeScene || index >= this.activeScene.lines.length) {
+              this.finishDialogue();
+              return;
+            }
+
+            const line = this.activeScene.lines[index];
+            const nameEl = document.getElementById('dialogue-speaker-name');
+            const bodyEl = document.getElementById('dialogue-text-body');
+            const avatarEl = document.getElementById('dialogue-avatar-img');
+
+            if (nameEl) nameEl.textContent = `${line.speaker} — ${line.title}`;
+            if (avatarEl) avatarEl.textContent = line.avatar || '🧙‍♂️';
+
+            if (this.typewriterTimer) clearInterval(this.typewriterTimer);
+
+            this.currentFullText = line.text;
+            this.isTyping = true;
+            let charIndex = 0;
+            if (bodyEl) bodyEl.textContent = '';
+
+            playSfx('swing');
+
+            this.typewriterTimer = setInterval(() => {
+              charIndex++;
+              if (bodyEl) bodyEl.textContent = this.currentFullText.slice(0, charIndex);
+              if (charIndex % 4 === 0) playSfx('swing');
+
+              if (charIndex >= this.currentFullText.length) {
+                clearInterval(this.typewriterTimer);
+                this.typewriterTimer = null;
+                this.isTyping = false;
+              }
+            }, 18);
+          },
+
+          onDialogueAdvance() {
+            if (this.isTyping) {
+              if (this.typewriterTimer) clearInterval(this.typewriterTimer);
+              this.typewriterTimer = null;
+              this.isTyping = false;
+              const bodyEl = document.getElementById('dialogue-text-body');
+              if (bodyEl) bodyEl.textContent = this.currentFullText;
+              return;
+            }
+
+            this.activeLineIndex++;
+            if (this.activeScene && this.activeLineIndex < this.activeScene.lines.length) {
+              this.displayLine(this.activeLineIndex);
+            } else {
+              this.finishDialogue();
+            }
+          },
+
+          skipDialogue() {
+            if (this.typewriterTimer) clearInterval(this.typewriterTimer);
+            this.finishDialogue();
+          },
+
+          finishDialogue() {
+            this.isDialogueActive = false;
+            window.isDialogueActive = false;
+            const overlay = document.getElementById('cinematic-dialogue-overlay');
+            if (overlay) overlay.hidden = true;
+
+            const callback = this.onFinishCallback;
+            this.onFinishCallback = null;
+            this.activeScene = null;
+
+            if (typeof callback === 'function') callback();
+            this.updateQuestUI();
+          },
+
+          talkToNpc(npcId) {
+            if (this.isDialogueActive) return;
+            if (npcId === 'elder') {
+              const cur = this.quests[this.currentQuestIndex];
+              if (cur && cur.scene && this.dialogueScenes[cur.scene]) {
+                this.triggerDialogue(cur.scene);
+              } else {
+                showToast('🧙‍♂️ Trưởng Lão Mo: "Hãy kiên trì giữ vững ngọn lửa sinh tồn của bộ tộc!"');
+              }
+            } else if (npcId === 'a_thao') {
+              if (this.currentQuestIndex < 3) {
+                showToast('🏹 A Thao đang đi săn ở bìa rừng phía Đông (45, 25)...');
+              } else {
+                this.triggerDialogue('scene_4_rescue_athao');
+              }
+            }
+          },
+
+          checkProgress() {
+            if (this.isDialogueActive) return;
+            const cur = this.quests[this.currentQuestIndex];
+            if (!cur) return;
+
+            if (typeof cur.checkComplete === 'function' && cur.checkComplete()) {
+              this.advanceQuest();
+            } else {
+              this.updateQuestUI();
+            }
+          },
+
+          advanceQuest() {
+            if (this.currentQuestIndex >= this.quests.length - 1) return;
+            this.currentQuestIndex++;
+            saveGameState();
+            playSfx('reward');
+            const nextQuest = this.quests[this.currentQuestIndex];
+            showToast(`🎉 HOÀN THÀNH NHIỆM VỤ! Mở khóa: ${nextQuest.title}`);
+
+            this.updateQuestUI();
+            if (nextQuest && nextQuest.scene && this.dialogueScenes[nextQuest.scene]) {
+              setTimeout(() => {
+                this.triggerDialogue(nextQuest.scene);
+              }, 400);
+            }
+          }
+        };
+
         // HÀNH ĐỘNG TƯƠNG TÁC NGỮ CẢNH
         let activeContextTarget = null;
         function triggerContextAction() {
           if (!activeContextTarget) return;
           if (activeContextTarget.isNpc) {
-            openNpcModal(activeContextTarget.npcId);
+            if (activeContextTarget.npcId === 'elder' || activeContextTarget.npcId === 'a_thao') {
+              QuestManager.talkToNpc(activeContextTarget.npcId);
+            } else {
+              openNpcModal(activeContextTarget.npcId);
+            }
           } else if (activeContextTarget.isVillager) {
             openTownHallModal();
           } else if (activeContextTarget.isHarvest) {
@@ -5245,6 +6600,9 @@
               }
             }
           });
+          if (typeof QuestManager !== 'undefined') {
+            QuestManager.checkProgress();
+          }
         }
 
         document.getElementById('btn-attack').addEventListener('click', triggerAttack);
@@ -5778,11 +7136,13 @@
           if (villagerTemplate && villagerTemplate.model && typeof THREE.SkeletonUtils !== 'undefined' && THREE.SkeletonUtils.clone) {
             villagerMesh = THREE.SkeletonUtils.clone(villagerTemplate.model);
             setupModelMesh(villagerMesh);
+            configureDynamicActor(villagerMesh);
           } else {
             const char = GameState.player.characters.male;
             if (char && char.model && typeof THREE.SkeletonUtils !== 'undefined') {
               villagerMesh = THREE.SkeletonUtils.clone(char.model);
               setupModelMesh(villagerMesh);
+              configureDynamicActor(villagerMesh);
             } else {
               villagerMesh = new THREE.Group();
             }
@@ -6084,6 +7444,7 @@
           playSfx('harvest');
           showToast(`👔 Đã chuyển nghề ${v.name} thành ${ROLE_INFO[newRole].name}!`);
           openTownHallModal();
+          setTimeout(() => QuestManager.checkProgress(), 300);
         };
 
         window.upgradeAge = function () {
@@ -6121,6 +7482,7 @@
           playSfx('reward');
           showToast(`🌟 CHÚC MỪNG! BỘ TỘC ĐÃ TIẾN LÊN ${newCfg.name}! (Giới hạn: ${newCfg.maxPop} Dân)`);
           openTownHallModal();
+          setTimeout(() => QuestManager.checkProgress(), 400);
         };
 
         function openTownHallModal() {
@@ -7520,6 +8882,7 @@
           spawnFloatingText(`✨ ĐÃ RÈN ${w.name.toUpperCase()}!`, p.group.position, 'dmg-popup--crit');
           showToast(`🌟 CHÚC MỪNG! ĐÃ RÈN THÀNH CÔNG: ${w.name} (Sát thương: ${w.atk} ATK)!`);
           openBlacksmithModal();
+          setTimeout(() => QuestManager.checkProgress(), 400);
         };
 
         window.craftCrocArmor = function () {
@@ -7546,6 +8909,7 @@
           spawnFloatingText('🛡️ GIÁP VẢY BẠO NGẠC (+200 HP, MIỄN CHẬM NƯỚC)!', p.group.position, 'dmg-popup--crit');
           showToast('🛡️ ĐÃ CHẾ TÁC GIÁP DA VẢY BẠO NGẠC: +200 Max HP & Miễn nhiễm 100% làm chậm đầm lầy!');
           openBlacksmithModal();
+          setTimeout(() => QuestManager.checkProgress(), 400);
         };
 
         window.craftGatorSpear = function () {
@@ -7572,6 +8936,7 @@
           spawnFloatingText('🔱 ĐẠI THƯƠNG RĂNG CÁ SẤU (55 ATK + XUẤT HUYẾT)!', p.group.position, 'dmg-popup--crit');
           showToast('🔱 ĐÃ CHẾ TÁC ĐẠI THƯƠNG RĂNG CÁ SẤU: 55 ATK & Gây Xuất Huyết -12 HP/s trong 4s!');
           openBlacksmithModal();
+          setTimeout(() => QuestManager.checkProgress(), 400);
         };
 
         window.upgradeTowerFire = function () {
@@ -7636,6 +9001,7 @@
               hasCrocArmor: GameState.player.hasCrocArmor || false,
               hasGatorSpear: GameState.player.hasGatorSpear || false,
               gender: GameState.player.gender,
+              questIndex: typeof QuestManager !== 'undefined' ? QuestManager.currentQuestIndex : 0,
               saveTimestamp: Date.now()
             };
             localStorage.setItem(SAVE_KEY, JSON.stringify(dataToSave));
@@ -7855,6 +9221,11 @@
               }
             }
 
+            if (typeof data.questIndex === 'number' && typeof QuestManager !== 'undefined') {
+              QuestManager.currentQuestIndex = data.questIndex;
+              QuestManager.updateQuestUI();
+            }
+
             return true;
           } catch (e) {
             return false;
@@ -8019,6 +9390,11 @@
           }
         };
 
+        window.setGraphicsProfile = function (profile) {
+          applyGraphicsProfile(profile);
+          openSettingsModal();
+        };
+
         function openSettingsModal() {
           const playMins = Math.round((GameState.playTimeSeconds || 0) / 60);
           const mult = GameState.harvestMultiplier || 1.0;
@@ -8030,6 +9406,28 @@
               <button class="modal-close" id="modal-close-btn">✕</button>
             </div>
             <div style="display:flex; flex-direction:column; gap:10px; font-size:11.5px; color:#fef08a;">
+              <!-- Chất lượng đồ họa iOS / Mobile -->
+              <div style="background:rgba(0,0,0,0.5); padding:10px; border-radius:8px; border:1px solid var(--line);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                  <div style="font-weight:900; color:#38bdf8;">🎮 ĐỒ HỌA RETINA & FPS (IOS / MOBILE)</div>
+                  <div style="font-size:10px; color:#fde047; font-weight:800;">${currentGraphicsProfile.toUpperCase()}</div>
+                </div>
+                <div style="font-size:9.5px; color:#cbd5e1; margin-bottom:8px;">
+                  Tăng độ nét màn hình Retina hoặc tối ưu FPS mượt mà cho thiết bị di động:
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:6px;">
+                  <button class="trade-btn" style="padding:7px 0; font-size:10px; font-weight:900; background:${currentGraphicsProfile === 'ultra' ? '#0284c7' : 'rgba(255,255,255,0.08)'}; border-color:${currentGraphicsProfile === 'ultra' ? '#38bdf8' : 'var(--line)'};" onclick="window.setGraphicsProfile('ultra')">
+                    💎 Siêu Nét
+                  </button>
+                  <button class="trade-btn" style="padding:7px 0; font-size:10px; font-weight:900; background:${currentGraphicsProfile === 'balanced' ? '#059669' : 'rgba(255,255,255,0.08)'}; border-color:${currentGraphicsProfile === 'balanced' ? '#34d399' : 'var(--line)'};" onclick="window.setGraphicsProfile('balanced')">
+                    ⚡ Cân Bằng
+                  </button>
+                  <button class="trade-btn" style="padding:7px 0; font-size:10px; font-weight:900; background:${currentGraphicsProfile === 'performance' ? '#d97706' : 'rgba(255,255,255,0.08)'}; border-color:${currentGraphicsProfile === 'performance' ? '#fbbf24' : 'var(--line)'};" onclick="window.setGraphicsProfile('performance')">
+                    🔋 Mượt / Pin
+                  </button>
+                </div>
+              </div>
+
               <!-- Âm thanh -->
               <div style="background:rgba(0,0,0,0.5); padding:10px; border-radius:8px; border:1px solid var(--line); display:flex; justify-content:space-between; align-items:center;">
                 <div>
@@ -8152,6 +9550,10 @@
 
           charOverlay.classList.add('is-hidden');
           GameState.started = true;
+
+          if (!questBeaconGroup) createQuestBeacon();
+          QuestManager.init();
+
           if (pendingOfflineReport) {
             setTimeout(() => {
               showOfflineReportModal(pendingOfflineReport);
@@ -8161,6 +9563,9 @@
             showToast(`📂 Đã khôi phục tiến trình chơi: Đời ${GameState.empire.era} (${GameState.player.weaponName})!`);
           } else {
             showToast(`🌟 Chào mừng ${chosenGender === 'male' ? 'Dũng Sĩ Nam' : 'Dũng Sĩ Nữ'} đến Kỷ Nguyên Hoang Cổ 3D!`);
+            setTimeout(() => {
+              QuestManager.triggerDialogue('scene_1_awakening');
+            }, 600);
           }
         };
 
@@ -8209,7 +9614,7 @@
         function initFloatingTextPool() {
           const cont = document.getElementById('floating-dmg-container');
           if (!cont) return;
-          cont.innerHTML = '';
+          floatingTextPool.length = 0;
           for (let i = 0; i < FLOATING_TEXT_POOL_SIZE; i++) {
             const span = document.createElement('span');
             span.className = 'dmg-popup';
@@ -8219,7 +9624,7 @@
             floatingTextPool.push({
               el: span,
               active: false,
-              hideTimer: null
+              expiresAt: 0
             });
           }
         }
@@ -8231,7 +9636,10 @@
           if (!poolItem) {
             // Nếu hồ bơi đầy, tái sử dụng item đầu tiên
             poolItem = floatingTextPool[0];
-            if (poolItem && poolItem.hideTimer) clearTimeout(poolItem.hideTimer);
+            if (poolItem) {
+              poolItem.active = false;
+              poolItem.expiresAt = 0;
+            }
           }
           if (!poolItem) return;
 
@@ -8250,11 +9658,18 @@
           span.style.top = `${y}px`;
           span.style.display = 'block';
 
-          poolItem.hideTimer = setTimeout(() => {
-            span.style.display = 'none';
-            poolItem.active = false;
-            poolItem.hideTimer = null;
-          }, 800);
+          poolItem.expiresAt = performance.now() + 800;
+        }
+
+        function updateFloatingTextPool(now) {
+          for (let i = 0; i < floatingTextPool.length; i++) {
+            const item = floatingTextPool[i];
+            if (item.active && item.expiresAt <= now) {
+              item.el.style.display = 'none';
+              item.active = false;
+              item.expiresAt = 0;
+            }
+          }
         }
 
         function updateHUD() {
@@ -8337,12 +9752,7 @@
         function animate(currentTime = 0) {
           requestAnimationFrame(animate);
 
-          // 3. Khóa Tốc Độ 60 FPS Chuẩn (có độ trễ sai số 3.5ms để không rớt khung hình trên màn hình 60Hz)
-          const elapsed = currentTime - lastFrameTime;
-          if (elapsed < targetFrameInterval - 3.5) return;
-          lastFrameTime = currentTime;
-
-          const dt = Math.min(clock.getDelta(), 0.05); // Cố định delta time tối đa 0.05s chống nhảy cóc giật lag
+          const dt = Math.min(clock.getDelta(), 0.05); // Cố định delta time tối đa 0.05s chống giật lag
           const time = clock.getElapsedTime();
           const p = GameState.player;
           const t = GameState.time;
@@ -8472,10 +9882,15 @@
           // 3. DI CHUYỂN DŨNG SĨ THEO VECTOR CAMERA ISOMETRIC (ZERO-ALLOCATION)
           if (p.hp > 0 && !p.isDead) {
             let moveX = input.x, moveZ = input.z;
-            if (input.keys['w'] || input.keys['arrowup']) moveZ -= 1;
-            if (input.keys['s'] || input.keys['arrowdown']) moveZ += 1;
-            if (input.keys['a'] || input.keys['arrowleft']) moveX -= 1;
-            if (input.keys['d'] || input.keys['arrowright']) moveX += 1;
+            if (window.isDialogueActive) {
+              moveX = 0;
+              moveZ = 0;
+            } else {
+              if (input.keys['w'] || input.keys['arrowup']) moveZ -= 1;
+              if (input.keys['s'] || input.keys['arrowdown']) moveZ += 1;
+              if (input.keys['a'] || input.keys['arrowleft']) moveX -= 1;
+              if (input.keys['d'] || input.keys['arrowright']) moveX += 1;
+            }
 
             camera.getWorldDirection(_camForward);
             _camForward.y = 0;
@@ -8580,6 +9995,20 @@
           const activeChar = p.characters[p.gender];
           if (activeChar && activeChar.mixer) {
             activeChar.mixer.update(dt);
+          }
+
+          // Cập nhật hoạt ảnh cho các NPC / Thú Cưng / Đồng đội (activeMixers) có culling khoảng cách <= 28m
+          for (let i = 0; i < activeMixers.length; i++) {
+            const m = activeMixers[i];
+            const rootObj = m.getRoot ? m.getRoot() : null;
+            if (rootObj && p.group) {
+              const dSq = rootObj.position ? rootObj.position.distanceToSquared(p.group.position) : 0;
+              if (dSq <= 784) { // 28m * 28m
+                m.update(dt);
+              }
+            } else {
+              m.update(dt);
+            }
           }
 
           // 4. KIỂM TRA ĐỐI TƯỢNG TƯƠNG TÁC GẦN NHẤT (DOM CACHED & STATE CHECKED)
@@ -8709,13 +10138,17 @@
             }
           }
 
+          // Regional streaming runs at 2Hz. Groups stay resident so interactions,
+          // quest references and save/load state remain stable.
+          updateWorldStreaming(p.group.position, currentTime);
+
           // 5. HOẠT HÓA CHUYỂN ĐỘNG SÓNG NƯỚC SHADER THREE.WATER
-          if (typeof water !== 'undefined' && water && water.material && water.material.uniforms && water.material.uniforms['time']) {
+          if (worldStreamingState.swampActive && typeof water !== 'undefined' && water && water.material && water.material.uniforms && water.material.uniforms['time']) {
             water.material.uniforms['time'].value += dt * 0.5;
           }
 
           // Hoạt hóa Vòng Bọt Sóng (Foam Rings)
-          if (typeof foamRings !== 'undefined' && Array.isArray(foamRings)) {
+          if (worldStreamingState.swampActive && typeof foamRings !== 'undefined' && Array.isArray(foamRings)) {
             foamRings.forEach((f) => {
               const pulse = Math.sin(time * 2.5 + f.phase);
               const sc = f.baseScale * (1.0 + pulse * 0.18);
@@ -8725,7 +10158,7 @@
           }
 
           // Hoạt hóa Hạt Bọt Khí Sủi Tăm (Swamp Bubble Particles)
-          if (typeof bubbleMesh !== 'undefined' && bubbleMesh && typeof bubbleData !== 'undefined') {
+          if (worldStreamingState.swampActive && typeof bubbleMesh !== 'undefined' && bubbleMesh && typeof bubbleData !== 'undefined') {
             for (let i = 0; i < bubbleData.length; i++) {
               const b = bubbleData[i];
               b.y += dt * b.speed;
@@ -8752,7 +10185,7 @@
             runeCrystal.rotation.y += dt * 0.9;
             runeCrystal.position.y = 3.2 + Math.sin(Date.now() * 0.003) * 0.12;
           }
-          if (typeof stonehengeCrystal !== 'undefined' && stonehengeCrystal) {
+          if (worldStreamingState.stonehengeActive && typeof stonehengeCrystal !== 'undefined' && stonehengeCrystal) {
             stonehengeCrystal.rotation.y += dt * 0.8;
             stonehengeCrystal.rotation.x += dt * 0.4;
             stonehengeCrystal.position.y = 2.8 + Math.sin(time * 2.0) * 0.2;
@@ -8909,14 +10342,21 @@
             if (!dino.alive) return;
 
             const distToPlayer = dino.group.position.distanceTo(p.group.position);
-            const inViewport = distToPlayer <= 25.0 || dino.isBoss || dino.state === 'AGGRO';
+            const inViewport = distToPlayer <= 25.0;
+
+            // Deinosuchus is the only actor owned by the swamp region. Freeze its
+            // simulation while the region is streamed out; other dinosaurs retain
+            // their existing 2Hz distant-AI behavior.
+            if (dino.id === 'deinosuchus_swamp' && !worldStreamingState.swampActive) {
+              return;
+            }
 
             // Cập nhật billboarding thanh máu cho khủng long (chỉ khi nằm trong tầm nhìn <= 25m)
             if (inViewport && dino.hpBarGroup) {
               dino.updateHealthBar();
             }
 
-            // Chỉ gọi mixer.update(dt) cho các cá thể nằm trong bán kính <= 25m hoặc Boss
+            // Chỉ cập nhật animation mỗi frame trong bán kính 25m.
             if (inViewport && dino.mixer) {
               dino.mixer.update(dt);
             }
@@ -8933,7 +10373,7 @@
             }
 
             if (dino.isFlying) {
-              dino.flightAngle += dt * 0.38;
+              dino.flightAngle += effectiveDt * 0.38;
               const fx = Math.cos(dino.flightAngle) * dino.flightRadius;
               const fz = Math.sin(dino.flightAngle) * (dino.flightRadius * 0.85);
               const groundAtFlight = getTerrainHeight(fx, fz);
@@ -9293,6 +10733,18 @@
           camera.lookAt(p.group.position.x, p.group.position.y + 1.1, p.group.position.z);
 
           campFireLight.intensity = 2.4 + Math.sin(time * 14) * 0.5 + Math.random() * 0.3;
+
+          // Cập nhật Cột Sáng Định Vị Mục Tiêu 3D (Quest Beacon)
+          if (questBeaconGroup && questBeaconGroup.visible) {
+            if (beaconRing) {
+              beaconRing.rotation.z += dt * 1.8;
+              const pulse = 0.85 + Math.sin(time * 4.0) * 0.15;
+              beaconRing.scale.set(pulse, pulse, pulse);
+            }
+            if (beaconBeam && beaconBeam.material) {
+              beaconBeam.material.opacity = 0.25 + Math.sin(time * 3.0) * 0.12;
+            }
+          }
 
           renderer.render(scene, camera);
         }

@@ -1,5 +1,5 @@
 {
-  "_note": "Hệ thống Thú Cưng Tiền Sử (Phụ lục B). Ấp trứng bằng bước chân thật, tăng buff và đồng hành cùng người chơi.",
+  "_note": "Hệ thống Thú Cưng Tiền Sử. Ấp trứng bằng năng lượng sinh tồn trong game, tăng buff và đồng hành cùng người chơi.",
   "version": 1,
   "eggs": [
     {
@@ -7,14 +7,14 @@
       "nameVi": "Trứng Rừng Cổ Đại",
       "requiredSteps": 3000,
       "hatchesInto": ["saber_cub", "ancient_falcon"],
-      "descVi": "Quả trứng phủ rêu phong tìm thấy giữa đại ngàn. Cần 3.000 bước chân ấm áp để nở."
+      "descVi": "Quả trứng phủ rêu phong tìm thấy giữa đại ngàn. Cần 3.000 điểm năng lượng sinh tồn để nở."
     },
     {
       "id": "egg_mountain",
       "nameVi": "Trứng Thạch Cốt Sơn",
       "requiredSteps": 5000,
       "hatchesInto": ["baby_mammoth"],
-      "descVi": "Quả trứng hoá thạch nặng trịch mang linh khí núi cao. Cần 5.000 bước chân kiên trì để đánh thức sinh mệnh cổ xưa."
+      "descVi": "Quả trứng hoá thạch nặng trịch mang linh khí núi cao. Cần 5.000 điểm năng lượng sinh tồn để đánh thức sinh mệnh cổ xưa."
     }
   ],
   "pets": [

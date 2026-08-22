@@ -264,7 +264,7 @@
         {
           "id": "ch4q3",
           "titleVi": "Hành trình vạn dặm",
-          "descVi": "Đi bộ đạt 4.000 bước chân trong chương để hoàn tất ghi chép của người đi trước.",
+          "descVi": "Tích lũy 4.000 điểm thám hiểm trong chương để hoàn tất ghi chép của người đi trước.",
           "objective": { "kind": "steps", "qty": 4000 },
           "reward": [{ "itemId": "blueprint", "qty": 1 }, { "itemId": "boiled_water", "qty": 4 }]
         }
@@ -301,7 +301,7 @@
         {
           "id": "ch5q3",
           "titleVi": "Chiến lũy kiên cường",
-          "descVi": "Đạt 4.500 bước chân trong chương để Lạc Lạc phân tích hoàn tất tầng âm chỉ huy quái.",
+          "descVi": "Tích lũy 4.500 điểm thám hiểm trong chương để Lạc Lạc phân tích hoàn tất tầng âm chỉ huy quái.",
           "objective": { "kind": "steps", "qty": 4500 },
           "reward": [{ "itemId": "healing_salve", "qty": 2 }]
         }
@@ -338,7 +338,7 @@
         {
           "id": "ch6q3",
           "titleVi": "Định vị tọa độ vết nứt",
-          "descVi": "Đạt 5.000 bước chân trong chương để hoàn tất đo đạc ba chiều về vết nứt bầu trời.",
+          "descVi": "Tích lũy 5.000 điểm thám hiểm trong chương để hoàn tất đo đạc ba chiều về vết nứt bầu trời.",
           "objective": { "kind": "steps", "qty": 5000 },
           "reward": [{ "itemId": "healing_salve", "qty": 3 }]
         }
@@ -375,7 +375,7 @@
         {
           "id": "ch7q3",
           "titleVi": "Khám phá bí mật kẻ bị chọn",
-          "descVi": "Đạt 5.500 bước chân trong chương để cùng Lạc Lạc giải mã con số mở cổng.",
+          "descVi": "Tích lũy 5.500 điểm thám hiểm trong chương để cùng Lạc Lạc giải mã con số mở cổng.",
           "objective": { "kind": "steps", "qty": 5500 },
           "reward": [{ "itemId": "upgrade_core", "qty": 3 }, { "itemId": "iron_ore", "qty": 15 }]
         }
@@ -385,14 +385,14 @@
       "index": 8,
       "id": "ch8_va_dut_gay",
       "titleVi": "Chương 8 — Vá Đứt Gãy",
-      "epigraphVi": "Vá lại đứt gãy ngàn năm bằng chính những bước chân bền bỉ trên mảnh đất này.",
+      "epigraphVi": "Vá lại đứt gãy ngàn năm bằng chính ý chí kiên cường trên mảnh đất này.",
       "caveArtIcon": "🌌",
       "unlockAfterBloodMoons": 7,
       "summaryVi": "Nghi lễ cuối. Một cái kết trọn vẹn — sau đó mở chế độ vô tận cho ai muốn ở lại.",
       "beats": [
-        { "id": "ch8b1", "triggerSteps": 0, "voStatus": "pending", "mood": "determined", "textVi": "Đêm nay là đêm đó. Bạn đã dựng pháo đài, đã sống qua bảy lần trăng đỏ, và đã đi đủ số bước. Tôi sẽ không nói 'chúc may mắn' — chúng ta chưa bao giờ sống bằng may mắn." },
+        { "id": "ch8b1", "triggerSteps": 0, "voStatus": "pending", "mood": "determined", "textVi": "Đêm nay là đêm đó. Bạn đã dựng pháo đài, đã sống qua bảy lần trăng đỏ, và đã tích lũy đủ sức mạnh. Tôi sẽ không nói 'chúc may mắn' — chúng ta chưa bao giờ sống bằng may mắn." },
         { "id": "ch8b2", "triggerSteps": 1000, "voStatus": "pending", "mood": "calm", "textVi": "Khi cửa mở, tôi không đi cùng bạn được. Thứ giữ tôi chạy được ở đây là chính cái nhịp dưới lòng đất kia. Về bên đó, tôi lại chỉ là một ứng dụng trong điện thoại. Thật ra thì... cũng không tệ lắm." },
-        { "id": "ch8b3", "triggerSteps": 2500, "voStatus": "pending", "mood": "proud", "textVi": "Nếu bạn muốn ở lại, tôi cũng hiểu. Trại này là do chính tay bạn dựng, từng cành củi một. Cửa sẽ vẫn mở vào mỗi thứ Bảy. Và tôi vẫn ở đây, đếm bước cùng bạn, như từ ngày đầu tiên." }
+        { "id": "ch8b3", "triggerSteps": 2500, "voStatus": "pending", "mood": "proud", "textVi": "Nếu bạn muốn ở lại, tôi cũng hiểu. Trại này là do chính tay bạn dựng, từng cành củi một. Cửa sẽ vẫn mở vào mỗi thứ Bảy. Và tôi vẫn ở đây, đồng hành cùng bạn, như từ ngày đầu tiên." }
       ],
       "quests": [
         {
@@ -404,8 +404,8 @@
         },
         {
           "id": "ch8q2",
-          "titleVi": "Bước chân định mệnh",
-          "descVi": "Đạt 2.500 bước chân trong chương cuối để mở ra cánh cổng không gian vĩnh hằng.",
+          "titleVi": "Cột mốc định mệnh",
+          "descVi": "Tích lũy 2.500 điểm thám hiểm trong chương cuối để mở ra cánh cổng không gian vĩnh hằng.",
           "objective": { "kind": "steps", "qty": 2500 },
           "reward": [{ "itemId": "upgrade_core", "qty": 5 }]
         }
@@ -435,7 +435,7 @@
         {
           "id": "ch9q2",
           "titleVi": "Hành trình băng giá",
-          "descVi": "Vượt qua 6.000 bước chân băng giá để tìm dấu tích mỏ khoáng sản cổ đại.",
+          "descVi": "Vượt qua 6.000 điểm thám hiểm băng giá để tìm dấu tích mỏ khoáng sản cổ đại.",
           "objective": { "kind": "steps", "qty": 6000 },
           "reward": [{ "itemId": "iron_ore", "qty": 20 }]
         }
@@ -452,7 +452,7 @@
       "beats": [
         { "id": "ch10b1", "triggerSteps": 0, "voStatus": "pending", "mood": "surprised", "textVi": "Dòng sông Hồng cuộn sóng đỏ rực dưới trăng. Một cột ánh sáng màu lam ngọc vừa bừng lên từ phía đền cổ ven sông Long Biên." },
         { "id": "ch10b2", "triggerSteps": 3500, "voStatus": "pending", "mood": "calm", "textVi": "Ký tự khắc trên vách đá ven sông viết về nguồn cội Rồng Tiên — những người đầu tiên chế ngự thú dữ bằng sự đoàn kết và ngọn lửa chính trực." },
-        { "id": "ch10b3", "triggerSteps": 7000, "voStatus": "pending", "mood": "proud", "textVi": "Bạn mang trong mình nhịp bước của vùng đất này. Hãy cầm chắc cây giáo sắt, thần thú Hồng Hà đã công nhận bạn là người kế vị xứng đáng." }
+        { "id": "ch10b3", "triggerSteps": 7000, "voStatus": "pending", "mood": "proud", "textVi": "Bạn mang trong mình nhịp đập của vùng đất này. Hãy cầm chắc cây giáo sắt, thần thú Hồng Hà đã công nhận bạn là người kế vị xứng đáng." }
       ],
       "quests": [
         {
@@ -465,7 +465,7 @@
         {
           "id": "ch10q2",
           "titleVi": "Theo dấu Thủy Thần",
-          "descVi": "Đi bộ 7.000 bước dọc các cổ đạo để mở khóa bản đồ thánh địa Long Biên.",
+          "descVi": "Tích lũy 7.000 điểm thám hiểm dọc các cổ đạo để mở khóa bản đồ thánh địa Long Biên.",
           "objective": { "kind": "steps", "qty": 7000 },
           "reward": [{ "itemId": "healing_salve", "qty": 5 }]
         }
@@ -495,7 +495,7 @@
         {
           "id": "ch11q2",
           "titleVi": "Trấn thủ Ốc Thành",
-          "descVi": "Đạt 8.000 bước chân trong chương để hoàn tất kích hoạt 9 cổng phong ấn Cổ Loa.",
+          "descVi": "Tích lũy 8.000 điểm thám hiểm trong chương để hoàn tất kích hoạt 9 cổng phong ấn Cổ Loa.",
           "objective": { "kind": "steps", "qty": 8000 },
           "reward": [{ "itemId": "upgrade_core", "qty": 6 }, { "itemId": "iron_ore", "qty": 30 }]
         }
@@ -508,7 +508,7 @@
       "unlockAfterBloodMoons": 11,
       "summaryVi": "Chương kết sử thi vĩ đại (True Ending). Bạn được toàn bộ các bộ tộc tiền sử tôn vinh làm Đại Tù Trưởng vĩnh hằng.",
       "beats": [
-        { "id": "ch12b1", "triggerSteps": 0, "voStatus": "pending", "textVi": "Bão tố đã tan. Đứt gãy không gian đã được vá lại bằng ý chí kiên cường và hàng triệu bước chân của bạn." },
+        { "id": "ch12b1", "triggerSteps": 0, "voStatus": "pending", "textVi": "Bão tố đã tan. Đứt gãy không gian đã được vá lại bằng ý chí kiên cường và sức mạnh của bạn." },
         { "id": "ch12b2", "triggerSteps": 5000, "voStatus": "pending", "textVi": "Tôi nhìn thấy những ngọn khói bình yên bốc lên từ khắp các buôn làng Thăng Long tiền sử. Bạn đã biến nơi hoang tàn thành quê hương thứ hai." },
         { "id": "ch12b3", "triggerSteps": 10000, "voStatus": "pending", "textVi": "Dù bạn quyết định trở về thế giới hiện đại hay ở lại dẫn dắt bộ tộc, cái tên của bạn sẽ sống mãi trong truyền thuyết. Cảm ơn bạn đã đồng hành cùng tôi suốt chặng đường vĩ đại này!" }
       ],
@@ -523,7 +523,7 @@
         {
           "id": "ch12q2",
           "titleVi": "Vạn Lý Trường Hành",
-          "descVi": "Đạt 10.000 bước chân trong chương cuối để phong vương Đại Tù Trưởng Thăng Long.",
+          "descVi": "Tích lũy 10.000 điểm thám hiểm trong chương cuối để phong vương Đại Tù Trưởng Thăng Long.",
           "objective": { "kind": "steps", "qty": 10000 },
           "reward": [{ "itemId": "upgrade_core", "qty": 15 }]
         }

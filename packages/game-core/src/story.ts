@@ -1,10 +1,9 @@
 /**
- * Cốt truyện 8 chương và giọng dẫn của Lạc Lạc (§5.6).
+ * Cốt truyện 12 chương sử thi và giọng dẫn của Lạc Lạc.
  *
- * Đây là XƯƠNG SỐNG của bản offline. Game online giữ chân bằng cộng đồng và sự kiện đẩy từ
- * server; game offline không có cả hai, nên nội dung phải làm việc đó — bài học lấy thẳng từ
- * Zombies, Run! (§1). Mỗi beat kích hoạt theo cột mốc số bước TRONG CHƯƠNG, để buổi đi bộ
- * biến thành một tập phim thay vì một màn hình chờ.
+ * Đây là XƯƠNG SỐNG của trải nghiệm game sinh tồn hoang cổ.
+ * Mỗi beat kích hoạt theo cột mốc tiến trình thám hiểm và sinh tồn TRONG CHƯƠNG,
+ * đưa người chơi qua từng giai đoạn lịch sử hào hùng của bộ tộc.
  */
 
 import { STORY } from './balance.ts';
