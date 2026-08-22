@@ -123,7 +123,7 @@ server.on('error', (e: NodeJS.ErrnoException) => {
   }
 });
 
-server.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, () => {
   console.log('');
   console.log('  KỶ NGUYÊN HOANG CỔ — prototype offline');
   console.log('  ─────────────────────────────────────');

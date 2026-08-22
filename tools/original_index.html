@@ -1,13 +1,1434 @@
-// ====================================================
-// MODULE: main.ts — THREE.JS ARPG ENGINE HOÀN CHỈNH
-// ====================================================
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no"
+    />
+    <meta name="theme-color" content="#0a0806" />
+    <meta name="description" content="Kỷ Nguyên Hoang Cổ 3D — Trình Quản Lý Hoạt Ảnh Dũng Sĩ & Quần Xã Khủng Long 3D" />
+    <title>Kỷ Nguyên Hoang Cổ 3D — Jurassic Survival</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600;1,700&display=swap"
+      rel="stylesheet"
+    />
 
-import { SpatialGrid, worldSpatialGrid } from './world/SpatialGrid.js';
-import { CanvasOverlay } from './ui/CanvasOverlay.js';
+    <!-- Three.js (r128), fflate, GLTFLoader, FBXLoader, SkeletonUtils & THREE.Water -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/libs/fflate.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/FBXLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/objects/Water.js"></script>
 
-export const canvasOverlay = new CanvasOverlay('hud-canvas');
+    <style>
+      :root {
+        --bg: #0e0c0a;
+        --bg-glass: rgba(22, 16, 12, 0.92);
+        --ink: #fef3c7;
+        --ink-dim: #bdae93;
+        --ink-faint: #78716c;
+        --line: rgba(245, 158, 11, 0.28);
+        --gold: #fbbf24;
+        --ember: #f59e0b;
+        --ember-deep: #b45309;
+        --hp: #ef4444;
+        --hunger: #f59e0b;
+        --thirst: #06b6d4;
+        --stamina: #10b981;
+        --bone: #fffbeb;
+        --font: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        --safe-b: env(safe-area-inset-bottom, 0px);
+        --safe-t: env(safe-area-inset-top, 0px);
+      }
 
-'use strict';
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      [hidden] {
+        display: none !important;
+      }
+
+      html,
+      body {
+        width: 100vw;
+        height: 100vh;
+        overflow: hidden;
+        background: #000;
+        color: var(--ink);
+        font: 14px/1.5 var(--font);
+        user-select: none;
+        -webkit-user-select: none;
+        touch-action: none;
+      }
+
+      /* CANVAS 3D */
+      #game3d {
+        position: fixed;
+        inset: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 1;
+        display: block;
+        outline: none;
+      }
+
+      /* UI LAYER */
+      .ui-layer {
+        position: fixed;
+        inset: 0;
+        z-index: 10;
+        pointer-events: none;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+
+      button,
+      .btn,
+      .interactive {
+        pointer-events: auto;
+        font: inherit;
+        color: inherit;
+        cursor: pointer;
+        border: none;
+        background: none;
+        touch-action: manipulation;
+      }
+
+      /* ROTATE DEVICE OVERLAY (FORCED LANDSCAPE MODE) */
+      .rotate-device-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        background: radial-gradient(circle at center, rgba(30, 20, 12, 0.98) 0%, rgba(8, 6, 4, 1.0) 100%);
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        text-align: center;
+        color: #fef08a;
+        backdrop-filter: blur(16px);
+        touch-action: none;
+      }
+
+      @media (orientation: portrait) {
+        .rotate-device-overlay {
+          display: flex !important;
+        }
+      }
+
+      @media (orientation: landscape) {
+        .rotate-device-overlay {
+          display: none !important;
+        }
+      }
+
+      .rotate-icon-wrapper {
+        width: 86px;
+        height: 86px;
+        border-radius: 50%;
+        background: rgba(245, 158, 11, 0.15);
+        border: 2px dashed rgba(251, 191, 36, 0.6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 18px;
+        animation: rotatePhoneAnim 2.2s infinite ease-in-out;
+      }
+
+      .rotate-icon {
+        font-size: 40px;
+        display: inline-block;
+      }
+
+      @keyframes rotatePhoneAnim {
+        0% { transform: rotate(0deg) scale(1); }
+        35% { transform: rotate(-90deg) scale(1.1); }
+        65% { transform: rotate(-90deg) scale(1.1); }
+        100% { transform: rotate(0deg) scale(1); }
+      }
+
+      .rotate-title {
+        font-size: 19px;
+        font-weight: 900;
+        color: #fde047;
+        text-shadow: 0 0 12px rgba(245, 158, 11, 0.6);
+        margin-bottom: 8px;
+        letter-spacing: 0.5px;
+      }
+
+      .rotate-desc {
+        font-size: 12.5px;
+        color: #e2e8f0;
+        max-width: 330px;
+        line-height: 1.55;
+        margin-bottom: 16px;
+      }
+
+      .rotate-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: linear-gradient(135deg, #d97706, #92400e);
+        color: #fff;
+        font-size: 10.5px;
+        font-weight: 800;
+        padding: 6px 14px;
+        border-radius: 999px;
+        border: 1px solid rgba(254, 240, 138, 0.4);
+      }
+
+      /* CHARACTER SELECTION MODAL */
+      .char-modal-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        background: radial-gradient(circle at center, rgba(32, 22, 14, 0.94) 0%, rgba(10, 8, 6, 0.98) 100%);
+        backdrop-filter: blur(18px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        transition: opacity 0.4s ease, visibility 0.4s ease;
+      }
+      .char-modal-overlay.is-hidden {
+        display: none !important;
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+      }
+      .char-modal {
+        width: 100%;
+        max-width: 580px;
+        background: linear-gradient(180deg, rgba(38, 27, 18, 0.96) 0%, rgba(18, 12, 8, 0.98) 100%);
+        border: 2px solid var(--line);
+        border-radius: 20px;
+        padding: 24px 20px;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.9), 0 0 30px rgba(245, 158, 11, 0.25);
+        text-align: center;
+      }
+      .char-badge {
+        display: inline-block;
+        background: linear-gradient(135deg, #d97706, #92400e);
+        color: #fff;
+        font-size: 10px;
+        font-weight: 900;
+        padding: 3px 10px;
+        border-radius: 999px;
+        letter-spacing: 1px;
+        margin-bottom: 6px;
+        border: 1px solid rgba(254, 240, 138, 0.4);
+      }
+      .char-title {
+        font-size: 22px;
+        font-weight: 900;
+        color: #fef08a;
+        margin-bottom: 6px;
+        text-shadow: 0 0 14px rgba(245, 158, 11, 0.5);
+      }
+      .char-sub {
+        font-size: 12px;
+        color: var(--ink-dim);
+        margin-bottom: 20px;
+      }
+      .char-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        margin-bottom: 20px;
+      }
+      .char-card {
+        background: rgba(28, 20, 14, 0.85);
+        border: 2px solid rgba(245, 158, 11, 0.3);
+        border-radius: 16px;
+        padding: 16px 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .char-card:hover {
+        border-color: var(--gold);
+        transform: translateY(-2px);
+      }
+      .char-card.is-selected {
+        border-color: #fbbf24;
+        background: linear-gradient(180deg, rgba(69, 39, 14, 0.95) 0%, rgba(30, 20, 12, 0.98) 100%);
+        box-shadow: 0 0 20px rgba(245, 158, 11, 0.45);
+      }
+      .char-card-avatar {
+        font-size: 32px;
+        margin-bottom: 8px;
+      }
+      .char-card-name {
+        font-size: 14px;
+        font-weight: 900;
+        color: #fef08a;
+      }
+      .char-card-role {
+        font-size: 10px;
+        font-weight: 800;
+        color: #38bdf8;
+        margin-bottom: 6px;
+      }
+      .char-card-desc {
+        font-size: 11px;
+        color: var(--bone);
+        line-height: 1.3;
+        margin-bottom: 8px;
+      }
+      .char-card-stats {
+        font-size: 9.5px;
+        font-weight: 800;
+        background: rgba(0, 0, 0, 0.6);
+        padding: 4px 8px;
+        border-radius: 6px;
+        color: #fde68a;
+        width: 100%;
+      }
+      .btn-start {
+        width: 100%;
+        padding: 13px 20px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #ef4444, #b91c1c 50%, #7f1d1d);
+        border: 2px solid #fef08a;
+        color: #fff;
+        font-size: 15px;
+        font-weight: 900;
+        cursor: pointer;
+        box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5);
+        transition: transform 0.15s ease;
+      }
+      .btn-start:hover {
+        transform: scale(1.02);
+      }
+
+      /* HUD TOP BAR */
+      /* HUD ROOT CONTAINER (POINTER EVENTS TRANSPARENT) */
+      .hud {
+        position: fixed;
+        inset: 0;
+        z-index: 20;
+        pointer-events: none;
+        overflow: hidden;
+      }
+
+      /* COMPACT TOP BAR (100% TRANSPARENT BACKGROUND, MAX 46px HEIGHT) */
+      .hud-top-bar {
+        position: fixed;
+        top: calc(var(--safe-t) + 6px);
+        left: 0;
+        right: 0;
+        padding: 0 10px;
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        pointer-events: none;
+        z-index: 25;
+      }
+
+      /* TOP-LEFT: AVATAR & 4 MINI GAUGES */
+      .hud-hero-box {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(18, 13, 9, 0.72);
+        border: 1px solid rgba(245, 158, 11, 0.4);
+        border-radius: 12px;
+        padding: 3px 6px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(10px);
+        pointer-events: auto;
+      }
+      .hero-avatar-mini {
+        position: relative;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 35% 35%, #b45309, #451a03 70%, #1c0e05 100%);
+        border: 1.5px solid #fef08a;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 17px;
+        cursor: pointer;
+      }
+      .hero-weapon-mini {
+        position: absolute;
+        bottom: -3px;
+        right: -3px;
+        background: #b91c1c;
+        color: #fff;
+        font-size: 7.5px;
+        font-weight: 900;
+        padding: 0.5px 3px;
+        border-radius: 999px;
+        border: 1px solid #fef08a;
+      }
+      .gauges-box-mini {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        width: 72px;
+      }
+      .gauge-row-mini {
+        display: flex;
+        align-items: center;
+        gap: 3px;
+        height: 5px;
+      }
+      .gauge-icon-mini { font-size: 8px; line-height: 1; width: 10px; text-align: center; }
+      .gauge-track-mini {
+        flex: 1;
+        height: 4px;
+        background: rgba(0, 0, 0, 0.8);
+        border-radius: 999px;
+        overflow: hidden;
+        border: 0.5px solid rgba(255, 255, 255, 0.15);
+      }
+      .gauge-fill {
+        height: 100%;
+        width: 100%;
+        border-radius: 999px;
+        transition: width 0.25s linear;
+      }
+      .gauge-fill--hp { background: linear-gradient(90deg, #ef4444, #f87171); }
+      .gauge-fill--hunger { background: linear-gradient(90deg, #d97706, #fbbf24); }
+      .gauge-fill--thirst { background: linear-gradient(90deg, #0284c7, #38bdf8); }
+      .gauge-fill--stamina { background: linear-gradient(90deg, #059669, #34d399); }
+
+      /* TOP-CENTER: PILL BADGE */
+      .hud-center-pill {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 10px;
+        font-weight: 900;
+        color: #fef08a;
+        background: rgba(18, 13, 9, 0.72);
+        border: 1px solid rgba(245, 158, 11, 0.45);
+        padding: 3.5px 9px;
+        border-radius: 999px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(10px);
+        pointer-events: auto;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+
+      /* TOP-RIGHT: 2 ROWS X 3 COLS RESOURCES GRID */
+      .hud-resources-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 2.5px;
+        background: rgba(18, 13, 9, 0.72);
+        border: 1px solid rgba(245, 158, 11, 0.4);
+        border-radius: 9px;
+        padding: 2.5px 4.5px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(10px);
+        pointer-events: auto;
+      }
+      .res-chip {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        font-size: 9.5px;
+        font-weight: 800;
+        background: rgba(0, 0, 0, 0.55);
+        padding: 1px 4px;
+        border-radius: 4px;
+        border: 0.5px solid rgba(255, 255, 255, 0.08);
+      }
+      .res-chip--food { color: #f87171; }
+      .res-chip--wood { color: #fcd34d; }
+      .res-chip--stone { color: #cbd5e1; }
+      .res-chip--herbs { color: #6ee7b7; }
+      .res-chip--gold { color: #fbbf24; }
+      .res-chip--fangs { color: #fda4af; }
+      .res-chip-val { font-variant-numeric: tabular-nums; }
+
+      /* TARGET BOSS HP BANNER */
+      .target-banner {
+        position: fixed;
+        top: calc(var(--safe-t) + 48px);
+        left: 50%;
+        transform: translateX(-50%);
+        width: min(88%, 380px);
+        background: linear-gradient(180deg, rgba(35, 10, 10, 0.95), rgba(18, 5, 5, 0.95));
+        border: 1.5px solid #ef4444;
+        border-radius: 10px;
+        padding: 6px 12px;
+        box-shadow: 0 6px 20px rgba(239, 68, 68, 0.35);
+        backdrop-filter: blur(10px);
+        z-index: 22;
+        pointer-events: auto;
+      }
+      .target-top {
+        display: flex;
+        justify-content: space-between;
+        font-size: 11px;
+        font-weight: 900;
+        color: #fca5a5;
+        margin-bottom: 3px;
+      }
+      .target-hp-track {
+        height: 6px;
+        background: rgba(0, 0, 0, 0.7);
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        overflow: hidden;
+      }
+      .target-hp-fill {
+        height: 100%;
+        width: 100%;
+        background: linear-gradient(90deg, #dc2626, #f87171);
+        transition: width 0.2s ease-out;
+      }
+
+      /* JOYSTICK VIRTUAL PAD (BOTTOM LEFT) */
+      .joystick-container {
+        position: fixed;
+        bottom: calc(var(--safe-b) + 16px);
+        left: 18px;
+        z-index: 35;
+        width: 105px;
+        height: 105px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: auto;
+        touch-action: none;
+      }
+      .joystick-base {
+        position: relative;
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(32, 22, 14, 0.55) 0%, rgba(14, 10, 7, 0.72) 80%);
+        border: 1.5px solid rgba(245, 158, 11, 0.45);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(8px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .joystick-stick {
+        position: absolute;
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 35% 35%, #f59e0b, #b45309 60%, #451a03 100%);
+        border: 1.5px solid #fef08a;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.85);
+        transform: translate(0px, 0px);
+      }
+
+      /* COMBAT & ACTION PAD (BOTTOM RIGHT) */
+      .combat-pad {
+        position: fixed;
+        bottom: calc(var(--safe-b) + 16px);
+        right: 18px;
+        z-index: 35;
+        width: 135px;
+        height: 135px;
+        pointer-events: none;
+      }
+      .btn-combat {
+        position: absolute;
+        border-radius: 50%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        cursor: pointer;
+        pointer-events: auto;
+        transition: transform 0.12s ease, filter 0.15s ease;
+      }
+      .btn-combat:active { transform: scale(0.9) !important; }
+
+      /* Nút ĐÁNH */
+      .btn-attack {
+        bottom: 0px;
+        right: 0px;
+        width: 72px;
+        height: 72px;
+        background: radial-gradient(circle at 35% 35%, #ef4444, #b91c1c 55%, #450a0a 100%);
+        border: 2px solid #fef08a;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.85), 0 0 14px rgba(239, 68, 68, 0.6);
+        z-index: 5;
+      }
+      .btn-attack-label { font-size: 9.5px; font-weight: 900; color: #fef08a; margin-top: 1px; }
+
+      /* Nút NÉ ĐÒN / LỘN NHÀO (DODGE) - Nằm bên trái nút Đánh */
+      .btn-dodge {
+        bottom: 4px;
+        right: 78px;
+        width: 44px;
+        height: 44px;
+        background: radial-gradient(circle at 35% 35%, #10b981, #047857 60%, #064e3b 100%);
+        border: 1.5px solid #6ee7b7;
+        box-shadow: 0 5px 14px rgba(0, 0, 0, 0.7);
+        z-index: 4;
+      }
+      .btn-dodge-name { font-size: 7px; font-weight: 800; color: #d1fae5; }
+
+      /* Nút TƯƠNG TÁC / THU THẬP - Nằm phía trên nút Đánh */
+      .btn-interact {
+        bottom: 76px;
+        right: 14px;
+        width: 50px;
+        height: 50px;
+        background: radial-gradient(circle at 35% 35%, #d97706, #b45309 60%, #451a03 100%);
+        border: 1.5px solid #fbbf24;
+        box-shadow: 0 5px 14px rgba(0, 0, 0, 0.7);
+        z-index: 4;
+        opacity: 0.4;
+        pointer-events: none;
+      }
+      .btn-interact.is-active {
+        opacity: 1;
+        pointer-events: auto;
+        animation: pulseGlow 1s infinite alternate;
+      }
+      @keyframes pulseGlow {
+        from { box-shadow: 0 0 8px rgba(245, 158, 11, 0.4); }
+        to { box-shadow: 0 0 18px rgba(251, 191, 36, 1); }
+      }
+      .btn-interact-name { font-size: 7px; font-weight: 800; color: #fef08a; }
+
+      /* QUEST HUD BANNER (TOP-LEFT / DƯỚI THANH CHỈ SỐ) */
+      .hud-quest-banner {
+        position: fixed;
+        top: calc(var(--safe-t) + 52px);
+        left: 12px;
+        z-index: 45;
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.94), rgba(30, 41, 59, 0.94));
+        border: 1.5px solid rgba(200, 150, 62, 0.85);
+        border-radius: 12px;
+        padding: 7px 12px;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.65), 0 0 12px rgba(200, 150, 62, 0.2);
+        backdrop-filter: blur(10px);
+        max-width: min(88vw, 420px);
+        cursor: pointer;
+        transition: transform 0.2s ease, border-color 0.2s ease;
+        pointer-events: auto;
+      }
+      .hud-quest-banner:hover {
+        transform: translateY(-1px);
+        border-color: #ffd700;
+      }
+      .quest-icon-badge {
+        font-size: 18px;
+        animation: floatQuestIcon 2s ease-in-out infinite alternate;
+        flex-shrink: 0;
+      }
+      @keyframes floatQuestIcon {
+        from { transform: translateY(0); }
+        to { transform: translateY(-3px); }
+      }
+      .quest-info-box {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        overflow: hidden;
+      }
+      .quest-header-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .quest-tag {
+        font-size: 8.5px;
+        font-weight: 900;
+        color: #f59e0b;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+      }
+      .quest-chapter-badge {
+        font-size: 8px;
+        font-weight: 700;
+        color: #94a3b8;
+        background: rgba(148, 163, 184, 0.15);
+        padding: 1px 5px;
+        border-radius: 4px;
+        white-space: nowrap;
+      }
+      .quest-title-text {
+        font-size: 11px;
+        font-weight: 700;
+        color: #f8fafc;
+        line-height: 1.3;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .quest-beacon-btn {
+        background: rgba(200, 150, 62, 0.2);
+        border: 1px solid rgba(200, 150, 62, 0.6);
+        border-radius: 8px;
+        padding: 3px 6px;
+        font-size: 13px;
+        color: #ffd700;
+        cursor: pointer;
+        margin-left: auto;
+        flex-shrink: 0;
+      }
+
+      /* CINEMATIC DIALOGUE OVERLAY UI (HỘP THOẠI ĐIỆN ẢNH ĐÔNG SƠN) */
+      .cinematic-dialogue-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        justify-content: center;
+        align-items: flex-end;
+        padding: 0 16px 20px 16px;
+        pointer-events: auto;
+        background: linear-gradient(to top, rgba(5, 8, 14, 0.75) 0%, rgba(5, 8, 14, 0.2) 40%, transparent 100%);
+        animation: fadeInDialogue 0.3s ease-out;
+      }
+      @keyframes fadeInDialogue {
+        from { opacity: 0; transform: translateY(12px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .dialogue-box {
+        width: min(94vw, 780px);
+        background: linear-gradient(135deg, rgba(12, 16, 24, 0.96) 0%, rgba(20, 26, 38, 0.94) 100%);
+        border: 2px solid #c8963e;
+        border-radius: 14px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.85), 0 0 24px rgba(200, 150, 62, 0.3);
+        backdrop-filter: blur(14px);
+        display: flex;
+        gap: 16px;
+        padding: 16px 20px;
+        position: relative;
+      }
+      .dialogue-skip-btn {
+        position: absolute;
+        top: 10px;
+        right: 14px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(200, 150, 62, 0.4);
+        border-radius: 6px;
+        color: #94a3b8;
+        font-size: 10px;
+        font-weight: 700;
+        padding: 3px 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      .dialogue-skip-btn:hover {
+        color: #ffd700;
+        border-color: #ffd700;
+        background: rgba(200, 150, 62, 0.2);
+      }
+      .dialogue-avatar-container {
+        position: relative;
+        width: 64px;
+        height: 64px;
+        flex-shrink: 0;
+      }
+      .dialogue-avatar-img {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background: radial-gradient(circle, #334155 0%, #0f172a 100%);
+        border: 2.5px solid #c8963e;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
+        position: relative;
+        z-index: 2;
+      }
+      .dialogue-avatar-glow {
+        position: absolute;
+        inset: -4px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(200, 150, 62, 0.4) 0%, transparent 70%);
+        z-index: 1;
+        animation: avatarPulse 2s infinite alternate;
+      }
+      @keyframes avatarPulse {
+        from { transform: scale(0.95); opacity: 0.5; }
+        to { transform: scale(1.1); opacity: 0.9; }
+      }
+      .dialogue-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-height: 80px;
+      }
+      .dialogue-speaker-name {
+        font-size: 13.5px;
+        font-weight: 900;
+        color: #ffd700;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        text-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
+        margin-bottom: 4px;
+      }
+      .dialogue-text-body {
+        font-size: 14px;
+        line-height: 1.5;
+        color: #f1f5f9;
+        min-height: 44px;
+        word-break: break-word;
+      }
+      .dialogue-controls {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 8px;
+        padding-top: 6px;
+        border-top: 1px solid rgba(200, 150, 62, 0.2);
+      }
+      .dialogue-hint-pc {
+        font-size: 10px;
+        color: #64748b;
+        font-style: italic;
+      }
+      .dialogue-next-btn {
+        background: linear-gradient(135deg, #d97706, #b45309);
+        border: 1.5px solid #fbbf24;
+        border-radius: 8px;
+        color: #fff;
+        font-size: 12px;
+        font-weight: 800;
+        padding: 6px 14px;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(217, 119, 6, 0.4);
+        transition: all 0.15s ease;
+      }
+      .dialogue-next-btn:hover {
+        transform: scale(1.04);
+        box-shadow: 0 4px 14px rgba(251, 191, 36, 0.6);
+      }
+
+      /* SIDEBAR QUICK MENU (TOP-RIGHT UNDER RESOURCES - ZERO OVERLAP WITH JOYSTICK/COMBAT) */
+      .sidebar-menu-container {
+        position: fixed;
+        top: calc(var(--safe-t) + 48px);
+        right: 10px;
+        z-index: 45;
+        pointer-events: auto;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 5px;
+      }
+      .sidebar-toggle-btn {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        background: linear-gradient(135deg, rgba(34, 24, 16, 0.94), rgba(18, 13, 8, 0.94));
+        border: 1.2px solid rgba(245, 158, 11, 0.65);
+        border-radius: 999px;
+        padding: 4px 11px;
+        color: #fef08a;
+        font-size: 11px;
+        font-weight: 900;
+        cursor: pointer;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.75), 0 0 10px rgba(245, 158, 11, 0.25);
+        backdrop-filter: blur(10px);
+        transition: all 0.2s ease;
+      }
+      .sidebar-toggle-btn:hover, .sidebar-toggle-btn:active {
+        background: rgba(245, 158, 11, 0.35);
+        border-color: #fef08a;
+        transform: scale(1.04);
+      }
+      .sidebar-menu-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(78px, 1fr));
+        gap: 4px;
+        background: linear-gradient(180deg, rgba(28, 19, 13, 0.95), rgba(14, 10, 7, 0.96));
+        border: 1.5px solid rgba(245, 158, 11, 0.45);
+        border-radius: 12px;
+        padding: 6px;
+        box-shadow: 0 8px 26px rgba(0, 0, 0, 0.85);
+        backdrop-filter: blur(14px);
+        transform-origin: top right;
+        transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .sidebar-menu-grid.is-collapsed {
+        display: none !important;
+      }
+      .dock-btn {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 7px;
+        border-radius: 8px;
+        color: #f1f5f9;
+        font-size: 13px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        transition: all 0.15s ease;
+        cursor: pointer;
+        box-sizing: border-box;
+      }
+      .dock-btn:hover, .dock-btn:active {
+        color: #fff;
+        background: rgba(245, 158, 11, 0.35);
+        border-color: #fef08a;
+        transform: translateY(-1px);
+      }
+      .dock-btn-lbl {
+        font-size: 9px;
+        font-weight: 800;
+        color: #fef08a;
+        white-space: nowrap;
+      }
+
+      /* MODALS (INVENTORY, SHOP, QUEST, FORGE) */
+      .game-modal-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 1200;
+        background: rgba(8, 6, 4, 0.75);
+        backdrop-filter: blur(10px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+      }
+      .game-modal {
+        width: 100%;
+        max-width: 520px;
+        background: linear-gradient(180deg, rgba(34, 24, 16, 0.98), rgba(18, 13, 8, 0.98));
+        border: 2px solid var(--line);
+        border-radius: 18px;
+        padding: 18px;
+        box-shadow: 0 14px 36px rgba(0, 0, 0, 0.9), 0 0 24px rgba(245, 158, 11, 0.2);
+        animation: modalIn 0.25s ease-out;
+        max-height: 85vh;
+        overflow-y: auto;
+      }
+      @keyframes modalIn {
+        from { opacity: 0; transform: scale(0.92); }
+        to { opacity: 1; transform: scale(1); }
+      }
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 14px;
+        border-bottom: 1px solid var(--line);
+        padding-bottom: 8px;
+      }
+      .modal-title { font-size: 16px; font-weight: 900; color: #fef08a; }
+      .modal-close {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid var(--line);
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+      }
+
+      .inventory-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+      .inv-card {
+        background: rgba(0, 0, 0, 0.45);
+        border: 1px solid rgba(245, 158, 11, 0.25);
+        border-radius: 12px;
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+      }
+      .inv-icon { font-size: 24px; margin-bottom: 4px; }
+      .inv-name { font-size: 11px; font-weight: 800; color: #fef08a; }
+      .inv-count { font-size: 10px; color: var(--bone); }
+      .inv-btn {
+        margin-top: 6px;
+        font-size: 9px;
+        font-weight: 800;
+        background: #d97706;
+        color: #fff;
+        padding: 3px 8px;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      .inv-btn:hover { background: #b45309; }
+
+      /* SHOP / QUEST / FORGE / TOWNHALL LISTS */
+      .trade-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(0, 0, 0, 0.4);
+        border: 1px solid rgba(245, 158, 11, 0.2);
+        border-radius: 10px;
+        padding: 8px 12px;
+        margin-bottom: 8px;
+      }
+      .trade-btn {
+        background: linear-gradient(135deg, #d97706, #92400e);
+        color: #fff;
+        font-size: 10px;
+        font-weight: 900;
+        padding: 4px 10px;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+
+      /* TOWNHALL / AGE UPGRADE MODAL */
+      .townhall-stat-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      .townhall-stat-card {
+        background: rgba(0, 0, 0, 0.5);
+        border: 1px solid rgba(245, 158, 11, 0.25);
+        border-radius: 10px;
+        padding: 8px 10px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .townhall-stat-icon { font-size: 20px; }
+      .townhall-stat-label { font-size: 10px; color: var(--ink-dim); }
+      .townhall-stat-val { font-size: 13px; font-weight: 900; color: #fef08a; }
+
+      .era-upgrade-box {
+        background: linear-gradient(135deg, rgba(69, 26, 3, 0.7) 0%, rgba(26, 12, 5, 0.9) 100%);
+        border: 1.5px solid #d97706;
+        border-radius: 12px;
+        padding: 12px;
+        margin-bottom: 14px;
+      }
+      .era-upgrade-title {
+        font-size: 13px;
+        font-weight: 900;
+        color: #fef08a;
+        margin-bottom: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .era-cost-pills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin: 8px 0;
+      }
+      .cost-pill {
+        font-size: 10px;
+        font-weight: 800;
+        padding: 2px 7px;
+        border-radius: 6px;
+        background: rgba(0, 0, 0, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      .cost-pill.is-met { color: #34d399; border-color: rgba(52, 211, 153, 0.4); }
+      .cost-pill.is-missing { color: #f87171; border-color: rgba(239, 68, 68, 0.4); }
+
+      .btn-era-upgrade {
+        width: 100%;
+        padding: 10px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #d97706, #b45309);
+        color: #fff;
+        font-size: 12px;
+        font-weight: 900;
+        cursor: pointer;
+        border: 1.5px solid #fef08a;
+        box-shadow: 0 4px 14px rgba(217, 119, 6, 0.4);
+        transition: all 0.2s;
+      }
+      .btn-era-upgrade:disabled {
+        background: #374151;
+        border-color: #4b5563;
+        color: #9ca3af;
+        cursor: not-allowed;
+        box-shadow: none;
+      }
+
+      .villager-card-item {
+        background: rgba(0, 0, 0, 0.45);
+        border: 1px solid rgba(245, 158, 11, 0.2);
+        border-radius: 10px;
+        padding: 8px 10px;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      .villager-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .villager-avatar {
+        font-size: 20px;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.08);
+        display: grid;
+        place-items: center;
+        border: 1px solid var(--line);
+      }
+      .role-btn-group {
+        display: flex;
+        gap: 3px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+      .role-tag-btn {
+        font-size: 9px;
+        font-weight: 800;
+        padding: 3px 6px;
+        border-radius: 5px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #d1d5db;
+        cursor: pointer;
+      }
+      .role-tag-btn.is-active {
+        background: #d97706;
+        border-color: #fef08a;
+        color: #fff;
+        font-weight: 900;
+      }
+
+      /* TOAST & FLOATING DAMAGE */
+      .toast-stack {
+        position: fixed;
+        top: 130px;
+        right: 18px;
+        z-index: 600;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        pointer-events: none;
+      }
+      .toast {
+        background: rgba(20, 15, 10, 0.95);
+        border: 1.2px solid var(--line);
+        border-radius: 8px;
+        padding: 8px 14px;
+        font-size: 12px;
+        font-weight: 700;
+        color: #fef08a;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7);
+        animation: toastIn 0.2s ease-out forwards;
+      }
+      @keyframes toastIn {
+        from { transform: translateX(40px); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+
+      .floating-dmg-container {
+        position: fixed;
+        inset: 0;
+        z-index: 15;
+        pointer-events: none;
+        overflow: hidden;
+      }
+      .dmg-popup {
+        position: absolute;
+        font-weight: 900;
+        font-size: 18px;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9), 0 0 8px rgba(239, 68, 68, 0.8);
+        transform: translate(-50%, -50%);
+        animation: floatUp 0.85s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+      }
+      .dmg-popup--player { color: #f87171; }
+      .dmg-popup--crit { color: #fbbf24; font-size: 22px; }
+      .dmg-popup--heal { color: #34d399; }
+      .dmg-popup--wood { color: #fcd34d; font-size: 15px; text-shadow: 0 0 10px rgba(245, 158, 11, 0.9); }
+      .dmg-popup--stone { color: #e2e8f0; font-size: 15px; text-shadow: 0 0 10px rgba(255, 255, 255, 0.9); }
+      .dmg-popup--food { color: #fb7185; font-size: 15px; text-shadow: 0 0 10px rgba(244, 63, 94, 0.9); }
+      .dmg-popup--herbs { color: #6ee7b7; font-size: 15px; text-shadow: 0 0 10px rgba(52, 211, 153, 0.9); }
+      .dmg-popup--harvest { color: #38bdf8; font-size: 14px; }
+      @keyframes floatUp {
+        0% { opacity: 0; transform: translate(-50%, -10px) scale(0.6); }
+        20% { opacity: 1; transform: translate(-50%, -30px) scale(1.15); }
+        100% { opacity: 0; transform: translate(-50%, -65px) scale(0.9); }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- LỚP PHỦ BẮT BUỘC XOAY NGANG MÀN HÌNH (FORCED LANDSCAPE OVERLAY) -->
+    <div id="rotate-device-overlay" class="rotate-device-overlay">
+      <div class="rotate-icon-wrapper">
+        <span class="rotate-icon">📱</span>
+      </div>
+      <div class="rotate-title">🔄 VUI LÒNG XOAY NGANG ĐIỆN THOẠI</div>
+      <div class="rotate-desc">
+        Kỷ Nguyên Hoang Cổ 3D được thiết kế tối ưu cho góc nhìn chiến trường rộng <b>(Màn hình ngang 16:9)</b>.
+      </div>
+      <div class="rotate-badge">
+        <span>⚔️</span>
+        <span>HÃY XOAY NGANG THIẾT BỊ ĐỂ TIẾP TỤC TRẢI NGHIỆM</span>
+      </div>
+    </div>
+
+    <!-- 1. CANVAS 3D RENDER LAYER -->
+    <canvas id="game3d"></canvas>
+
+    <!-- 2. FLOATING DAMAGE & HARVEST TEXT LAYER -->
+    <div id="floating-dmg-container" class="floating-dmg-container"></div>
+
+    <!-- 3. MÀN HÌNH CHỌN DŨNG SĨ ĐẦU GAME -->
+    <div id="char-modal-overlay" class="char-modal-overlay">
+      <div class="char-modal">
+        <span class="char-badge">KỶ NGUYÊN HOANG CỔ 3D</span>
+        <h1 class="char-title">CHỌN DŨNG SĨ SINH TỒN</h1>
+        <p class="char-sub">Chọn nhân vật của bạn để bắt đầu hành trình chinh phục Kỷ Jura!</p>
+
+        <div class="char-grid">
+          <!-- Dũng Sĩ Nam -->
+          <div class="char-card is-selected" id="card-male" data-gender="male">
+            <div class="char-card-avatar">🏹</div>
+            <h3 class="char-card-name">DŨNG SĨ NAM</h3>
+            <span class="char-card-role">Bách Bộ Xuyên Dương</span>
+            <p class="char-card-desc">Thân hình cường tráng, cầm đại giáo xương và sức mạnh dũng mãnh.</p>
+            <div class="char-card-stats">⚔️ ATK: 25 | 🛡️ Sức Chống Chịu: 95</div>
+          </div>
+
+          <!-- Dũng Sĩ Nữ -->
+          <div class="char-card" id="card-female" data-gender="female">
+            <div class="char-card-avatar">🗡️</div>
+            <h3 class="char-card-name">DŨNG SĨ NỮ</h3>
+            <span class="char-card-role">Nguyệt Ảnh Linh Miêu</span>
+            <p class="char-card-desc">Thân thủ nhanh nhẹn phi thường, khả năng né đòn linh hoạt chí mạng.</p>
+            <div class="char-card-stats">⚡ Tốc Độ: 98 | 🎯 Bạo Kích: 95</div>
+          </div>
+        </div>
+
+        <button id="btn-start-game" class="btn-start">🔥 BẮT ĐẦU SINH TỒN</button>
+      </div>
+    </div>
+
+    <!-- 4. LỚP GIAO DIỆN UI TẦNG TRÊN (HUD COMPACT & NON-OVERLAPPING) -->
+    <div class="ui-layer">
+      <div id="hud" class="hud">
+        <!-- 1. COMPACT TOP BAR (100% TRANSPARENT, MAX 46px HEIGHT) -->
+        <div class="hud-top-bar">
+          <!-- TOP-LEFT: AVATAR & 4 MINI GAUGES -->
+          <div class="hud-hero-box">
+            <div class="hero-avatar-mini" id="hero-avatar-btn" title="Bấm để đổi Dũng Sĩ Nam / Nữ">
+              <span id="hero-emoji">🏹</span>
+              <span class="hero-weapon-mini" id="weapon-level-badge">Lv.1</span>
+            </div>
+
+            <div class="gauges-box-mini">
+              <!-- HP -->
+              <div class="gauge-row-mini" title="Máu (HP)">
+                <span class="gauge-icon-mini">❤️</span>
+                <div class="gauge-track-mini"><div id="bar-hp" class="gauge-fill gauge-fill--hp"></div></div>
+              </div>
+              <!-- Hunger -->
+              <div class="gauge-row-mini" title="Độ No (Hunger)">
+                <span class="gauge-icon-mini">🍗</span>
+                <div class="gauge-track-mini"><div id="bar-hunger" class="gauge-fill gauge-fill--hunger"></div></div>
+              </div>
+              <!-- Thirst -->
+              <div class="gauge-row-mini" title="Độ Khát (Thirst)">
+                <span class="gauge-icon-mini">💧</span>
+                <div class="gauge-track-mini"><div id="bar-thirst" class="gauge-fill gauge-fill--thirst"></div></div>
+              </div>
+              <!-- Stamina -->
+              <div class="gauge-row-mini" title="Thể Lực (Stamina)">
+                <span class="gauge-icon-mini">⚡</span>
+                <div class="gauge-track-mini"><div id="bar-stamina" class="gauge-fill gauge-fill--stamina"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TOP-CENTER: PILL BADGE -->
+          <div class="hud-center-pill" id="empire-era-badge" title="Bấm để mở Nhà Chính / Thời Tiết">
+            <span id="val-era-day">🏛️ Ngày 1/90 (Đời I)</span>
+            <span>•</span>
+            <span id="hud-clock-text">09:45</span>
+            <span id="hud-weather-icon">☀️</span>
+          </div>
+
+          <!-- TOP-RIGHT: 2x3 MINI RESOURCE GRID -->
+          <div class="hud-resources-grid">
+            <div class="res-chip res-chip--food" title="Thực Phẩm (Food)">
+              <span>🥩</span><span class="res-chip-val" id="val-food">40</span>
+            </div>
+            <div class="res-chip res-chip--wood" title="Gỗ (Wood)">
+              <span>🪵</span><span class="res-chip-val" id="val-wood">35</span>
+            </div>
+            <div class="res-chip res-chip--stone" title="Đá (Stone)">
+              <span>🪨</span><span class="res-chip-val" id="val-stone">25</span>
+            </div>
+            <div class="res-chip res-chip--herbs" title="Thảo Dược (Herbs)">
+              <span>🌿</span><span class="res-chip-val" id="val-herbs">10</span>
+            </div>
+            <div class="res-chip res-chip--gold" title="Đồng Vàng (Gold)">
+              <span>🪙</span><span class="res-chip-val" id="val-gold">150</span>
+            </div>
+            <div class="res-chip res-chip--fangs" title="Nanh Thú (Fangs)">
+              <span>🦷</span><span class="res-chip-val" id="val-fangs">0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- QUEST PROGRESS BANNER (TOP-LEFT / DƯỚI THANH CHỈ SỐ) -->
+        <div id="hud-quest-banner" class="hud-quest-banner">
+          <div class="quest-icon-badge">📜</div>
+          <div class="quest-info-box">
+            <div class="quest-header-row">
+              <span class="quest-tag">NHIỆM VỤ CHÍNH</span>
+              <span id="quest-chapter-badge" class="quest-chapter-badge">ĐỜI I: KHỞI NGUYÊN</span>
+            </div>
+            <div id="quest-title-text" class="quest-title-text">Nhiệm vụ 1: Nhặt 5 Cành Cây & 3 Khối Đá quanh Doanh Trại (0/5 Wood, 0/3 Stone)</div>
+          </div>
+          <button class="quest-beacon-btn" id="btn-quest-guide" title="Bật/Tắt định vị mục tiêu">🧭</button>
+        </div>
+
+        <!-- TARGET BOSS HP BANNER -->
+        <div class="target-banner" id="target-banner" hidden>
+          <div class="target-top">
+            <span id="target-title">🦖 ĐẠI BẠO LONG T-REX</span>
+            <span id="target-hp-text">600 / 600 HP</span>
+          </div>
+          <div class="target-hp-track">
+            <div id="target-hp-fill" class="target-hp-fill"></div>
+          </div>
+        </div>
+
+        <!-- CẦN JOYSTICK ẢO (GÓC DƯỚI TRÁI) -->
+        <div id="joystick-container" class="joystick-container">
+          <div id="joystick-base" class="joystick-base">
+            <div id="joystick-stick" class="joystick-stick"></div>
+          </div>
+        </div>
+
+        <!-- CỤM NÚT CHIẾN ĐẤU & TƯƠNG TÁC (GÓC DƯỚI PHẢI) -->
+        <div class="combat-pad">
+          <button id="btn-interact" class="btn-combat btn-interact" title="Thu thập / Trò chuyện (E)">
+            <span style="font-size: 18px;" id="btn-interact-icon">✋</span>
+            <span class="btn-interact-name" id="btn-interact-label">TƯƠNG TÁC</span>
+          </button>
+
+          <button id="btn-dodge" class="btn-combat btn-dodge" title="Lộn nhào né đòn (Space / L)">
+            <span style="font-size: 16px;">💨</span>
+            <span class="btn-dodge-name">NÉ ĐÒN</span>
+          </button>
+
+          <button id="btn-attack" class="btn-combat btn-attack" title="Tấn công (Chuột Trái / J)">
+            <span style="font-size: 26px;">⚔️</span>
+            <span class="btn-attack-label">ĐÁNH</span>
+          </button>
+        </div>
+
+        <!-- THANH MENU BỘ TỘC (GÓC TRÊN PHẢI - HOÀN TOÀN KHÔNG ĐÈ JOYSTICK VÀ NÚT ĐÁNH) -->
+        <div class="sidebar-menu-container" id="sidebar-menu-container">
+          <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" title="Bật/Tắt Menu Quản Lý Bộ Tộc">
+            <span id="sidebar-toggle-icon">📜</span>
+            <span id="sidebar-toggle-text">BỘ TỘC ▾</span>
+          </button>
+          <nav class="sidebar-menu-grid" id="sidebar-menu-grid">
+            <button class="dock-btn" id="dock-btn-townhall" title="🏛️ Nhà Chính (Quản Lý Bộ Tộc)">
+              <span>🏛️</span>
+              <span class="dock-btn-lbl">Nhà Chính</span>
+            </button>
+            <button class="dock-btn" id="dock-btn-inv" title="🎒 Túi Đồ & Trang Bị">
+              <span>🎒</span>
+              <span class="dock-btn-lbl">Túi Đồ</span>
+            </button>
+            <button class="dock-btn" id="dock-btn-quest" title="📜 Sắc Lệnh Trưởng Lão">
+              <span>📜</span>
+              <span class="dock-btn-lbl">Sắc Lệnh</span>
+            </button>
+            <button class="dock-btn" id="dock-btn-forge" title="⚒️ Lò Rèn Thần Binh">
+              <span>⚒️</span>
+              <span class="dock-btn-lbl">Lò Rèn</span>
+            </button>
+            <button class="dock-btn" id="dock-btn-shop" title="🛒 Giao Thương">
+              <span>🛒</span>
+              <span class="dock-btn-lbl">Thương Điếm</span>
+            </button>
+            <button class="dock-btn" id="dock-btn-treasure" title="🧭 Cổ Đồ Tầm Bảo">
+              <span>🧭</span>
+              <span class="dock-btn-lbl">Tầm Bảo</span>
+            </button>
+            <button class="dock-btn" id="dock-btn-campaign" title="👑 5 Chương Sử Thi">
+              <span>👑</span>
+              <span class="dock-btn-lbl">Sử Thi</span>
+            </button>
+            <button class="dock-btn" id="dock-btn-switch" title="🔄 Đổi Dũng Sĩ Nam / Nữ">
+              <span>🔄</span>
+              <span class="dock-btn-lbl">Đổi Tướng</span>
+            </button>
+            <button class="dock-btn" id="dock-btn-settings" title="⚙️ Cài Đặt Hệ Thống">
+              <span>⚙️</span>
+              <span class="dock-btn-lbl">Cài Đặt</span>
+            </button>
+          </nav>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. CINEMATIC DIALOGUE OVERLAY UI (HỘP THOẠI ĐIỆN ẢNH ĐÔNG SƠN) -->
+    <div id="cinematic-dialogue-overlay" class="cinematic-dialogue-overlay" hidden>
+      <div class="dialogue-box">
+        <button id="btn-dialogue-skip" class="dialogue-skip-btn" title="Bỏ qua hội thoại (Esc / Skip)">Bỏ qua ⏭️</button>
+        <div class="dialogue-avatar-container">
+          <div id="dialogue-avatar-img" class="dialogue-avatar-img">🧙‍♂️</div>
+          <div class="dialogue-avatar-glow"></div>
+        </div>
+        <div class="dialogue-content">
+          <div id="dialogue-speaker-name" class="dialogue-speaker-name">TRƯỞNG LÃO MO - Vu Sư Khởi Nguyên</div>
+          <div id="dialogue-text-body" class="dialogue-text-body"></div>
+          <div class="dialogue-controls">
+            <span class="dialogue-hint-pc">Nhấn [Space] / [Enter] / [Click] để tiếp tục</span>
+            <button id="btn-dialogue-next" class="dialogue-next-btn">Tiếp Tục ➔</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL POPUPS (TÚI ĐỒ / SHOP / QUEST / FORGE) -->
+    <div id="game-modal-overlay" class="game-modal-overlay" hidden>
+      <div class="game-modal" id="game-modal-content">
+        <!-- Content injected dynamically -->
+      </div>
+    </div>
+
+    <!-- TOAST STACK -->
+    <div id="toast-stack" class="toast-stack"></div>
+
+    <!-- ==================== THREE.JS PRODUCTION GAME ENGINE ==================== -->
+    <script>
+      (function () {
+        'use strict';
 
         // ----------------------------------------------------
         // CHƯƠNG I: CẤU TRÚC DỮ LIỆU TRẠNG THÁI (GAMESTATE)
@@ -9384,3 +10805,7 @@ export const canvasOverlay = new CanvasOverlay('hud-canvas');
         });
 
         animate();
+      })();
+    </script>
+  </body>
+</html>
